@@ -11,6 +11,7 @@ from flask import Flask, request, jsonify, send_from_directory
 
 from bot.config import get_user_date, DB_PATH
 from garmin.readiness import get_readiness_for_date
+from garmin.coaching import get_daily_coaching_summary
 from bot.parser import parse_health_message
 from bot.db import (
     init_db, save_message, update_message_json, save_entries,
@@ -161,6 +162,18 @@ def readiness_today():
 def readiness_for_date(date_for: str):
     """Get readiness assessment for a specific date."""
     return jsonify(get_readiness_for_date(date_for))
+
+
+@app.route("/api/coaching/today")
+def coaching_today():
+    """Get a user-facing daily coaching summary."""
+    return jsonify(get_daily_coaching_summary())
+
+
+@app.route("/api/coaching/<date_for>")
+def coaching_for_date(date_for: str):
+    """Get a user-facing daily coaching summary for a specific date."""
+    return jsonify(get_daily_coaching_summary(date_for))
 
 
 @app.route("/api/undo", methods=["POST"])
