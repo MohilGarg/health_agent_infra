@@ -5,6 +5,7 @@ import json
 import sqlite3
 from dataclasses import asdict
 from pathlib import Path
+from textwrap import shorten
 import sys
 
 import pandas as pd
@@ -77,6 +78,51 @@ def _truthy_date(value) -> str | None:
     return text or None
 
 
+def _sqlite_tables(conn: sqlite3.Connection) -> set[str]:
+    rows = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+    return {row[0] for row in rows}
+
+
+def _sqlite_columns(conn: sqlite3.Connection, table_name: str) -> set[str]:
+    rows = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
+    return {row[1] for row in rows}
+
+
+def _build_top_meals_summary(conn: sqlite3.Connection, date_for: str) -> str | None:
+    meal_item_columns = _sqlite_columns(conn, "meal_items")
+    if not {"date_for", "item_name"}.issubset(meal_item_columns):
+        return None
+
+    calories_expr = "COALESCE(SUM(calories), 0)" if "calories" in meal_item_columns else "0"
+    rows = conn.execute(
+        f"""
+        SELECT item_name, {calories_expr} AS total_calories
+        FROM meal_items
+        WHERE date_for = ?
+        GROUP BY item_name
+        ORDER BY total_calories DESC, item_name ASC
+        LIMIT 3
+        """,
+        (date_for,),
+    ).fetchall()
+    if not rows:
+        return None
+
+    parts = []
+    for item_name, total_calories in rows:
+        if item_name is None:
+            continue
+        label = str(item_name).strip()
+        if not label:
+            continue
+        if total_calories:
+            label = f"{label} ({int(round(total_calories))} kcal)"
+        parts.append(label)
+    if not parts:
+        return None
+    return shorten(", ".join(parts), width=120, placeholder="...")
+
+
 def load_manual_gym(path: Path) -> tuple[dict[str, list[dict]], list[str]]:
     if not path.exists():
         return {}, []
@@ -100,24 +146,67 @@ def load_nutrition_rows(db_path: Path) -> tuple[dict[str, dict], list[str]]:
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
-        rows = conn.execute(
-            """
-            SELECT date_for, total_calories, total_protein_g, total_carbs_g,
-                   total_fat_g, total_fiber_g, meal_count
-            FROM daily_summary
-            ORDER BY date_for
-            """
-        ).fetchall()
+        tables = _sqlite_tables(conn)
+        rows = []
+        source_name = None
+
+        if "daily_summary" in tables:
+            daily_summary_columns = _sqlite_columns(conn, "daily_summary")
+            if {"date_for", "total_calories", "total_protein_g", "total_carbs_g", "total_fat_g", "total_fiber_g", "meal_count"}.issubset(daily_summary_columns):
+                rows = conn.execute(
+                    """
+                    SELECT date_for,
+                           total_calories,
+                           total_protein_g,
+                           total_carbs_g,
+                           total_fat_g,
+                           total_fiber_g,
+                           meal_count
+                    FROM daily_summary
+                    ORDER BY date_for
+                    """
+                ).fetchall()
+                source_name = "health_log_sqlite_daily_summary"
+
+        if not rows and "meal_items" in tables:
+            meal_item_columns = _sqlite_columns(conn, "meal_items")
+            if {"date_for", "item_name"}.issubset(meal_item_columns):
+                calories_expr = "COALESCE(SUM(calories), 0)" if "calories" in meal_item_columns else "NULL"
+                protein_expr = "COALESCE(SUM(protein_g), 0)" if "protein_g" in meal_item_columns else "NULL"
+                carbs_expr = "COALESCE(SUM(carbs_g), 0)" if "carbs_g" in meal_item_columns else "NULL"
+                fat_expr = "COALESCE(SUM(fat_g), 0)" if "fat_g" in meal_item_columns else "NULL"
+                fiber_expr = "COALESCE(SUM(fiber_g), 0)" if "fiber_g" in meal_item_columns else "NULL"
+                rows = conn.execute(
+                    f"""
+                    SELECT date_for,
+                           {calories_expr} AS total_calories,
+                           {protein_expr} AS total_protein_g,
+                           {carbs_expr} AS total_carbs_g,
+                           {fat_expr} AS total_fat_g,
+                           {fiber_expr} AS total_fiber_g,
+                           COUNT(*) AS meal_count
+                    FROM meal_items
+                    GROUP BY date_for
+                    ORDER BY date_for
+                    """
+                ).fetchall()
+                source_name = "health_log_sqlite_meal_items"
     except sqlite3.Error:
         conn.close()
         return {}, []
-    conn.close()
 
     mapped = {}
     dates = []
     for row in rows:
-        mapped[row["date_for"]] = dict(row)
-        dates.append(row["date_for"])
+        date_for = row["date_for"]
+        if not date_for:
+            continue
+        payload = dict(row)
+        payload["top_meals_summary"] = _build_top_meals_summary(conn, date_for) if "meal_items" in tables else None
+        payload["source"] = source_name
+        mapped[date_for] = payload
+        dates.append(date_for)
+    conn.close()
     return mapped, dates
 
 
@@ -265,7 +354,8 @@ def build_nutrition(nutrition_rows: dict[str, dict], date: str) -> NutritionDail
         fiber_g=safe_float(row.get("total_fiber_g")),
         meal_count=safe_int(row.get("meal_count")),
         food_log_completeness="logged" if safe_int(row.get("meal_count")) else "not_logged",
-        source="health_log_sqlite",
+        top_meals_summary=row.get("top_meals_summary"),
+        source=row.get("source") or "health_log_sqlite",
     )
 
 
