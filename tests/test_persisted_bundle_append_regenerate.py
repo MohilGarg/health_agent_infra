@@ -132,6 +132,7 @@ class PersistedBundleAppendRegenerateTest(unittest.TestCase):
                         "event_meal_20260409_meal_estimated_flag",
                         "event_meal_20260409_meal_label",
                     ],
+                    "subjective_entry_ids": [],
                     "manual_log_entry_ids": ["manual_meal_20260409"],
                 },
             )

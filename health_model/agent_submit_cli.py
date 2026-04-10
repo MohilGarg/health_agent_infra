@@ -149,6 +149,7 @@ def _accepted_provenance_from_intake(intake: dict[str, Any]) -> dict[str, list[s
     return {
         "source_artifact_ids": [intake["artifact"]["artifact_id"]] if intake.get("artifact") else [],
         "input_event_ids": [event["event_id"] for event in intake.get("derived_events", [])],
+        "subjective_entry_ids": [],
         "manual_log_entry_ids": [intake["entry"]["entry_id"]] if intake.get("entry") else [],
     }
 

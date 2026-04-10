@@ -120,8 +120,10 @@ class AgentSubmitCliIntegrationTest(unittest.TestCase):
             self.assertEqual(wrong_day["error"]["code"], "bundle_fragment_scope_mismatch")
             self.assertIn("source_artifact_ids", hydration["accepted_provenance"])
             self.assertIn("input_event_ids", hydration["accepted_provenance"])
+            self.assertIn("subjective_entry_ids", hydration["accepted_provenance"])
             self.assertIn("manual_log_entry_ids", hydration["accepted_provenance"])
             self.assertIn("source_artifact_ids", meal["accepted_provenance"])
+            self.assertIn("subjective_entry_ids", meal["accepted_provenance"])
             self.assertTrue(hydration["dated_artifact_path"].endswith("agent_readable_daily_context_2026-04-09.json"))
             self.assertTrue(meal["latest_artifact_path"].endswith("agent_readable_daily_context_latest.json"))
 

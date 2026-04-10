@@ -616,6 +616,7 @@ def _accepted_provenance_payload(fragment: BundleFragment) -> dict[str, list[str
     return {
         "source_artifact_ids": [artifact["artifact_id"] for artifact in fragment.get("source_artifacts", [])],
         "input_event_ids": [event["event_id"] for event in fragment.get("input_events", [])],
+        "subjective_entry_ids": [entry["entry_id"] for entry in fragment.get("subjective_daily_entries", [])],
         "manual_log_entry_ids": [entry["entry_id"] for entry in fragment.get("manual_log_entries", [])],
     }
 

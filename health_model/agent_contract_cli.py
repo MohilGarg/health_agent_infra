@@ -247,6 +247,38 @@ def _contract_payload() -> dict[str, Any]:
                     },
                 ],
             },
+            "submit.voice_note": {
+                "module": "health_model.agent_voice_note_cli",
+                "command": "submit",
+                "mode": "write",
+                "description": "Append one canonicalized same-day transcribed voice note and regenerate daily context artifacts.",
+                "args": [
+                    *(_shared_arg(name) for name in ("bundle_path", "output_dir", "user_id", "date")),
+                    {
+                        "name": "payload_json",
+                        "flag": "--payload-json",
+                        "type": "json_object",
+                        "required": False,
+                        "description": "Bounded transcribed voice-note payload as one JSON object string. Exactly one of --payload-json or --payload-path is required.",
+                    },
+                    {
+                        "name": "payload_path",
+                        "flag": "--payload-path",
+                        "type": "string",
+                        "required": False,
+                        "description": "Path to one bounded transcribed voice-note JSON payload file. Exactly one of --payload-json or --payload-path is required.",
+                    },
+                ],
+                "consumes": [
+                    "shared_input_bundle",
+                    "voice_note_submission_payload",
+                ],
+                "produces": [
+                    "shared_input_bundle",
+                    "agent_readable_daily_context_dated",
+                    "agent_readable_daily_context_latest",
+                ],
+            },
             "context.get": {
                 "module": "health_model.agent_context_cli",
                 "command": "get",
@@ -302,6 +334,8 @@ def _contract_payload() -> dict[str, Any]:
         "accepted_enums": {
             "bundle_commands": ["init"],
             "submit_commands": ["hydration", "meal"],
+            "voice_note_commands": ["submit"],
+            "voice_note_payload_inputs": ["payload_json", "payload_path"],
             "context_commands": ["get", "get-latest"],
             "contract_commands": ["describe"],
             "completeness_state": ["partial", "complete", "corrected"],
@@ -317,6 +351,10 @@ def _contract_payload() -> dict[str, Any]:
                     "artifact_type": "agent_readable_daily_context",
                     "shape": "read-only context JSON consumed through --artifact-path",
                 },
+                {
+                    "artifact_type": "voice_note_submission_payload",
+                    "shape": "bounded transcribed voice-note JSON object consumed through --payload-json or --payload-path by submit.voice_note",
+                },
             ],
             "produced": [
                 {
@@ -331,6 +369,7 @@ def _contract_payload() -> dict[str, Any]:
                         "{output_dir}/agent_readable_daily_context_{date}.json",
                         "{output_dir}/agent_readable_daily_context_latest.json",
                     ],
+                    "notes": "submit.hydration, submit.meal, and submit.voice_note regenerate both the dated and latest artifacts on success.",
                 }
             ],
         },

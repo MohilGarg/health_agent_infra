@@ -232,39 +232,32 @@ Zero-to-one bootstrap flow from fresh local state:
 
 ```bash
 python3 -m health_model.agent_bundle_cli init \
-  --bundle-path data/health/shared_input_bundle_2026-04-10.json \
-  --user-id user_1 \
-  --date 2026-04-10
+  --bundle-path data/health/shared_input_bundle_2026-04-09.json \
+  --user-id user_dom \
+  --date 2026-04-09
 ```
 
 ```bash
-python3 -m health_model.agent_submit_cli hydration \
-  --bundle-path data/health/shared_input_bundle_2026-04-10.json \
+python3 -m health_model.agent_voice_note_cli submit \
+  --bundle-path data/health/shared_input_bundle_2026-04-09.json \
   --output-dir data/health \
-  --user-id user_1 \
-  --date 2026-04-10 \
-  --collected-at 2026-04-10T09:15:00+01:00 \
-  --ingested-at 2026-04-10T09:15:03+01:00 \
-  --raw-location healthlab://manual/hydration/2026-04-10/morning \
-  --confidence-score 0.98 \
-  --completeness-state complete \
-  --amount-ml 500 \
-  --beverage-type water \
-  --notes "Morning hydration."
+  --user-id user_dom \
+  --date 2026-04-09 \
+  --payload-path tests/fixtures/voice_note_intake/daily_voice_note_input.json
 ```
 
 ```bash
 python3 -m health_model.agent_context_cli get \
-  --artifact-path data/health/agent_readable_daily_context_2026-04-10.json \
-  --user-id user_1 \
-  --date 2026-04-10
+  --artifact-path data/health/agent_readable_daily_context_2026-04-09.json \
+  --user-id user_dom \
+  --date 2026-04-09
 ```
 
 ```bash
 python3 -m health_model.agent_contract_cli describe
 ```
 
-This bounded flow proves an external agent can discover the contract, initialize a canonical empty shared-input bundle from zero local state, submit a same-day manual entry, and read back the regenerated daily context using only CLI surfaces.
+This bounded flow proves an external agent can discover the contract, initialize a canonical empty shared-input bundle from zero local state, submit one same-day transcribed voice note, and read back the regenerated daily context using only CLI surfaces.
 
 Each call returns machine-readable JSON with:
 
