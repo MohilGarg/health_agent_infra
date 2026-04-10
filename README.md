@@ -25,6 +25,7 @@ The canonical public demo surface for this slice is:
 - disposable generated runtime outputs: `artifacts/public_demo/generated/`
 - checked-in public demo bundle: `artifacts/public_demo/captured/`
 - audited flagship proof bundle: `artifacts/flagship_loop_proof/2026-04-09/`
+- deterministic synthetic stress harness: `python3 scripts/run_synthetic_recommendation_stress_harness.py` with outputs under `artifacts/synthetic_stress_harness/latest/`
 
 The checked-in public demo bundle includes:
 - `artifacts/public_demo/captured/shared_input_bundle_2026-04-09.json`
