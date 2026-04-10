@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from dataclasses import asdict
+from pathlib import Path
 from typing import Any, Literal, TypedDict
 from uuid import uuid4
 
@@ -67,6 +69,15 @@ class BundleValidationResponse(TypedDict):
     is_valid: bool
     schema_issues: list[ValidationIssueDict]
     semantic_issues: list[ValidationIssueDict]
+
+
+class PersistedBundleAppendResponse(TypedDict, total=False):
+    ok: bool
+    bundle_path: str
+    bundle: dict[str, Any] | None
+    appended_fragment: BundleFragment | None
+    validation: ValidationPayload
+    error: ErrorPayload | None
 
 
 class DailyContextErrorResponse(TypedDict):
@@ -243,6 +254,97 @@ def submit_gym_set(
     )
 
 
+def load_persisted_bundle(*, bundle_path: str) -> dict[str, Any]:
+    return json.loads(Path(bundle_path).read_text())
+
+
+
+def write_persisted_bundle(*, bundle_path: str, bundle: dict[str, Any]) -> str:
+    path = Path(bundle_path)
+    validation = validate_shared_input_bundle(bundle)
+    if not validation.is_valid:
+        raise BundleValidationError(
+            code="invalid_bundle",
+            message="Shared input bundle failed validation.",
+            validation=validation,
+            details={"bundle_path": str(path)},
+        )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(bundle, indent=2, sort_keys=True) + "\n")
+    return str(path)
+
+
+
+def append_bundle_fragment_to_persisted_bundle(
+    *,
+    bundle_path: str,
+    fragment: BundleFragment,
+    user_id: str,
+    date: str,
+) -> PersistedBundleAppendResponse:
+    fragment_validation = validate_shared_input_bundle(fragment)
+    if not fragment_validation.is_valid:
+        return {
+            "ok": False,
+            "bundle_path": bundle_path,
+            "bundle": None,
+            "appended_fragment": fragment,
+            "validation": _validation_payload(fragment_validation),
+            "error": {
+                "code": "invalid_bundle_fragment",
+                "message": "Generated bundle fragment failed canonical validation.",
+                "retryable": False,
+                "details": {"user_id": user_id, "date": date},
+            },
+        }
+
+    scoping_issues = _bundle_fragment_scoping_issues(fragment=fragment, user_id=user_id, date=date)
+    if scoping_issues:
+        validation = ValidationResult(bundle=None, schema_issues=[], semantic_issues=scoping_issues)
+        return {
+            "ok": False,
+            "bundle_path": bundle_path,
+            "bundle": None,
+            "appended_fragment": fragment,
+            "validation": _validation_payload(validation),
+            "error": {
+                "code": "bundle_fragment_scope_mismatch",
+                "message": "Bundle fragment must match the requested user_id and date.",
+                "retryable": False,
+                "details": {"user_id": user_id, "date": date},
+            },
+        }
+
+    base_bundle = load_persisted_bundle(bundle_path=bundle_path)
+    merged_bundle = merge_bundle_fragments(base_bundle, fragment)
+    merged_validation = validate_shared_input_bundle(merged_bundle)
+    if not merged_validation.is_valid:
+        return {
+            "ok": False,
+            "bundle_path": bundle_path,
+            "bundle": None,
+            "appended_fragment": fragment,
+            "validation": _validation_payload(merged_validation),
+            "error": {
+                "code": "invalid_merged_bundle",
+                "message": "Merged shared input bundle failed canonical validation.",
+                "retryable": False,
+                "details": {"user_id": user_id, "date": date},
+            },
+        }
+
+    write_persisted_bundle(bundle_path=bundle_path, bundle=merged_bundle)
+    return {
+        "ok": True,
+        "bundle_path": bundle_path,
+        "bundle": merged_bundle,
+        "appended_fragment": fragment,
+        "validation": _validation_payload(merged_validation),
+        "error": None,
+    }
+
+
+
 def build_daily_context(
     *,
     bundle: dict[str, Any],
@@ -350,6 +452,46 @@ def _provenance_payload(
         provenance["event_id"] = derived_events[0]["event_id"]
         provenance["event_ids"] = [event["event_id"] for event in derived_events]
     return provenance
+
+
+class BundleValidationError(ValueError):
+    def __init__(self, *, code: str, message: str, validation: ValidationResult, details: dict[str, Any] | None = None) -> None:
+        self.code = code
+        self.validation = validation
+        self.details = details or {}
+        super().__init__(message)
+
+
+
+def _bundle_fragment_scoping_issues(*, fragment: BundleFragment, user_id: str, date: str) -> list[Any]:
+    issues = []
+    for index, artifact in enumerate(fragment.get("source_artifacts", [])):
+        if artifact.get("user_id") != user_id:
+            issues.append(_issue("user_id_mismatch", "Source artifact user_id must match the requested user_id.", f"source_artifacts[{index}].user_id"))
+    for index, event in enumerate(fragment.get("input_events", [])):
+        if event.get("user_id") != user_id:
+            issues.append(_issue("user_id_mismatch", "Input event user_id must match the requested user_id.", f"input_events[{index}].user_id"))
+        if event.get("effective_date") != date:
+            issues.append(_issue("effective_date_mismatch", "Input event effective_date must match the requested date.", f"input_events[{index}].effective_date"))
+    for index, entry in enumerate(fragment.get("subjective_daily_entries", [])):
+        if entry.get("user_id") != user_id:
+            issues.append(_issue("user_id_mismatch", "Subjective daily entry user_id must match the requested user_id.", f"subjective_daily_entries[{index}].user_id"))
+        if entry.get("date") != date:
+            issues.append(_issue("date_mismatch", "Subjective daily entry date must match the requested date.", f"subjective_daily_entries[{index}].date"))
+    for index, entry in enumerate(fragment.get("manual_log_entries", [])):
+        if entry.get("user_id") != user_id:
+            issues.append(_issue("user_id_mismatch", "Manual log entry user_id must match the requested user_id.", f"manual_log_entries[{index}].user_id"))
+        if entry.get("date") != date:
+            issues.append(_issue("date_mismatch", "Manual log entry date must match the requested date.", f"manual_log_entries[{index}].date"))
+    return issues
+
+
+
+def _issue(code: str, message: str, path: str) -> Any:
+    from health_model.shared_input_backbone import ValidationIssue
+
+    return ValidationIssue(code=code, message=message, path=path)
+
 
 
 def _validation_payload(validation: ValidationResult) -> ValidationPayload:

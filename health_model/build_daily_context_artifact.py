@@ -6,15 +6,15 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from health_model.agent_interface import load_persisted_bundle
 from health_model.agent_readable_daily_context import build_agent_readable_daily_context
 from health_model.shared_input_backbone import validate_shared_input_bundle
 
 
 def build_daily_context_artifact(*, bundle_path: str, user_id: str, date: str, output_dir: str) -> dict[str, Any]:
-    bundle_file = Path(bundle_path)
+    bundle = load_persisted_bundle(bundle_path=bundle_path)
     output_path = Path(output_dir)
 
-    bundle = json.loads(bundle_file.read_text())
     validation = validate_shared_input_bundle(bundle)
     if not validation.is_valid:
         raise BundleValidationFailed(validation)
