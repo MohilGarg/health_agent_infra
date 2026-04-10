@@ -1,175 +1,83 @@
 # Health Lab
 
-Health Lab is a personal health analytics platform that combines Garmin wearable data, food logging, and lightweight ML models into one system for tracking recovery, nutrition, and day-to-day health trends.
+Health Lab is a local-first personal health lab for turning bounded daily inputs into machine-readable artifacts that another agent can inspect safely.
 
-Built as an applied ML + data engineering portfolio project.
+## What works today
 
-## Highlights
+The clearest shipped proof in this repo is a CLI-first loop:
 
-- Built an end-to-end health tracking system combining **Garmin biometrics**, **nutrition logging**, and **interactive dashboards**
-- Added a **bounded offline Garmin GDPR export adapter**, so the project can produce usable datasets without depending on fragile live login flows
-- Trained a **portion-estimation model** to convert natural-language food logs into gram estimates
-- Grounded nutrition estimates in **deterministic USDA lookups**, avoiding LLM hallucinated macros at inference time
-- Built a **Python + Flask + SQLite** application with a web UI, ML pipeline, and Garmin ingestion flow
-- Engineered a personal system that connects **data collection, modelling, storage, and presentation**
+`contract describe -> bundle init -> voice-note submit -> context get -> recommendation create`
 
-## What the system does
+That loop is implemented under `health_model/`, covered by CLI integration tests, and produces JSON artifacts with explicit scope and fail-closed error envelopes.
 
-Health Lab has two main parts:
+## Canonical sample demo path
 
-1. **Food logging pipeline**
-   - Parses food descriptions into structured items
-   - Estimates portion size in grams with a trained model
-   - Maps foods to USDA references
-   - Computes calories and macros via deterministic lookup
-
-2. **Garmin health pipeline**
-   - Pulls wearable data from Garmin when live access is available
-   - Ingests Garmin GDPR export zips offline when live access is unreliable
-   - Cleans and flattens daily metrics
-   - Builds engineered features for analysis
-   - Exports data into dashboards and analysis workflows
-
-Together, these create a personal health data stack for analysing recovery, nutrition, and behavioural trends.
-
-## Architecture
-
-```text
-User input (text)
-       |
-       v
-+------------------------+      +--------------------+
-|  Claude API (parsing)  | ---> |  Text Parser       |
-|  Identifies food items |      |  Splits into items |
-|  + portion descriptions|      |  + portions        |
-+------------------------+      +--------+-----------+
-                                         |
-                                         v
-                                +--------+-----------+
-                                |  Food Matcher      |
-                                |  Fuzzy match to    |
-                                |  USDA reference DB |
-                                +--------+-----------+
-                                         |
-                                         v
-                                +--------+-----------+
-                                | Portion Estimator  |
-                                | GBM model          |
-                                +--------+-----------+
-                                         |
-                                         v
-                                +--------+-----------+
-                                | Nutrition Lookup   |
-                                | deterministic USDA |
-                                +--------+-----------+
-                                         |
-                                         v
-                                   SQLite + Web UI
-```
-
-## Tech stack
-
-| Component | Technology | Notes |
-|---|---|---|
-| Backend | Python, Flask | REST API serving the web UI |
-| ML | scikit-learn HistGradientBoostingRegressor | Portion-size estimation |
-| Parsing | Anthropic Claude API | Structured food extraction |
-| Nutrition data | USDA FoodData Central | Deterministic calorie/macronutrient lookup |
-| Database | SQLite | Single-user local persistence |
-| Frontend | Vanilla JS, Chart.js | Mobile-first UI |
-| Garmin ingestion | Python + garminconnect | Daily metrics, activities, sleep, HRV |
-| Analysis | pandas, NumPy, Jupyter | EDA and model evaluation |
-
-## Project structure
-
-```text
-.
-├── bot/            # Backend logic and business layer
-├── ml/             # Portion-estimation model and data pipeline
-├── web/            # Flask app + frontend
-├── garmin/         # Garmin ingestion and feature engineering
-├── dashboard/      # Dashboard export and standalone dashboard files
-├── notebooks/      # Exploratory and evaluation notebooks
-└── data/           # Runtime data (git-ignored)
-```
-
-## Quickstart
-
-### Requirements
-
-- Python 3.10+
-- `pip`
-- Anthropic API key for parsing
-- Garmin credentials if using the Garmin ingestion pipeline
-
-### Install
+This repo's top-level demo uses tracked fixtures only.
 
 ```bash
-pip install -r requirements.txt
+python3 -m health_model.agent_contract_cli describe
+
+mkdir -p /tmp/health_lab_demo/data/health
+
+python3 -m health_model.agent_bundle_cli init \
+  --bundle-path /tmp/health_lab_demo/data/health/shared_input_bundle_2026-04-09.json \
+  --user-id user_dom \
+  --date 2026-04-09
+
+python3 -m health_model.agent_voice_note_cli submit \
+  --bundle-path /tmp/health_lab_demo/data/health/shared_input_bundle_2026-04-09.json \
+  --output-dir /tmp/health_lab_demo/data/health \
+  --user-id user_dom \
+  --date 2026-04-09 \
+  --payload-path /Users/myapplemini01/Projects/garmin_lab/tests/fixtures/voice_note_intake/daily_voice_note_input.json
+
+python3 -m health_model.agent_context_cli get \
+  --artifact-path /tmp/health_lab_demo/data/health/agent_readable_daily_context_2026-04-09.json \
+  --user-id user_dom \
+  --date 2026-04-09
+
+python3 -m health_model.agent_recommendation_cli create \
+  --output-dir /tmp/health_lab_demo/data/health \
+  --payload-json '{"user_id":"user_dom","date":"2026-04-09","context_artifact_path":"/tmp/health_lab_demo/data/health/agent_readable_daily_context_2026-04-09.json","context_artifact_id":"agent_context_user_dom_2026-04-09","recommendation_id":"rec_20260409_recovery_01","summary":"Keep training easy and prioritize recovery inputs today.","rationale":"The submitted voice note grounds low energy, soreness, and same-day training load, so the safe next step is a lighter day.","evidence_refs":["subjective_01JQVOICESUBJ01","event_01JQVOICELEGS1"],"confidence_score":0.82}'
 ```
 
-### Run the web app
+Fixture source: `tests/fixtures/voice_note_intake/daily_voice_note_input.json`
 
-```bash
-python web/app.py
-```
+Generated demo artifacts:
+- `/tmp/health_lab_demo/data/health/shared_input_bundle_2026-04-09.json`
+- `/tmp/health_lab_demo/data/health/agent_readable_daily_context_2026-04-09.json`
+- `/tmp/health_lab_demo/data/health/agent_readable_daily_context_latest.json`
+- `/tmp/health_lab_demo/data/health/agent_recommendation_2026-04-09.json`
+- `/tmp/health_lab_demo/data/health/agent_recommendation_latest.json`
 
-### Run the Garmin pipeline
+## Non-clinical and privacy boundaries
 
-Live pull path:
+- This is a personal software project, not a clinical product or medical device.
+- The sample demo above is fixture-backed and does not require private health data.
+- Runtime outputs belong under local `data/` paths or another local directory such as `/tmp/health_lab_demo/`; those files are not the public proof object.
+- The repo should be read as artifact-generation infrastructure, not diagnosis or treatment advice.
 
-```bash
-python garmin/pull_garmin.py
-python garmin/clean_garmin.py
-python garmin/build_features.py
-```
+## Real now vs not yet
 
-Offline export path:
+### Real now
+- Contract discovery via `python3 -m health_model.agent_contract_cli describe`
+- Fresh bundle bootstrap via `python3 -m health_model.agent_bundle_cli init`
+- Voice-note submission into a persisted bundle via `python3 -m health_model.agent_voice_note_cli submit`
+- Scoped context reads via `python3 -m health_model.agent_context_cli get`
+- Recommendation artifact creation via `python3 -m health_model.agent_recommendation_cli create`
+- Older Garmin, food logging, dashboard, and web-app surfaces elsewhere in the repo
 
-```bash
-python3 garmin/import_export.py /path/to/garmin-export.zip
-python3 garmin/analyze_export.py
-python3 web/app.py
-```
+### Not yet
+- No claim of clinical-grade guidance, diagnosis, or monitoring
+- No public multi-user product, hosted API, or polished install flow
+- No claim that private runtime data in local `data/` directories is demo-safe for sharing
+- No claim that the broader repo has been refactored around this CLI loop yet
 
-Then open `http://localhost:5001/garmin-export` for the first bounded visual + interpretation layer over the normalized export outputs.
+## Quick repo orientation
 
-The offline path writes derived runtime outputs under `data/garmin/export/` and keeps raw personal export contents out of tracked files.
+The current flagship loop lives in `health_model/`. Older project surfaces for Garmin ingestion, dashboards, and the web app still exist in the repo, but they are not the cleanest stranger-safe proof path today.
 
-## Current capabilities
-
-### Shipped
-- Food logging with structured parsing
-- Portion estimation model
-- USDA-based calorie and macro lookup
-- SQLite-backed storage
-- Web UI for logging and viewing data
-- Garmin ingestion and feature-building pipeline
-- Offline Garmin export normalization path for messy GDPR exports
-- First bounded runtime analysis artifact from normalized export outputs
-- Daily readiness / recovery scoring from engineered Garmin features, nutrition logs, and training context
-- Dashboard export flow
-
-### Experimental / analysis-facing
-- Exploratory notebooks for health and ML analysis
-- Iteration on feature engineering and model evaluation
-- Ongoing refinement of the health analytics layer
-
-## Why this project is interesting
-
-This repo is not just a notebook or toy model. It demonstrates:
-- applied machine learning in a real use case
-- data engineering across multiple sources
-- product thinking around a usable health tool
-- system design from ingestion to UI
-- proof-first handling of messy real-world health exports instead of relying on perfect APIs
-
-## Current proof-first Garmin surfaces
-
-- `garmin/import_export.py` normalizes a bounded Garmin GDPR export into runtime datasets
-- `garmin/analyze_export.py` creates a summary, recent trend payload, and conservative interpretation layer from those normalized outputs
-- `/garmin-export` renders a product-facing recovery + running overview directly from the local runtime artifacts
-- `docs/offline_garmin_export_adapter.md` documents the supported offline ingest path and its limits
+If you want the smallest trustworthy slice first, run the fixture-backed CLI demo above, then inspect the generated JSON artifacts.
 
 ## Canonical Health Lab daily snapshot core
 
