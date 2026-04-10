@@ -192,6 +192,36 @@ Outputs:
 
 This v1 snapshot keeps unsupported fields explicit as `null` and separates data-backed observations from generic guidance.
 
+## Shared input backbone proof
+
+The repo now also includes the bounded shared input backbone validator in `health_model/shared_input_backbone.py`.
+
+It implements:
+- base canonical model validation for `source_artifact`, `input_event`, `subjective_daily_entry`, and `manual_log_entry`
+- semantic checks for the frozen shared-input contract rule set
+- a focused proof target in `tests/test_shared_input_backbone.py`
+
+Run:
+
+```bash
+python3 -m unittest tests.test_shared_input_backbone
+```
+
+## Voice-note intake proof
+
+The repo also includes a bounded voice-note intake path in `health_model/voice_note_intake.py`.
+
+It implements:
+- one transcribed daily voice note to one canonical `source_artifact`
+- bounded derived `input_event` extraction with transcript-span provenance
+- optional `subjective_daily_entry` generation with explicit confidence
+
+Run:
+
+```bash
+python3 -m unittest tests.test_voice_note_intake
+```
+
 ## Next steps
 
 - Improve the dashboard and daily readiness views

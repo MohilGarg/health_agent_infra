@@ -1,0 +1,184 @@
+{
+  "source_artifacts": [
+    {
+      "artifact_id": "artifact_01JQZ9WEARABLEA1",
+      "user_id": "user_dom",
+      "source_type": "wearable",
+      "source_name": "garmin",
+      "source_record_id": "garmin_sleep_2026-04-09",
+      "collected_at": "2026-04-10T06:31:00Z",
+      "ingested_at": "2026-04-10T06:31:04Z",
+      "raw_location": "garmin://sleep/2026-04-09",
+      "raw_format": "json",
+      "hash_or_version": "sha256:wearable-sleep-a1",
+      "parser_version": "garmin-adapter@0.1.0"
+    },
+    {
+      "artifact_id": "artifact_01JQZ9VOICE01",
+      "user_id": "user_dom",
+      "source_type": "voice_note",
+      "source_name": "daily_voice_note",
+      "collected_at": "2026-04-09T21:45:00+01:00",
+      "ingested_at": "2026-04-09T21:47:10+01:00",
+      "raw_location": "file:///healthlab/audio/2026-04-09-note.m4a",
+      "raw_format": "m4a",
+      "hash_or_version": "sha256:voice-a1",
+      "transcript_ref": "file:///healthlab/transcripts/2026-04-09-note.json",
+      "parser_version": "voice-extractor@0.1.0"
+    },
+    {
+      "artifact_id": "artifact_01JQZ9MANUAL01",
+      "user_id": "user_dom",
+      "source_type": "manual",
+      "source_name": "manual_day_log",
+      "collected_at": "2026-04-09T18:00:00+01:00",
+      "ingested_at": "2026-04-09T18:00:05+01:00",
+      "raw_location": "healthlab://manual/day/2026-04-09",
+      "raw_format": "json",
+      "parser_version": "manual-form@0.1.0"
+    }
+  ],
+  "input_events": [
+    {
+      "event_id": "event_01JQZ9SLEEP01",
+      "user_id": "user_dom",
+      "source_type": "wearable",
+      "source_name": "garmin",
+      "source_record_id": "garmin_sleep_2026-04-09_duration",
+      "capture_mode": "passive",
+      "domain": "sleep",
+      "metric_name": "sleep_duration_minutes",
+      "value_type": "number",
+      "value_number": 438,
+      "event_start_at": "2026-04-10T00:48:00+01:00",
+      "event_end_at": "2026-04-10T08:06:00+01:00",
+      "effective_date": "2026-04-10",
+      "ingested_at": "2026-04-10T06:31:04Z",
+      "confidence_label": "high",
+      "confidence_score": 0.97,
+      "missingness_state": "present",
+      "unit": "minutes",
+      "provenance": {
+        "artifact_id": "artifact_01JQZ9WEARABLEA1",
+        "derivation_method": "wearable_normalization",
+        "supporting_refs": [
+          "sleep.durationInSeconds"
+        ],
+        "parser_version": "garmin-adapter@0.1.0",
+        "conflict_status": "none"
+      }
+    },
+    {
+      "event_id": "event_01JQZ9VOICECAF1",
+      "user_id": "user_dom",
+      "source_type": "voice_note",
+      "source_name": "daily_voice_note",
+      "source_record_id": "segment_12",
+      "capture_mode": "derived",
+      "domain": "context",
+      "metric_name": "caffeine_late_intake_flag",
+      "value_type": "boolean",
+      "value_boolean": true,
+      "event_start_at": null,
+      "event_end_at": null,
+      "effective_date": "2026-04-09",
+      "ingested_at": "2026-04-09T21:47:10+01:00",
+      "confidence_label": "medium",
+      "confidence_score": 0.73,
+      "missingness_state": "present",
+      "uncertainty_note": "Speaker said they had coffee late while revising, exact time not stated.",
+      "provenance": {
+        "artifact_id": "artifact_01JQZ9VOICE01",
+        "derivation_method": "voice_extraction",
+        "supporting_refs": [
+          "transcript:chars:412-463"
+        ],
+        "parser_version": "voice-extractor@0.1.0",
+        "conflict_status": "none"
+      }
+    },
+    {
+      "event_id": "event_01JQZ9HYDRATE1",
+      "user_id": "user_dom",
+      "source_type": "manual",
+      "source_name": "manual_day_log",
+      "source_record_id": "manual_hydration_1",
+      "capture_mode": "derived",
+      "domain": "hydration",
+      "metric_name": "hydration_amount_ml",
+      "value_type": "number",
+      "value_number": 750,
+      "event_start_at": null,
+      "event_end_at": null,
+      "effective_date": "2026-04-09",
+      "ingested_at": "2026-04-09T18:00:05+01:00",
+      "confidence_label": "high",
+      "confidence_score": 0.99,
+      "missingness_state": "present",
+      "unit": "ml",
+      "provenance": {
+        "artifact_id": "artifact_01JQZ9MANUAL01",
+        "derivation_method": "manual_form_normalization",
+        "supporting_refs": [
+          "manual_log_entry:manual_01JQZ9HYDR01"
+        ],
+        "parser_version": "manual-form@0.1.0",
+        "conflict_status": "none"
+      }
+    }
+  ],
+  "subjective_daily_entries": [
+    {
+      "entry_id": "subjective_01JQZ9SUBJ01",
+      "user_id": "user_dom",
+      "date": "2026-04-09",
+      "energy_self_rating": 2,
+      "stress_self_rating": 4,
+      "mood_self_rating": 3,
+      "perceived_sleep_quality": 2,
+      "illness_or_soreness_flag": true,
+      "free_text_summary": "Felt flat, stressed from deadlines, legs sore after lifting, and sleep felt poor.",
+      "extraction_status": "complete",
+      "source_artifact_ids": [
+        "artifact_01JQZ9VOICE01"
+      ],
+      "confidence_label": "medium",
+      "confidence_score": 0.76
+    }
+  ],
+  "manual_log_entries": [
+    {
+      "entry_id": "manual_01JQZ9HYDR01",
+      "user_id": "user_dom",
+      "date": "2026-04-09",
+      "log_type": "hydration",
+      "payload": {
+        "amount_ml": 750,
+        "beverage_type": "water",
+        "notes": "bottle finished during afternoon study block"
+      },
+      "source_artifact_id": "artifact_01JQZ9MANUAL01",
+      "completeness_state": "complete",
+      "confidence_label": "high",
+      "confidence_score": 0.99
+    },
+    {
+      "entry_id": "manual_01JQZ9SET01",
+      "user_id": "user_dom",
+      "date": "2026-04-09",
+      "log_type": "exercise_set",
+      "payload": {
+        "exercise_name": "barbell squat",
+        "set_index": 1,
+        "reps": 5,
+        "weight_kg": 100,
+        "rir": 2,
+        "notes": "moved well"
+      },
+      "source_artifact_id": "artifact_01JQZ9MANUAL01",
+      "completeness_state": "complete",
+      "confidence_label": "high",
+      "confidence_score": 0.99
+    }
+  ]
+}

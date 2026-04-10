@@ -1,0 +1,97 @@
+{
+  "source_artifacts": [
+    {
+      "artifact_id": "artifact_01JQVOICEINTAKE01",
+      "user_id": "user_dom",
+      "source_type": "voice_note",
+      "source_name": "daily_voice_note",
+      "source_record_id": "voice-note-2026-04-09",
+      "collected_at": "2026-04-09T21:45:00+01:00",
+      "ingested_at": "2026-04-09T21:47:10+01:00",
+      "raw_location": "file:///healthlab/audio/2026-04-09-note.m4a",
+      "raw_format": "m4a",
+      "hash_or_version": "sha256:voice-a1",
+      "transcript_ref": "file:///healthlab/transcripts/2026-04-09-note.json",
+      "parser_version": "voice-extractor@0.2.0"
+    }
+  ],
+  "input_events": [
+    {
+      "event_id": "event_01JQVOICECAF1",
+      "user_id": "user_dom",
+      "source_type": "voice_note",
+      "source_name": "daily_voice_note",
+      "source_record_id": "segment_12",
+      "capture_mode": "derived",
+      "domain": "context",
+      "metric_name": "caffeine_late_intake_flag",
+      "value_type": "boolean",
+      "value_boolean": true,
+      "event_start_at": null,
+      "event_end_at": null,
+      "effective_date": "2026-04-09",
+      "ingested_at": "2026-04-09T21:47:10+01:00",
+      "confidence_label": "medium",
+      "confidence_score": 0.73,
+      "missingness_state": "present",
+      "uncertainty_note": "Speaker said they had coffee late while revising, exact time not stated.",
+      "provenance": {
+        "artifact_id": "artifact_01JQVOICEINTAKE01",
+        "derivation_method": "voice_extraction",
+        "supporting_refs": [
+          "transcript:chars:117-145"
+        ],
+        "parser_version": "voice-extractor@0.2.0",
+        "conflict_status": "none"
+      }
+    },
+    {
+      "event_id": "event_01JQVOICELEGS1",
+      "user_id": "user_dom",
+      "source_type": "voice_note",
+      "source_name": "daily_voice_note",
+      "source_record_id": "segment_08",
+      "capture_mode": "derived",
+      "domain": "subjective",
+      "metric_name": "illness_or_soreness_flag",
+      "value_type": "boolean",
+      "value_boolean": true,
+      "event_start_at": null,
+      "event_end_at": null,
+      "effective_date": "2026-04-09",
+      "ingested_at": "2026-04-09T21:47:10+01:00",
+      "confidence_label": "high",
+      "confidence_score": 0.88,
+      "missingness_state": "present",
+      "provenance": {
+        "artifact_id": "artifact_01JQVOICEINTAKE01",
+        "derivation_method": "voice_extraction",
+        "supporting_refs": [
+          "transcript:chars:63-95"
+        ],
+        "parser_version": "voice-extractor@0.2.0",
+        "conflict_status": "none"
+      }
+    }
+  ],
+  "subjective_daily_entries": [
+    {
+      "entry_id": "subjective_01JQVOICESUBJ01",
+      "user_id": "user_dom",
+      "date": "2026-04-09",
+      "energy_self_rating": 2,
+      "stress_self_rating": 4,
+      "mood_self_rating": 3,
+      "perceived_sleep_quality": 2,
+      "illness_or_soreness_flag": true,
+      "free_text_summary": "Felt flat, stressed from deadlines, legs sore after lifting, and sleep felt poor.",
+      "extraction_status": "complete",
+      "source_artifact_ids": [
+        "artifact_01JQVOICEINTAKE01"
+      ],
+      "confidence_label": "medium",
+      "confidence_score": 0.76
+    }
+  ],
+  "manual_log_entries": []
+}

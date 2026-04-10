@@ -1,0 +1,108 @@
+from __future__ import annotations
+
+import unittest
+
+from health_model.manual_logging import (
+    build_exercise_set_manual_log_entry,
+    build_hydration_input_event,
+    build_hydration_manual_log_entry,
+    build_manual_logging_bundle,
+    build_manual_source_artifact,
+)
+from health_model.shared_input_backbone import validate_shared_input_bundle
+
+
+class ManualLoggingTest(unittest.TestCase):
+    def test_hydration_and_gym_set_enter_canonical_backbone_cleanly(self) -> None:
+        artifact = build_manual_source_artifact(
+            artifact_id="artifact_01JQZMANUALA1",
+            user_id="user_dom",
+            source_name="manual_gym_hydration_log",
+            collected_at="2026-04-10T18:42:00+01:00",
+            ingested_at="2026-04-10T18:42:03+01:00",
+            raw_location="healthlab://manual/gym-hydration/2026-04-10",
+            parser_version="manual-form@0.1.0",
+        )
+        hydration_entry = build_hydration_manual_log_entry(
+            entry_id="manual_01JQZHYDRATEA1",
+            user_id="user_dom",
+            date="2026-04-10",
+            source_artifact_id=artifact["artifact_id"],
+            amount_ml=600,
+            beverage_type="water",
+            notes="filled bottle after training",
+            completeness_state="complete",
+            confidence_score=0.99,
+        )
+        gym_set_entry = build_exercise_set_manual_log_entry(
+            entry_id="manual_01JQZSETA001",
+            user_id="user_dom",
+            date="2026-04-10",
+            source_artifact_id=artifact["artifact_id"],
+            exercise_name="front squat",
+            set_index=1,
+            reps=5,
+            weight_kg=80,
+            rir=2,
+            notes="paused first rep",
+            completeness_state="complete",
+            confidence_score=0.99,
+        )
+        hydration_event = build_hydration_input_event(
+            event_id="event_01JQZHYDEVENT1",
+            source_record_id="manual_hydration_2026-04-10_1",
+            manual_entry=hydration_entry,
+            artifact=artifact,
+        )
+
+        bundle = build_manual_logging_bundle(
+            source_artifact=artifact,
+            manual_log_entries=[hydration_entry, gym_set_entry],
+            input_events=[hydration_event],
+        )
+        result = validate_shared_input_bundle(bundle)
+
+        self.assertTrue(result.is_valid)
+        self.assertEqual(result.schema_issues, [])
+        self.assertEqual(result.semantic_issues, [])
+        self.assertEqual(bundle["manual_log_entries"][0]["source_artifact_id"], artifact["artifact_id"])
+        self.assertEqual(
+            bundle["input_events"][0]["provenance"]["supporting_refs"],
+            ["manual_log_entry:manual_01JQZHYDRATEA1"],
+        )
+        self.assertEqual(bundle["manual_log_entries"][0]["completeness_state"], "complete")
+        self.assertEqual(bundle["manual_log_entries"][1]["completeness_state"], "complete")
+
+    def test_complete_exercise_set_requires_reps_for_honest_completeness(self) -> None:
+        artifact = build_manual_source_artifact(
+            artifact_id="artifact_01JQZMANUALA2",
+            user_id="user_dom",
+            source_name="manual_gym_hydration_log",
+            collected_at="2026-04-10T18:42:00+01:00",
+            ingested_at="2026-04-10T18:42:03+01:00",
+            raw_location="healthlab://manual/gym-hydration/2026-04-10",
+        )
+        incomplete_gym_set = build_exercise_set_manual_log_entry(
+            entry_id="manual_01JQZSETA002",
+            user_id="user_dom",
+            date="2026-04-10",
+            source_artifact_id=artifact["artifact_id"],
+            exercise_name="front squat",
+            set_index=2,
+            weight_kg=80,
+            completeness_state="complete",
+            confidence_score=0.99,
+        )
+        bundle = build_manual_logging_bundle(
+            source_artifact=artifact,
+            manual_log_entries=[incomplete_gym_set],
+        )
+
+        result = validate_shared_input_bundle(bundle)
+
+        self.assertFalse(result.is_valid)
+        self.assertIn("manual_completeness_mismatch", {issue.code for issue in result.semantic_issues})
+
+
+if __name__ == "__main__":
+    unittest.main()
