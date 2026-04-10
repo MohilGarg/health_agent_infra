@@ -15,6 +15,70 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 class AgentContextCliIntegrationTest(unittest.TestCase):
+    def test_get_reads_valid_scoped_context_after_zero_to_one_init_submit_flow(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            health_dir = Path(temp_dir) / "data" / "health"
+            bundle_path = health_dir / "shared_input_bundle_2026-04-10.json"
+
+            init = self._run_bundle_cli(
+                [
+                    "init",
+                    "--bundle-path",
+                    str(bundle_path),
+                    "--user-id",
+                    "user_1",
+                    "--date",
+                    "2026-04-10",
+                ]
+            )
+
+            submit = self._run_submit_cli(
+                [
+                    "hydration",
+                    "--bundle-path",
+                    str(bundle_path),
+                    "--output-dir",
+                    str(health_dir),
+                    "--user-id",
+                    "user_1",
+                    "--date",
+                    "2026-04-10",
+                    "--collected-at",
+                    "2026-04-10T09:15:00+01:00",
+                    "--ingested-at",
+                    "2026-04-10T09:15:03+01:00",
+                    "--raw-location",
+                    "healthlab://manual/hydration/2026-04-10/morning",
+                    "--confidence-score",
+                    "0.99",
+                    "--completeness-state",
+                    "complete",
+                    "--amount-ml",
+                    "500",
+                    "--beverage-type",
+                    "water",
+                ]
+            )
+
+            read_result = self._run_context_cli(
+                [
+                    "get",
+                    "--artifact-path",
+                    submit["dated_artifact_path"],
+                    "--user-id",
+                    "user_1",
+                    "--date",
+                    "2026-04-10",
+                ]
+            )
+
+            self.assertTrue(init["ok"], msg=init)
+            self.assertTrue(submit["ok"], msg=submit)
+            self.assertTrue(read_result["ok"], msg=read_result)
+            self.assertEqual(read_result["context"]["artifact_type"], "agent_readable_daily_context")
+            self.assertEqual(read_result["context"]["user_id"], "user_1")
+            self.assertEqual(read_result["context"]["date"], "2026-04-10")
+
     def test_get_reads_valid_scoped_context_after_submit_regenerate_flow(self) -> None:
         base_bundle = json.loads((FIXTURE_DIR / "fixture_multi_day_bundle.json").read_text())
 
@@ -204,6 +268,19 @@ class AgentContextCliIntegrationTest(unittest.TestCase):
         )
         self.assertEqual(completed.returncode, expected_returncode, msg=completed.stderr or completed.stdout)
         self.assertEqual(completed.stderr.strip(), "")
+        return json.loads(completed.stdout)
+
+    def _run_bundle_cli(self, args: list[str], *, expected_returncode: int = 0) -> dict[str, object]:
+        completed = subprocess.run(
+            [sys.executable, "-m", "health_model.agent_bundle_cli", *args],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, expected_returncode, msg=completed.stderr or completed.stdout)
+        self.assertEqual(completed.stderr.strip(), "")
+        self.assertTrue(completed.stdout.strip())
         return json.loads(completed.stdout)
 
     def _run_context_cli(self, args: list[str], *, expected_returncode: int = 0) -> dict[str, object]:

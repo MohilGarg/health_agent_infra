@@ -11,7 +11,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 class AgentContractCliIntegrationTest(unittest.TestCase):
-    def test_describe_returns_machine_readable_contract_for_submit_and_context_loop(self) -> None:
+    def test_describe_returns_machine_readable_contract_for_bootstrap_submit_and_context_loop(self) -> None:
         result = self._run_cli(["describe"])
 
         self.assertTrue(result["ok"], msg=result)
@@ -22,6 +22,7 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
         self.assertEqual(contract["contract_id"], "health_lab_agent_contract")
         self.assertEqual(contract["contract_version"], "2026-04-10")
         self.assertEqual(contract["discovery"]["command"], "describe")
+        self.assertEqual(contract["accepted_enums"]["bundle_commands"], ["init"])
         self.assertEqual(contract["accepted_enums"]["submit_commands"], ["hydration", "meal"])
         self.assertEqual(contract["accepted_enums"]["context_commands"], ["get", "get-latest"])
         self.assertEqual(contract["accepted_enums"]["completeness_state"], ["partial", "complete", "corrected"])
@@ -34,6 +35,12 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
             contract["path_conventions"]["latest_context_artifact"],
             "{output_dir}/agent_readable_daily_context_latest.json",
         )
+
+        bootstrap_init = contract["supported_operations"]["bootstrap.init"]
+        self.assertEqual(bootstrap_init["module"], "health_model.agent_bundle_cli")
+        self.assertEqual(bootstrap_init["command"], "init")
+        self.assertEqual(bootstrap_init["mode"], "write")
+        self.assertEqual([arg["name"] for arg in bootstrap_init["args"]], ["bundle_path", "user_id", "date"])
 
         submit_hydration = contract["supported_operations"]["submit.hydration"]
         hydration_flags = {arg["flag"] for arg in submit_hydration["args"]}
@@ -53,8 +60,14 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
         self.assertEqual([arg["name"] for arg in context_get["args"]], ["artifact_path", "user_id", "date"])
 
         produced = contract["artifact_types"]["produced"]
-        self.assertEqual(produced[0]["artifact_type"], "agent_readable_daily_context")
-        self.assertIn("{output_dir}/agent_readable_daily_context_latest.json", produced[0]["paths"])
+        self.assertEqual(produced[0]["artifact_type"], "shared_input_bundle")
+        self.assertIn("{output_dir}/shared_input_bundle_{date}.json", produced[0]["paths"])
+        self.assertEqual(produced[1]["artifact_type"], "agent_readable_daily_context")
+        self.assertIn("{output_dir}/agent_readable_daily_context_latest.json", produced[1]["paths"])
+        self.assertEqual(
+            contract["response_envelopes"]["bootstrap.init"]["success_keys"],
+            ["ok", "bundle_path", "bundle", "validation", "error"],
+        )
 
     def test_invalid_command_returns_fail_closed_json_error_shape(self) -> None:
         result = self._run_cli(["nope"], expected_returncode=1)

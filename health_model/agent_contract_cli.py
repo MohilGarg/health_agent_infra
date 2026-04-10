@@ -139,6 +139,17 @@ def _contract_payload() -> dict[str, Any]:
             "read_only": True,
         },
         "supported_operations": {
+            "bootstrap.init": {
+                "module": "health_model.agent_bundle_cli",
+                "command": "init",
+                "mode": "write",
+                "description": "Create one canonical empty shared-input bundle and fail closed if the target path already exists.",
+                "args": [
+                    _shared_arg("bundle_path"),
+                    _shared_arg("user_id"),
+                    _shared_arg("date"),
+                ],
+            },
             "contract.describe": {
                 "module": "health_model.agent_contract_cli",
                 "command": "describe",
@@ -289,6 +300,7 @@ def _contract_payload() -> dict[str, Any]:
             },
         },
         "accepted_enums": {
+            "bundle_commands": ["init"],
             "submit_commands": ["hydration", "meal"],
             "context_commands": ["get", "get-latest"],
             "contract_commands": ["describe"],
@@ -299,7 +311,7 @@ def _contract_payload() -> dict[str, Any]:
             "consumed": [
                 {
                     "artifact_type": "shared_input_bundle",
-                    "shape": "persisted shared-input bundle JSON consumed through --bundle-path",
+                    "shape": "persisted shared-input bundle JSON consumed through --bundle-path and bootstrapped by bootstrap.init when starting from zero local state",
                 },
                 {
                     "artifact_type": "agent_readable_daily_context",
@@ -307,6 +319,12 @@ def _contract_payload() -> dict[str, Any]:
                 },
             ],
             "produced": [
+                {
+                    "artifact_type": "shared_input_bundle",
+                    "paths": [
+                        "{output_dir}/shared_input_bundle_{date}.json",
+                    ],
+                },
                 {
                     "artifact_type": "agent_readable_daily_context",
                     "paths": [
@@ -322,6 +340,10 @@ def _contract_payload() -> dict[str, Any]:
             "latest_context_artifact": "{output_dir}/agent_readable_daily_context_latest.json",
         },
         "response_envelopes": {
+            "bootstrap.init": {
+                "success_keys": ["ok", "bundle_path", "bundle", "validation", "error"],
+                "error_keys": ["ok", "bundle_path", "bundle", "validation", "error"],
+            },
             "contract.describe": {
                 "success_keys": ["ok", "contract", "validation", "error"],
                 "error_keys": ["ok", "contract", "validation", "error"],
