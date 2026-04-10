@@ -1,0 +1,13 @@
+{
+  "user_id": "user_1",
+  "date": "2026-04-09",
+  "context_artifact_path": "tests/fixtures/agent_readable_daily_context/generated_fixture_day_context.json",
+  "context_artifact_id": "agent_context_user_1_2026-04-09",
+  "recommendation_id": "rec_bad_evidence_01",
+  "summary": "Summary",
+  "rationale": "Rationale",
+  "evidence_refs": [
+    "not_in_context"
+  ],
+  "confidence_score": 0.8
+}
