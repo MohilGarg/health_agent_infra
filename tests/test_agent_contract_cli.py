@@ -10,10 +10,11 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 VOICE_NOTE_FIXTURE = REPO_ROOT / "tests" / "fixtures" / "voice_note_intake" / "daily_voice_note_input.json"
+RETRIEVAL_FIXTURE_DIR = REPO_ROOT / "tests" / "fixtures" / "retrieval_contract"
 
 
 class AgentContractCliIntegrationTest(unittest.TestCase):
-    def test_describe_returns_machine_readable_contract_for_bootstrap_submit_context_and_recommendation_loop(self) -> None:
+    def test_describe_returns_machine_readable_contract_for_bootstrap_submit_context_retrieval_and_recommendation_loop(self) -> None:
         result = self._run_cli(["describe"])
 
         self.assertTrue(result["ok"], msg=result)
@@ -22,17 +23,41 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
 
         contract = result["contract"]
         self.assertEqual(contract["contract_id"], "health_lab_agent_contract")
-        self.assertEqual(contract["contract_version"], "2026-04-10")
+        self.assertEqual(contract["contract_version"], "2026-04-11")
+        self.assertEqual(contract["architecture_boundary"]["private_memory_layer"], "external_to_health_lab")
+        self.assertFalse(contract["architecture_boundary"]["hosted_memory_claims"])
+        self.assertFalse(contract["architecture_boundary"]["embedded_coach_claims"])
         self.assertEqual(contract["discovery"]["command"], "describe")
         self.assertEqual(contract["accepted_enums"]["bundle_commands"], ["init"])
         self.assertEqual(contract["accepted_enums"]["submit_commands"], ["hydration", "meal"])
         self.assertEqual(contract["accepted_enums"]["voice_note_commands"], ["submit"])
         self.assertEqual(contract["accepted_enums"]["voice_note_payload_inputs"], ["payload_json", "payload_path"])
         self.assertEqual(contract["accepted_enums"]["context_commands"], ["get", "get-latest"])
+        self.assertEqual(
+            contract["accepted_enums"]["retrieval_operations"],
+            [
+                "retrieve.day_context",
+                "retrieve.day_nutrition_brief",
+                "retrieve.sleep_review",
+                "retrieve.weekly_pattern_review",
+            ],
+        )
         self.assertEqual(contract["accepted_enums"]["recommendation_commands"], ["create"])
         self.assertEqual(contract["accepted_enums"]["recommendation_payload_inputs"], ["payload_json", "payload_path"])
         self.assertEqual(contract["accepted_enums"]["completeness_state"], ["partial", "complete", "corrected"])
         self.assertEqual(contract["accepted_enums"]["estimated"], ["true", "false"])
+        self.assertEqual(contract["accepted_enums"]["retrieval_boolean_flags"], ["true", "false"])
+        self.assertEqual(
+            contract["accepted_enums"]["retrieval_missingness_states"],
+            ["present", "partial", "missing", "not_supported"],
+        )
+        self.assertEqual(
+            contract["accepted_enums"]["retrieval_conflict_states"],
+            ["none", "source_conflict", "scope_conflict", "resolution_required"],
+        )
+        self.assertIn("request_id", contract["accepted_scope_fields"])
+        self.assertIn("requested_at", contract["accepted_scope_fields"])
+        self.assertIn("memory_locator", contract["accepted_scope_fields"])
         self.assertEqual(
             contract["path_conventions"]["dated_context_artifact"],
             "{output_dir}/agent_readable_daily_context_{date}.json",
@@ -86,6 +111,26 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
         self.assertEqual(context_get["command"], "get")
         self.assertEqual([arg["name"] for arg in context_get["args"]], ["artifact_path", "user_id", "date"])
 
+        retrieval_day_context = contract["supported_operations"]["retrieve.day_context"]
+        retrieval_args = {arg["name"]: arg for arg in retrieval_day_context["args"]}
+        self.assertEqual(retrieval_day_context["module"], "health_model.agent_context_cli")
+        self.assertEqual(retrieval_day_context["command"], "get")
+        self.assertEqual(retrieval_day_context["mode"], "read")
+        self.assertEqual(retrieval_day_context["implementation_status"], "proof_complete")
+        self.assertEqual(retrieval_day_context["response_envelope"], "retrieval")
+        self.assertEqual(retrieval_day_context["consumes"], ["agent_readable_daily_context"])
+        self.assertEqual(retrieval_day_context["produces"], ["retrieval_response_envelope"])
+        self.assertEqual(retrieval_args["artifact_path"]["flag"], "--artifact-path")
+        self.assertEqual(retrieval_args["request_id"]["flag"], "--request-id")
+        self.assertFalse(retrieval_args["timezone"]["required"])
+
+        weekly_review = contract["supported_operations"]["retrieve.weekly_pattern_review"]
+        weekly_args = {arg["name"]: arg for arg in weekly_review["args"]}
+        self.assertEqual(weekly_review["range_limit_days"], 7)
+        self.assertEqual(weekly_args["start_date"]["flag"], "--start-date")
+        self.assertEqual(weekly_args["end_date"]["flag"], "--end-date")
+        self.assertEqual(weekly_args["memory_locator"]["flag"], "--memory-locator")
+
         recommendation_create = contract["supported_operations"]["recommendation.create"]
         recommendation_args = {arg["name"]: arg for arg in recommendation_create["args"]}
         self.assertEqual(recommendation_create["module"], "health_model.agent_recommendation_cli")
@@ -131,6 +176,25 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
             contract["response_envelopes"]["recommendation.create"]["success_keys"],
             ["ok", "artifact_path", "latest_artifact_path", "recommendation", "validation", "error"],
         )
+        self.assertEqual(
+            contract["response_envelopes"]["retrieval"]["success_keys"],
+            ["ok", "artifact_path", "retrieval", "validation", "error"],
+        )
+        self.assertEqual(
+            contract["response_envelopes"]["retrieval"]["retrieval_keys"],
+            [
+                "operation",
+                "scope",
+                "coverage_status",
+                "generated_from",
+                "evidence",
+                "important_gaps",
+                "conflicts",
+                "unsupported_claims",
+            ],
+        )
+        self.assertEqual(contract["proof_artifacts"]["human_contract"], "docs/retrieval_contract_v1.md")
+        self.assertEqual(contract["proof_artifacts"]["machine_contract"], "artifacts/contracts/retrieval_contract_v1.json")
 
     def test_contract_describe_bootstrap_voice_note_submit_and_context_get_prove_external_agent_loop(self) -> None:
         contract_result = self._run_cli(["describe"])
@@ -210,6 +274,97 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
             )
             self.assertEqual(subjective_signal["value"], 2)
             self.assertTrue(subjective_signal["evidence_refs"])
+
+    def test_describe_exposes_retrieval_contract_metadata_and_expected_operations_fixture(self) -> None:
+        result = self._run_cli(["describe"])
+        expected = json.loads((RETRIEVAL_FIXTURE_DIR / "retrieval_contract_v1_expected_operations.json").read_text())
+
+        self.assertEqual(result["contract"]["accepted_enums"]["retrieval_operations"], expected["operations"])
+
+        day_context = result["contract"]["supported_operations"]["retrieve.day_context"]
+        self.assertEqual(day_context["module"], "health_model.agent_context_cli")
+        self.assertEqual(day_context["command"], "get")
+        self.assertEqual(day_context["mode"], "read")
+
+        day_nutrition_brief = result["contract"]["supported_operations"]["retrieve.day_nutrition_brief"]
+        self.assertEqual(day_nutrition_brief["implementation_status"], "discovery_visible_implementation_thin")
+        self.assertEqual(day_nutrition_brief["response_envelope"], "retrieval")
+
+    def test_retrieve_day_context_contract_matches_current_repo_reality_and_fixture_shape(self) -> None:
+        result = self._run_cli(["describe"])
+        request_fixture = json.loads((RETRIEVAL_FIXTURE_DIR / "day_context_smoke_request.json").read_text())
+        response_fixture = json.loads((RETRIEVAL_FIXTURE_DIR / "day_context_smoke_response.json").read_text())
+        artifact_path = REPO_ROOT / request_fixture["artifact_path"]
+
+        context = self._run_module(
+            "health_model.agent_context_cli",
+            [
+                "get",
+                "--artifact-path",
+                str(artifact_path),
+                "--user-id",
+                request_fixture["user_id"],
+                "--date",
+                request_fixture["date"],
+            ],
+        )
+
+        retrieval = {
+            "ok": context["ok"],
+            "artifact_path": request_fixture["artifact_path"],
+            "retrieval": {
+                "operation": "retrieve.day_context",
+                "scope": {
+                    "user_id": request_fixture["user_id"],
+                    "date": request_fixture["date"],
+                },
+                "coverage_status": "partial" if context["context"]["important_gaps"] else "present",
+                "generated_from": context["context"]["generated_from"],
+                "evidence": "agent_readable_daily_context",
+                "important_gaps": [gap["code"] for gap in context["context"]["important_gaps"]],
+                "conflicts": context["context"]["conflicts"],
+                "unsupported_claims": [],
+            },
+        }
+
+        self.assertTrue(context["ok"], msg=context)
+        self.assertEqual(result["contract"]["response_envelopes"]["retrieval"]["retrieval_keys"], list(retrieval["retrieval"].keys()))
+        self.assertEqual(retrieval, response_fixture)
+
+    def test_retrieve_day_context_fails_closed_on_wrong_scope(self) -> None:
+        artifact_path = REPO_ROOT / "data" / "health" / "agent_readable_daily_context_2026-04-10.json"
+
+        wrong_user = self._run_module(
+            "health_model.agent_context_cli",
+            [
+                "get",
+                "--artifact-path",
+                str(artifact_path),
+                "--user-id",
+                "user_other",
+                "--date",
+                "2026-04-10",
+            ],
+            expected_returncode=1,
+        )
+        wrong_date = self._run_module(
+            "health_model.agent_context_cli",
+            [
+                "get",
+                "--artifact-path",
+                str(artifact_path),
+                "--user-id",
+                "user_dom",
+                "--date",
+                "2026-04-09",
+            ],
+            expected_returncode=1,
+        )
+
+        self.assertFalse(wrong_user["ok"])
+        self.assertEqual(wrong_user["error"]["code"], "artifact_user_mismatch")
+        self.assertFalse(wrong_date["ok"])
+        self.assertEqual(wrong_date["error"]["code"], "artifact_date_mismatch")
 
     def test_invalid_command_returns_fail_closed_json_error_shape(self) -> None:
         result = self._run_cli(["nope"], expected_returncode=1)

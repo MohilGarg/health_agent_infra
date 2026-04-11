@@ -1,0 +1,8 @@
+{
+  "operations": [
+    "retrieve.day_context",
+    "retrieve.day_nutrition_brief",
+    "retrieve.sleep_review",
+    "retrieve.weekly_pattern_review"
+  ]
+}

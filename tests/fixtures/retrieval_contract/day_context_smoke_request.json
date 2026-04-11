@@ -1,0 +1,10 @@
+{
+  "operation": "retrieve.day_context",
+  "user_id": "user_dom",
+  "date": "2026-04-10",
+  "artifact_path": "data/health/agent_readable_daily_context_2026-04-10.json",
+  "request_id": "req_day_context_smoke_2026_04_11",
+  "requested_at": "2026-04-11T08:55:00+01:00",
+  "include_conflicts": true,
+  "include_missingness": true
+}

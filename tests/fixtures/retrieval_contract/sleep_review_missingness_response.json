@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "retrieval": {
+    "operation": "retrieve.sleep_review",
+    "coverage_status": "partial",
+    "important_gaps": [
+      "missing_sleep_window",
+      "missing_sleep_duration"
+    ],
+    "conflicts": [],
+    "unsupported_claims": []
+  }
+}

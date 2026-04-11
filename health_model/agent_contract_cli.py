@@ -7,7 +7,7 @@ from typing import Any
 
 
 CONTRACT_ID = "health_lab_agent_contract"
-CONTRACT_VERSION = "2026-04-10"
+CONTRACT_VERSION = "2026-04-11"
 SHARED_ARGS = {
     "bundle_path": {
         "flag": "--bundle-path",
@@ -72,6 +72,81 @@ SHARED_ARGS = {
     },
 }
 
+RETRIEVAL_COMMON_ARGS = {
+    "artifact_path": {
+        "name": "artifact_path",
+        "flag": "--artifact-path",
+        "type": "string",
+        "required": True,
+        "description": "Path to one scoped read-only artifact when retrieval is backed by a local artifact file.",
+    },
+    "memory_locator": {
+        "name": "memory_locator",
+        "flag": "--memory-locator",
+        "type": "string",
+        "required": True,
+        "description": "External user-owned memory reference or locator. Health Lab does not host the backing store.",
+    },
+    "request_id": {
+        "name": "request_id",
+        "flag": "--request-id",
+        "type": "string",
+        "required": True,
+        "description": "Stable request identifier for proofability.",
+    },
+    "requested_at": {
+        "name": "requested_at",
+        "flag": "--requested-at",
+        "type": "datetime",
+        "required": True,
+        "description": "ISO 8601 timestamp for when retrieval was requested.",
+    },
+    "start_date": {
+        "name": "start_date",
+        "flag": "--start-date",
+        "type": "date",
+        "required": True,
+        "description": "Inclusive ISO start date for range-scoped retrieval, YYYY-MM-DD.",
+    },
+    "end_date": {
+        "name": "end_date",
+        "flag": "--end-date",
+        "type": "date",
+        "required": True,
+        "description": "Inclusive ISO end date for range-scoped retrieval, YYYY-MM-DD.",
+    },
+    "timezone": {
+        "name": "timezone",
+        "flag": "--timezone",
+        "type": "string",
+        "required": False,
+        "description": "Optional timezone hint for interpreting requested scope.",
+    },
+    "max_evidence_items": {
+        "name": "max_evidence_items",
+        "flag": "--max-evidence-items",
+        "type": "integer",
+        "required": False,
+        "description": "Optional cap on returned evidence items.",
+    },
+    "include_conflicts": {
+        "name": "include_conflicts",
+        "flag": "--include-conflicts",
+        "type": "enum",
+        "required": False,
+        "accepted_values": ["true", "false"],
+        "description": "Whether to include surfaced conflicts in the retrieval response.",
+    },
+    "include_missingness": {
+        "name": "include_missingness",
+        "flag": "--include-missingness",
+        "type": "enum",
+        "required": False,
+        "accepted_values": ["true", "false"],
+        "description": "Whether to include explicit missingness notes in the retrieval response.",
+    },
+}
+
 
 class CliParseError(ValueError):
     pass
@@ -133,6 +208,12 @@ def _contract_payload() -> dict[str, Any]:
     return {
         "contract_id": CONTRACT_ID,
         "contract_version": CONTRACT_VERSION,
+        "architecture_boundary": {
+            "private_memory_layer": "external_to_health_lab",
+            "health_lab_role": "protocol_reference_layer_only",
+            "hosted_memory_claims": False,
+            "embedded_coach_claims": False,
+        },
         "discovery": {
             "cli_module": "health_model.agent_contract_cli",
             "command": "describe",
@@ -330,6 +411,92 @@ def _contract_payload() -> dict[str, Any]:
                     },
                 ],
             },
+            "retrieve.day_context": {
+                "module": "health_model.agent_context_cli",
+                "command": "get",
+                "mode": "read",
+                "description": "Return one scoped agent-readable daily context artifact as the v1 retrieval proof surface.",
+                "implementation_status": "proof_complete",
+                "args": [
+                    _shared_arg("user_id"),
+                    _shared_arg("date"),
+                    _retrieval_arg("artifact_path"),
+                    _retrieval_arg("request_id"),
+                    _retrieval_arg("requested_at"),
+                    _retrieval_arg("timezone"),
+                    _retrieval_arg("max_evidence_items"),
+                    _retrieval_arg("include_conflicts"),
+                    _retrieval_arg("include_missingness"),
+                ],
+                "consumes": ["agent_readable_daily_context"],
+                "produces": ["retrieval_response_envelope"],
+                "response_envelope": "retrieval",
+            },
+            "retrieve.day_nutrition_brief": {
+                "module": "health_model.day_nutrition_brief",
+                "command": "retrieve-day-nutrition-brief",
+                "mode": "read",
+                "description": "Describe the bounded day-scoped nutrition brief retrieval contract without introducing hosted retrieval.",
+                "implementation_status": "discovery_visible_implementation_thin",
+                "args": [
+                    _shared_arg("user_id"),
+                    _shared_arg("date"),
+                    _retrieval_arg("memory_locator"),
+                    _retrieval_arg("request_id"),
+                    _retrieval_arg("requested_at"),
+                    _retrieval_arg("timezone"),
+                    _retrieval_arg("max_evidence_items"),
+                    _retrieval_arg("include_conflicts"),
+                    _retrieval_arg("include_missingness"),
+                ],
+                "consumes": ["user_owned_private_memory_locator"],
+                "produces": ["retrieval_response_envelope"],
+                "response_envelope": "retrieval",
+            },
+            "retrieve.sleep_review": {
+                "module": "health_model.agent_context_cli",
+                "command": "retrieve-sleep-review",
+                "mode": "read",
+                "description": "Describe the bounded one-day sleep review retrieval contract with missingness-first semantics.",
+                "implementation_status": "discovery_visible_implementation_thin",
+                "args": [
+                    _shared_arg("user_id"),
+                    _shared_arg("date"),
+                    _retrieval_arg("memory_locator"),
+                    _retrieval_arg("request_id"),
+                    _retrieval_arg("requested_at"),
+                    _retrieval_arg("timezone"),
+                    _retrieval_arg("max_evidence_items"),
+                    _retrieval_arg("include_conflicts"),
+                    _retrieval_arg("include_missingness"),
+                ],
+                "consumes": ["user_owned_private_memory_locator"],
+                "produces": ["retrieval_response_envelope"],
+                "response_envelope": "retrieval",
+            },
+            "retrieve.weekly_pattern_review": {
+                "module": "health_model.agent_context_cli",
+                "command": "retrieve-weekly-pattern-review",
+                "mode": "read",
+                "description": "Describe the bounded seven-day weekly pattern retrieval contract while keeping implementation intentionally thin in v1.",
+                "implementation_status": "discovery_visible_implementation_thin",
+                "args": [
+                    _shared_arg("user_id"),
+                    _retrieval_arg("start_date"),
+                    _retrieval_arg("end_date"),
+                    _retrieval_arg("memory_locator"),
+                    _retrieval_arg("request_id"),
+                    _retrieval_arg("requested_at"),
+                    _retrieval_arg("timezone"),
+                    _retrieval_arg("max_evidence_items"),
+                    _retrieval_arg("include_conflicts"),
+                    _retrieval_arg("include_missingness"),
+                ],
+                "consumes": ["user_owned_private_memory_locator"],
+                "produces": ["retrieval_response_envelope"],
+                "response_envelope": "retrieval",
+                "range_limit_days": 7,
+            },
             "recommendation.create": {
                 "module": "health_model.agent_recommendation_cli",
                 "command": "create",
@@ -382,12 +549,35 @@ def _contract_payload() -> dict[str, Any]:
             "voice_note_commands": ["submit"],
             "voice_note_payload_inputs": ["payload_json", "payload_path"],
             "context_commands": ["get", "get-latest"],
+            "retrieval_operations": [
+                "retrieve.day_context",
+                "retrieve.day_nutrition_brief",
+                "retrieve.sleep_review",
+                "retrieve.weekly_pattern_review",
+            ],
             "recommendation_commands": ["create"],
             "recommendation_payload_inputs": ["payload_json", "payload_path"],
             "contract_commands": ["describe"],
             "completeness_state": ["partial", "complete", "corrected"],
             "estimated": ["true", "false"],
+            "retrieval_boolean_flags": ["true", "false"],
+            "retrieval_missingness_states": ["present", "partial", "missing", "not_supported"],
+            "retrieval_conflict_states": ["none", "source_conflict", "scope_conflict", "resolution_required"],
         },
+        "accepted_scope_fields": [
+            "user_id",
+            "date",
+            "start_date",
+            "end_date",
+            "artifact_path",
+            "memory_locator",
+            "request_id",
+            "requested_at",
+            "timezone",
+            "max_evidence_items",
+            "include_conflicts",
+            "include_missingness",
+        ],
         "artifact_types": {
             "consumed": [
                 {
@@ -456,12 +646,35 @@ def _contract_payload() -> dict[str, Any]:
                 "success_keys": ["ok", "artifact_path", "latest_artifact_path", "recommendation", "validation", "error"],
                 "error_keys": ["ok", "artifact_path", "latest_artifact_path", "recommendation", "validation", "error"],
             },
+            "retrieval": {
+                "success_keys": ["ok", "artifact_path", "retrieval", "validation", "error"],
+                "error_keys": ["ok", "artifact_path", "retrieval", "validation", "error"],
+                "retrieval_keys": [
+                    "operation",
+                    "scope",
+                    "coverage_status",
+                    "generated_from",
+                    "evidence",
+                    "important_gaps",
+                    "conflicts",
+                    "unsupported_claims",
+                ],
+            },
+        },
+        "proof_artifacts": {
+            "human_contract": "docs/retrieval_contract_v1.md",
+            "machine_contract": "artifacts/contracts/retrieval_contract_v1.json",
+            "day_context_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11/",
         },
     }
 
 
 def _shared_arg(name: str) -> dict[str, Any]:
     return {"name": name, **SHARED_ARGS[name]}
+
+
+def _retrieval_arg(name: str) -> dict[str, Any]:
+    return dict(RETRIEVAL_COMMON_ARGS[name])
 
 
 def _error_response(
