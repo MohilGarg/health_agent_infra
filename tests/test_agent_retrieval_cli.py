@@ -656,6 +656,32 @@ class AgentRetrievalCliIntegrationTest(unittest.TestCase):
         self.assertFalse(result["ok"])
         self.assertEqual(result, expected)
 
+    def test_recommendation_resolution_window_fails_closed_on_invalid_requested_at_with_request_echo(self) -> None:
+        request_fixture = json.loads((RETRIEVAL_FIXTURE_DIR / "recommendation_resolution_window_success_request.json").read_text())
+        expected = json.loads((RETRIEVAL_FIXTURE_DIR / "recommendation_resolution_window_invalid_request_metadata_response.json").read_text())
+
+        result = self._run_cli(
+            [
+                "recommendation-resolution-window",
+                "--user-id",
+                request_fixture["user_id"],
+                "--start-date",
+                request_fixture["start_date"],
+                "--end-date",
+                request_fixture["end_date"],
+                "--memory-locator",
+                request_fixture["memory_locator"],
+                "--request-id",
+                request_fixture["request_id"],
+                "--requested-at",
+                "2026-04-11T13:25:00",
+            ],
+            expected_returncode=1,
+        )
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result, expected)
+
     def test_recommendation_resolution_window_fails_closed_on_range_limit(self) -> None:
         request_fixture = json.loads((RETRIEVAL_FIXTURE_DIR / "recommendation_resolution_window_success_request.json").read_text())
         expected = json.loads((RETRIEVAL_FIXTURE_DIR / "recommendation_resolution_window_range_limit_response.json").read_text())
