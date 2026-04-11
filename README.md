@@ -115,6 +115,22 @@ Outputs:
 
 This v1 snapshot keeps unsupported fields explicit as `null` and separates data-backed observations from generic guidance.
 
+## Day-scoped nutrition brief
+
+For a compact read-only nutrition view in the self-usage lane, run:
+
+```bash
+python3 -m health_model.day_nutrition_brief \
+  --date 2026-04-08 \
+  --user-id 1
+```
+
+Outputs:
+- `data/health/day_nutrition_brief_YYYY-MM-DD.json`
+- `data/health/day_nutrition_brief_latest.json`
+
+This brief uses only accepted daily snapshot nutrition fields, keeps missing nutrition coverage explicit, and marks personalized bedtime guidance plus micronutrient-gap detection as unsupported in this slice.
+
 ## Shared input backbone proof
 
 The repo now also includes the bounded shared input backbone validator in `health_model/shared_input_backbone.py`.
