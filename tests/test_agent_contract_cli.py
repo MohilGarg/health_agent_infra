@@ -124,6 +124,14 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
         self.assertEqual(retrieval_args["request_id"]["flag"], "--request-id")
         self.assertFalse(retrieval_args["timezone"]["required"])
 
+        sleep_review = contract["supported_operations"]["retrieve.sleep_review"]
+        sleep_review_args = {arg["name"]: arg for arg in sleep_review["args"]}
+        self.assertEqual(sleep_review["module"], "health_model.agent_retrieval_cli")
+        self.assertEqual(sleep_review["command"], "sleep-review")
+        self.assertEqual(sleep_review["implementation_status"], "proof_complete")
+        self.assertEqual(sleep_review["consumes"], ["agent_readable_daily_context"])
+        self.assertEqual(sleep_review_args["artifact_path"]["flag"], "--artifact-path")
+
         weekly_review = contract["supported_operations"]["retrieve.weekly_pattern_review"]
         weekly_args = {arg["name"]: arg for arg in weekly_review["args"]}
         self.assertEqual(weekly_review["range_limit_days"], 7)
@@ -289,6 +297,11 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
         day_nutrition_brief = result["contract"]["supported_operations"]["retrieve.day_nutrition_brief"]
         self.assertEqual(day_nutrition_brief["implementation_status"], "discovery_visible_implementation_thin")
         self.assertEqual(day_nutrition_brief["response_envelope"], "retrieval")
+
+        sleep_review = result["contract"]["supported_operations"]["retrieve.sleep_review"]
+        self.assertEqual(sleep_review["module"], "health_model.agent_retrieval_cli")
+        self.assertEqual(sleep_review["command"], "sleep-review")
+        self.assertEqual(sleep_review["implementation_status"], "proof_complete")
 
     def test_retrieve_day_context_contract_matches_current_repo_reality_and_fixture_shape(self) -> None:
         result = self._run_cli(["describe"])

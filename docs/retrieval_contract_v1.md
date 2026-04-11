@@ -40,12 +40,13 @@ Machine-readable discovery is published by `python3 -m health_model.agent_contra
 
 ### `retrieve.sleep_review`
 - Purpose: return a bounded one-day sleep evidence review.
-- Current implementation status: discovery-visible, implementation-thin.
-- Required scope: `user_id`, `date`, `memory_locator`, `request_id`, `requested_at`.
+- Current implementation status: proof-complete in v1.
+- Required scope: `user_id`, `date`, `artifact_path`, `request_id`, `requested_at`.
 - Semantics:
   - review-only, not advisory
   - distinguish grounded, subjective-only, and missing sleep evidence
   - partial coverage is valid when scope matches but evidence is sparse
+  - fail closed if the artifact is missing, invalid JSON, wrong `artifact_type`, wrong `user_id`, or wrong `date`
 
 ### `retrieve.weekly_pattern_review`
 - Purpose: return a bounded seven-day pattern review over already accepted daily surfaces.
@@ -112,9 +113,11 @@ The `retrieval` object contains:
 
 ## Proof expectation for v1
 
-The smallest safe proof is `retrieve.day_context` only.
+The frozen proof bundles for this slice live under:
+- `artifacts/protocol_layer_proof/2026-04-11/` for `retrieve.day_context`
+- `artifacts/protocol_layer_proof/2026-04-11-sleep-review/` for `retrieve.sleep_review`
 
-The frozen proof bundle for this slice lives under `artifacts/protocol_layer_proof/2026-04-11/` and includes:
+Each bundle includes:
 - retrieval request artifact
 - copied day-context artifact
 - success envelope
