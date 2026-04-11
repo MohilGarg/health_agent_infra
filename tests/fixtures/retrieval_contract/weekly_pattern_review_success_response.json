@@ -6,39 +6,6 @@
     "conflicts": [
       {
         "code": "conflicting_passive_activity",
-        "date": "2026-04-04",
-        "detail": "Passive activity evidence conflicted across canonical events.",
-        "domain": "activity_training",
-        "evidence_refs": [
-          "event_active_minutes_20260409",
-          "event_steps_evening_20260409",
-          "event_steps_morning_20260409"
-        ]
-      },
-      {
-        "code": "conflicting_passive_activity",
-        "date": "2026-04-06",
-        "detail": "Passive activity evidence conflicted across canonical events.",
-        "domain": "activity_training",
-        "evidence_refs": [
-          "event_active_minutes_20260409",
-          "event_steps_evening_20260409",
-          "event_steps_morning_20260409"
-        ]
-      },
-      {
-        "code": "conflicting_passive_activity",
-        "date": "2026-04-08",
-        "detail": "Passive activity evidence conflicted across canonical events.",
-        "domain": "activity_training",
-        "evidence_refs": [
-          "event_active_minutes_20260409",
-          "event_steps_evening_20260409",
-          "event_steps_morning_20260409"
-        ]
-      },
-      {
-        "code": "conflicting_passive_activity",
         "date": "2026-04-09",
         "detail": "Passive activity evidence conflicted across canonical events.",
         "domain": "activity_training",
@@ -54,29 +21,25 @@
       "days_reviewed": 7,
       "per_day": [
         {
-          "conflict_codes": [
-            "conflicting_passive_activity"
-          ],
-          "coverage_status": "partial",
+          "conflict_codes": [],
+          "coverage_status": "missing",
           "date": "2026-04-04",
           "important_gap_codes": [
-            "missing_subjective_sleep_quality"
+            "missing_sleep_window",
+            "missing_sleep_duration",
+            "missing_subjective_sleep_quality",
+            "missing_passive_activity",
+            "missing_intentional_training"
           ],
           "sleep_review": {
             "primary_sleep_window": {
-              "confidence_label": "high",
-              "confidence_score": 0.96,
-              "derivation_method": "direct_rollup",
-              "evidence_refs": [
-                "event_sleep_start_20260409",
-                "event_sleep_end_20260409"
-              ],
-              "status": "grounded",
-              "uncertainty_note": null,
-              "value": {
-                "end_at": "2026-04-09T06:55:00+01:00",
-                "start_at": "2026-04-08T22:45:00+01:00"
-              }
+              "confidence_label": "low",
+              "confidence_score": 0.0,
+              "derivation_method": "none",
+              "evidence_refs": [],
+              "status": "missing",
+              "uncertainty_note": "No complete grounded sleep window was available.",
+              "value": null
             },
             "subjective_sleep_quality": {
               "confidence_label": "low",
@@ -88,25 +51,24 @@
               "value": null
             },
             "total_sleep_duration_minutes": {
-              "confidence_label": "high",
-              "confidence_score": 0.95,
+              "confidence_label": "low",
+              "confidence_score": 0.0,
               "derivation_method": "none",
-              "evidence_refs": [
-                "event_sleep_duration_20260409"
-              ],
-              "status": "grounded",
-              "uncertainty_note": null,
-              "value": 490.0
+              "evidence_refs": [],
+              "status": "missing",
+              "uncertainty_note": "No reliable sleep duration evidence was available.",
+              "value": null
             }
           }
         },
         {
           "conflict_codes": [],
-          "coverage_status": "partial",
+          "coverage_status": "missing",
           "date": "2026-04-05",
           "important_gap_codes": [
             "missing_sleep_window",
             "missing_sleep_duration",
+            "missing_subjective_sleep_quality",
             "missing_passive_activity",
             "missing_intentional_training"
           ],
@@ -121,53 +83,6 @@
               "value": null
             },
             "subjective_sleep_quality": {
-              "confidence_label": "medium",
-              "confidence_score": 0.79,
-              "derivation_method": "none",
-              "evidence_refs": [
-                "subjective_self_usage_20260410"
-              ],
-              "status": "grounded",
-              "uncertainty_note": null,
-              "value": 3
-            },
-            "total_sleep_duration_minutes": {
-              "confidence_label": "low",
-              "confidence_score": 0.0,
-              "derivation_method": "none",
-              "evidence_refs": [],
-              "status": "missing",
-              "uncertainty_note": "No reliable sleep duration evidence was available.",
-              "value": null
-            }
-          }
-        },
-        {
-          "conflict_codes": [
-            "conflicting_passive_activity"
-          ],
-          "coverage_status": "partial",
-          "date": "2026-04-06",
-          "important_gap_codes": [
-            "missing_subjective_sleep_quality"
-          ],
-          "sleep_review": {
-            "primary_sleep_window": {
-              "confidence_label": "high",
-              "confidence_score": 0.96,
-              "derivation_method": "direct_rollup",
-              "evidence_refs": [
-                "event_sleep_start_20260409",
-                "event_sleep_end_20260409"
-              ],
-              "status": "grounded",
-              "uncertainty_note": null,
-              "value": {
-                "end_at": "2026-04-09T06:55:00+01:00",
-                "start_at": "2026-04-08T22:45:00+01:00"
-              }
-            },
-            "subjective_sleep_quality": {
               "confidence_label": "low",
               "confidence_score": 0.0,
               "derivation_method": "none",
@@ -177,25 +92,24 @@
               "value": null
             },
             "total_sleep_duration_minutes": {
-              "confidence_label": "high",
-              "confidence_score": 0.95,
+              "confidence_label": "low",
+              "confidence_score": 0.0,
               "derivation_method": "none",
-              "evidence_refs": [
-                "event_sleep_duration_20260409"
-              ],
-              "status": "grounded",
-              "uncertainty_note": null,
-              "value": 490.0
+              "evidence_refs": [],
+              "status": "missing",
+              "uncertainty_note": "No reliable sleep duration evidence was available.",
+              "value": null
             }
           }
         },
         {
           "conflict_codes": [],
-          "coverage_status": "partial",
-          "date": "2026-04-07",
+          "coverage_status": "missing",
+          "date": "2026-04-06",
           "important_gap_codes": [
             "missing_sleep_window",
             "missing_sleep_duration",
+            "missing_subjective_sleep_quality",
             "missing_passive_activity",
             "missing_intentional_training"
           ],
@@ -210,15 +124,13 @@
               "value": null
             },
             "subjective_sleep_quality": {
-              "confidence_label": "medium",
-              "confidence_score": 0.79,
+              "confidence_label": "low",
+              "confidence_score": 0.0,
               "derivation_method": "none",
-              "evidence_refs": [
-                "subjective_self_usage_20260410"
-              ],
-              "status": "grounded",
-              "uncertainty_note": null,
-              "value": 3
+              "evidence_refs": [],
+              "status": "missing",
+              "uncertainty_note": "Subjective sleep quality was not provided.",
+              "value": null
             },
             "total_sleep_duration_minutes": {
               "confidence_label": "low",
@@ -232,29 +144,25 @@
           }
         },
         {
-          "conflict_codes": [
-            "conflicting_passive_activity"
-          ],
-          "coverage_status": "partial",
-          "date": "2026-04-08",
+          "conflict_codes": [],
+          "coverage_status": "missing",
+          "date": "2026-04-07",
           "important_gap_codes": [
-            "missing_subjective_sleep_quality"
+            "missing_sleep_window",
+            "missing_sleep_duration",
+            "missing_subjective_sleep_quality",
+            "missing_passive_activity",
+            "missing_intentional_training"
           ],
           "sleep_review": {
             "primary_sleep_window": {
-              "confidence_label": "high",
-              "confidence_score": 0.96,
-              "derivation_method": "direct_rollup",
-              "evidence_refs": [
-                "event_sleep_start_20260409",
-                "event_sleep_end_20260409"
-              ],
-              "status": "grounded",
-              "uncertainty_note": null,
-              "value": {
-                "end_at": "2026-04-09T06:55:00+01:00",
-                "start_at": "2026-04-08T22:45:00+01:00"
-              }
+              "confidence_label": "low",
+              "confidence_score": 0.0,
+              "derivation_method": "none",
+              "evidence_refs": [],
+              "status": "missing",
+              "uncertainty_note": "No complete grounded sleep window was available.",
+              "value": null
             },
             "subjective_sleep_quality": {
               "confidence_label": "low",
@@ -266,15 +174,54 @@
               "value": null
             },
             "total_sleep_duration_minutes": {
-              "confidence_label": "high",
-              "confidence_score": 0.95,
+              "confidence_label": "low",
+              "confidence_score": 0.0,
               "derivation_method": "none",
-              "evidence_refs": [
-                "event_sleep_duration_20260409"
-              ],
-              "status": "grounded",
-              "uncertainty_note": null,
-              "value": 490.0
+              "evidence_refs": [],
+              "status": "missing",
+              "uncertainty_note": "No reliable sleep duration evidence was available.",
+              "value": null
+            }
+          }
+        },
+        {
+          "conflict_codes": [],
+          "coverage_status": "missing",
+          "date": "2026-04-08",
+          "important_gap_codes": [
+            "missing_sleep_window",
+            "missing_sleep_duration",
+            "missing_subjective_sleep_quality",
+            "missing_passive_activity",
+            "missing_intentional_training"
+          ],
+          "sleep_review": {
+            "primary_sleep_window": {
+              "confidence_label": "low",
+              "confidence_score": 0.0,
+              "derivation_method": "none",
+              "evidence_refs": [],
+              "status": "missing",
+              "uncertainty_note": "No complete grounded sleep window was available.",
+              "value": null
+            },
+            "subjective_sleep_quality": {
+              "confidence_label": "low",
+              "confidence_score": 0.0,
+              "derivation_method": "none",
+              "evidence_refs": [],
+              "status": "missing",
+              "uncertainty_note": "Subjective sleep quality was not provided.",
+              "value": null
+            },
+            "total_sleep_duration_minutes": {
+              "confidence_label": "low",
+              "confidence_score": 0.0,
+              "derivation_method": "none",
+              "evidence_refs": [],
+              "status": "missing",
+              "uncertainty_note": "No reliable sleep duration evidence was available.",
+              "value": null
             }
           }
         },
@@ -412,23 +359,23 @@
     "important_gaps": [
       {
         "code": "missing_intentional_training",
-        "days_present": 3
+        "days_present": 6
       },
       {
         "code": "missing_passive_activity",
-        "days_present": 3
+        "days_present": 6
       },
       {
         "code": "missing_sleep_duration",
-        "days_present": 3
+        "days_present": 6
       },
       {
         "code": "missing_sleep_window",
-        "days_present": 3
+        "days_present": 6
       },
       {
         "code": "missing_subjective_sleep_quality",
-        "days_present": 4
+        "days_present": 6
       }
     ],
     "operation": "retrieve.weekly_pattern_review",

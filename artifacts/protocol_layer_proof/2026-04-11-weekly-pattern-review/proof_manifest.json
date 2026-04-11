@@ -44,6 +44,7 @@
   },
   "notes": [
     "Weekly retrieval aggregates only accepted agent_readable_daily_context artifacts listed by the bounded memory locator fixture.",
+    "Each accepted daily artifact is frozen under its matching day label so per-day evidence refs stay truthful.",
     "The slice is review-only and returns per-day sleep evidence, repeated important gaps, and surfaced conflicts."
   ],
   "operation": "retrieve.weekly_pattern_review",
