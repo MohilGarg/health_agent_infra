@@ -83,6 +83,19 @@ Machine-readable discovery is published by `python3 -m health_model.agent_contra
   - fail closed if `judgment.recommendation_artifact_path` does not resolve to the supplied recommendation artifact path
   - return `retrieval.evidence.recommendation`, `retrieval.evidence.judgment`, and explicit linkage fields, with no new synthesis, coaching, or aggregation
 
+### `retrieve.recommendation_feedback_window`
+- Purpose: return a bounded seven-day read-only window of linked recommendation plus same-day judgment pairs aggregated only from an accepted memory locator fixture.
+- Current implementation status: proof-complete in v1.
+- Required scope: `user_id`, `start_date`, `end_date`, `memory_locator`, `request_id`, `requested_at`.
+- Optional scope: `timezone`, `max_feedback_items`, `include_conflicts`, `include_missingness`.
+- Semantics:
+  - validate `request_id` as a non-empty string and `requested_at` as an ISO 8601 datetime with timezone information, then echo both under `validation.request_echo`
+  - fail closed if `start_date` or `end_date` is invalid, the inclusive range exceeds seven contiguous dates, or the bounded `memory_locator` fixture cannot be resolved
+  - aggregate only accepted same-day recommendation plus judgment pairs listed by the bounded `memory_locator`
+  - fail closed if any listed pair is malformed, wrong-scope, missing, or has mismatched recommendation id or recommendation artifact path linkage
+  - allow truthful partial coverage when some in-range dates legitimately have no linked pair listed in the locator
+  - no scoring, ranking, recommendation rewriting, coaching logic, or analytics
+
 ### `retrieve.weekly_pattern_review`
 - Purpose: return a bounded seven-day pattern review over already accepted daily context artifacts.
 - Current implementation status: proof-complete in v1.
@@ -104,6 +117,11 @@ Required common retrieval fields:
 - `requested_at`
 - scope selector: `date` or `start_date` plus `end_date`
 - locator: `artifact_path`, `recommendation_artifact_path` plus `judgment_artifact_path`, or `memory_locator`
+
+Optional retrieval fields still used by bounded window retrieval ops:
+- `timezone`
+- `max_feedback_items`
+
 
 Optional retrieval fields for accepted daily retrieval ops:
 - `include_conflicts`
@@ -161,6 +179,7 @@ The frozen proof bundles for this slice live under:
 - `artifacts/protocol_layer_proof/2026-04-11-recommendation-retrieval/` for `retrieve.recommendation`
 - `artifacts/protocol_layer_proof/2026-04-11-recommendation-judgment-retrieval/` for `retrieve.recommendation_judgment`
 - `artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/` for `retrieve.recommendation_feedback`
+- `artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/` for `retrieve.recommendation_feedback_window`
 - `artifacts/protocol_layer_proof/2026-04-11-weekly-pattern-review/` for `retrieve.weekly_pattern_review`
 
 Each bundle includes:

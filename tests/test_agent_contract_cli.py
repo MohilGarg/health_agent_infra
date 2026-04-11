@@ -42,6 +42,7 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
                 "retrieve.recommendation",
                 "retrieve.recommendation_judgment",
                 "retrieve.recommendation_feedback",
+                "retrieve.recommendation_feedback_window",
                 "retrieve.weekly_pattern_review",
             ],
         )
@@ -180,6 +181,19 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
         self.assertNotIn("timezone", recommendation_feedback_args)
         self.assertNotIn("max_evidence_items", recommendation_feedback_args)
 
+        recommendation_feedback_window = contract["supported_operations"]["retrieve.recommendation_feedback_window"]
+        recommendation_feedback_window_args = {arg["name"]: arg for arg in recommendation_feedback_window["args"]}
+        self.assertEqual(recommendation_feedback_window["module"], "health_model.agent_retrieval_cli")
+        self.assertEqual(recommendation_feedback_window["command"], "recommendation-feedback-window")
+        self.assertEqual(recommendation_feedback_window["implementation_status"], "proof_complete")
+        self.assertEqual(recommendation_feedback_window["range_limit_days"], 7)
+        self.assertEqual(
+            recommendation_feedback_window["consumes"],
+            ["user_owned_private_memory_locator", "agent_recommendation", "recommendation_judgment"],
+        )
+        self.assertEqual(recommendation_feedback_window_args["memory_locator"]["flag"], "--memory-locator")
+        self.assertEqual(recommendation_feedback_window_args["max_feedback_items"]["flag"], "--max-feedback-items")
+
         day_nutrition_brief = contract["supported_operations"]["retrieve.day_nutrition_brief"]
         day_nutrition_args = {arg["name"]: arg for arg in day_nutrition_brief["args"]}
         self.assertEqual(day_nutrition_brief["module"], "health_model.day_nutrition_brief")
@@ -317,6 +331,10 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
             contract["proof_artifacts"]["recommendation_feedback_retrieval_proof_bundle"],
             "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/",
         )
+        self.assertEqual(
+            contract["proof_artifacts"]["recommendation_feedback_window_retrieval_proof_bundle"],
+            "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/",
+        )
 
     def test_contract_describe_bootstrap_voice_note_submit_and_context_get_prove_external_agent_loop(self) -> None:
         contract_result = self._run_cli(["describe"])
@@ -434,6 +452,11 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
         self.assertEqual(recommendation_feedback["module"], "health_model.agent_retrieval_cli")
         self.assertEqual(recommendation_feedback["command"], "recommendation-feedback")
         self.assertEqual(recommendation_feedback["implementation_status"], "proof_complete")
+
+        recommendation_feedback_window = result["contract"]["supported_operations"]["retrieve.recommendation_feedback_window"]
+        self.assertEqual(recommendation_feedback_window["module"], "health_model.agent_retrieval_cli")
+        self.assertEqual(recommendation_feedback_window["command"], "recommendation-feedback-window")
+        self.assertEqual(recommendation_feedback_window["implementation_status"], "proof_complete")
 
         weekly_review = result["contract"]["supported_operations"]["retrieve.weekly_pattern_review"]
         self.assertEqual(weekly_review["module"], "health_model.agent_context_cli")
