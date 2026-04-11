@@ -39,6 +39,7 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
                 "retrieve.day_context",
                 "retrieve.day_nutrition_brief",
                 "retrieve.sleep_review",
+                "retrieve.recommendation",
                 "retrieve.recommendation_judgment",
                 "retrieve.weekly_pattern_review",
             ],
@@ -146,6 +147,16 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
         self.assertEqual(sleep_review_args["artifact_path"]["flag"], "--artifact-path")
         self.assertNotIn("timezone", sleep_review_args)
         self.assertNotIn("max_evidence_items", sleep_review_args)
+
+        recommendation = contract["supported_operations"]["retrieve.recommendation"]
+        recommendation_args = {arg["name"]: arg for arg in recommendation["args"]}
+        self.assertEqual(recommendation["module"], "health_model.agent_retrieval_cli")
+        self.assertEqual(recommendation["command"], "recommendation")
+        self.assertEqual(recommendation["implementation_status"], "proof_complete")
+        self.assertEqual(recommendation["consumes"], ["agent_recommendation"])
+        self.assertEqual(recommendation_args["artifact_path"]["flag"], "--artifact-path")
+        self.assertNotIn("timezone", recommendation_args)
+        self.assertNotIn("max_evidence_items", recommendation_args)
 
         recommendation_judgment = contract["supported_operations"]["retrieve.recommendation_judgment"]
         recommendation_judgment_args = {arg["name"]: arg for arg in recommendation_judgment["args"]}
@@ -283,6 +294,10 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
             "artifacts/protocol_layer_proof/2026-04-11-weekly-pattern-review/",
         )
         self.assertEqual(
+            contract["proof_artifacts"]["recommendation_retrieval_proof_bundle"],
+            "artifacts/protocol_layer_proof/2026-04-11-recommendation-retrieval/",
+        )
+        self.assertEqual(
             contract["proof_artifacts"]["recommendation_judgment_retrieval_proof_bundle"],
             "artifacts/protocol_layer_proof/2026-04-11-recommendation-judgment-retrieval/",
         )
@@ -388,6 +403,11 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
         self.assertEqual(sleep_review["module"], "health_model.agent_retrieval_cli")
         self.assertEqual(sleep_review["command"], "sleep-review")
         self.assertEqual(sleep_review["implementation_status"], "proof_complete")
+
+        recommendation = result["contract"]["supported_operations"]["retrieve.recommendation"]
+        self.assertEqual(recommendation["module"], "health_model.agent_retrieval_cli")
+        self.assertEqual(recommendation["command"], "recommendation")
+        self.assertEqual(recommendation["implementation_status"], "proof_complete")
 
         recommendation_judgment = result["contract"]["supported_operations"]["retrieve.recommendation_judgment"]
         self.assertEqual(recommendation_judgment["module"], "health_model.agent_retrieval_cli")

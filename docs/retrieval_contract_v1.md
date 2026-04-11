@@ -52,6 +52,16 @@ Machine-readable discovery is published by `python3 -m health_model.agent_contra
   - partial coverage is valid when scope matches but evidence is sparse
   - fail closed if the artifact is missing, invalid JSON, wrong `artifact_type`, wrong `user_id`, or wrong `date`
 
+### `retrieve.recommendation`
+- Purpose: return one scoped `agent_recommendation` artifact.
+- Current implementation status: proof-complete in v1.
+- Required scope: `user_id`, `date`, `artifact_path`, `request_id`, `requested_at`.
+- Semantics:
+  - validate `request_id` as a non-empty string and `requested_at` as an ISO 8601 datetime with timezone information, then echo both under `validation.request_echo`
+  - fail closed if the artifact is missing, invalid JSON, wrong `artifact_type`, wrong `user_id`, or wrong `date`
+  - preserve the accepted recommendation payload fields under `retrieval.evidence`, especially `recommendation_id`, `summary`, `rationale`, `evidence_refs`, `confidence_score`, `context_artifact_path`, and `context_artifact_id`
+  - remain read-only and artifact-scoped with no new synthesis, coaching, or aggregation
+
 ### `retrieve.recommendation_judgment`
 - Purpose: return one scoped `recommendation_judgment` artifact.
 - Current implementation status: proof-complete in v1.
@@ -137,6 +147,7 @@ The frozen proof bundles for this slice live under:
 - `artifacts/protocol_layer_proof/2026-04-11/` for `retrieve.day_context`
 - `artifacts/protocol_layer_proof/2026-04-11-day-nutrition-brief/` for `retrieve.day_nutrition_brief`
 - `artifacts/protocol_layer_proof/2026-04-11-sleep-review/` for `retrieve.sleep_review`
+- `artifacts/protocol_layer_proof/2026-04-11-recommendation-retrieval/` for `retrieve.recommendation`
 - `artifacts/protocol_layer_proof/2026-04-11-recommendation-judgment-retrieval/` for `retrieve.recommendation_judgment`
 - `artifacts/protocol_layer_proof/2026-04-11-weekly-pattern-review/` for `retrieve.weekly_pattern_review`
 
