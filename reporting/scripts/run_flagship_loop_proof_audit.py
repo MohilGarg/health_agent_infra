@@ -2,17 +2,28 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-FIXTURE_CONTEXT = REPO_ROOT / "tests" / "fixtures" / "agent_readable_daily_context" / "generated_fixture_day_context.json"
-OUTPUT_ROOT = REPO_ROOT / "artifacts" / "flagship_loop_proof" / "2026-04-09"
-PAYLOAD_DIR = REPO_ROOT / "artifacts" / "flagship_loop_proof" / "payloads"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+FIXTURE_CONTEXT = REPO_ROOT / "safety" / "tests" / "fixtures" / "agent_readable_daily_context" / "generated_fixture_day_context.json"
+OUTPUT_ROOT = REPO_ROOT / "reporting" / "artifacts" / "flagship_loop_proof" / "2026-04-09"
+PAYLOAD_DIR = REPO_ROOT / "reporting" / "artifacts" / "flagship_loop_proof" / "payloads"
 POSITIVE_PAYLOAD_PATH = PAYLOAD_DIR / "recommendation_positive_payload_2026-04-09.json"
 NEGATIVE_PAYLOAD_PATH = PAYLOAD_DIR / "recommendation_negative_payload_2026-04-09.json"
+
+
+def _subprocess_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join([
+        str(REPO_ROOT / "clean"),
+        str(REPO_ROOT / "safety"),
+        env.get("PYTHONPATH", ""),
+    ]).rstrip(os.pathsep)
+    return env
 
 
 def _sha256(path: Path) -> str:
@@ -23,6 +34,7 @@ def _run_cli(*args: str, expected_returncode: int) -> dict:
     completed = subprocess.run(
         [sys.executable, "-m", "health_model.agent_recommendation_cli", *args],
         cwd=REPO_ROOT,
+        env=_subprocess_env(),
         capture_output=True,
         text=True,
         check=False,
@@ -95,17 +107,17 @@ def main() -> int:
     (OUTPUT_ROOT / "negative_artifact_state_preservation.json").write_text(json.dumps(preservation, indent=2, sort_keys=True) + "\n")
 
     manifest = {
-        "frozen_command": "python3 scripts/run_flagship_loop_proof_audit.py",
+        "frozen_command": "python3 reporting/scripts/run_flagship_loop_proof_audit.py",
         "fixture_context_path": str(FIXTURE_CONTEXT.relative_to(REPO_ROOT)),
         "positive_payload_path": str(POSITIVE_PAYLOAD_PATH.relative_to(REPO_ROOT)),
         "negative_payload_path": str(NEGATIVE_PAYLOAD_PATH.relative_to(REPO_ROOT)),
         "produced_artifacts": [
-            "artifacts/flagship_loop_proof/2026-04-09/agent_readable_daily_context_2026-04-09.json",
-            "artifacts/flagship_loop_proof/2026-04-09/agent_recommendation_2026-04-09.json",
-            "artifacts/flagship_loop_proof/2026-04-09/agent_recommendation_latest.json",
-            "artifacts/flagship_loop_proof/2026-04-09/positive_result.json",
-            "artifacts/flagship_loop_proof/2026-04-09/negative_fail_closed_result.json",
-            "artifacts/flagship_loop_proof/2026-04-09/negative_artifact_state_preservation.json",
+            "reporting/artifacts/flagship_loop_proof/2026-04-09/agent_readable_daily_context_2026-04-09.json",
+            "reporting/artifacts/flagship_loop_proof/2026-04-09/agent_recommendation_2026-04-09.json",
+            "reporting/artifacts/flagship_loop_proof/2026-04-09/agent_recommendation_latest.json",
+            "reporting/artifacts/flagship_loop_proof/2026-04-09/positive_result.json",
+            "reporting/artifacts/flagship_loop_proof/2026-04-09/negative_fail_closed_result.json",
+            "reporting/artifacts/flagship_loop_proof/2026-04-09/negative_artifact_state_preservation.json",
         ],
         "negative_case_preserved_bytes": preservation["byte_identical_preserved"],
     }

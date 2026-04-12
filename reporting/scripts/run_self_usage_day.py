@@ -4,18 +4,29 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_USER_ID = "user_dom"
-DEFAULT_PROOF_ROOT = REPO_ROOT / "artifacts" / "self_usage" / "week1"
+DEFAULT_PROOF_ROOT = REPO_ROOT / "reporting" / "artifacts" / "self_usage" / "week1"
 DEFAULT_HEALTH_DIR = REPO_ROOT / "data" / "health"
-DEFAULT_CAPTURE_TEMPLATE = REPO_ROOT / "artifacts" / "self_usage" / "templates" / "day_runner_capture_template.json"
-DEFAULT_JUDGMENT_TEMPLATE = REPO_ROOT / "artifacts" / "self_usage" / "templates" / "judgment_log_template.csv"
+DEFAULT_CAPTURE_TEMPLATE = REPO_ROOT / "reporting" / "artifacts" / "self_usage" / "templates" / "day_runner_capture_template.json"
+DEFAULT_JUDGMENT_TEMPLATE = REPO_ROOT / "reporting" / "artifacts" / "self_usage" / "templates" / "judgment_log_template.csv"
+
+
+def _subprocess_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join([
+        str(REPO_ROOT / "clean"),
+        str(REPO_ROOT / "safety"),
+        env.get("PYTHONPATH", ""),
+    ]).rstrip(os.pathsep)
+    return env
 
 
 def parse_args() -> argparse.Namespace:
@@ -191,7 +202,7 @@ def main() -> int:
 
 
 def _run_command(command: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(command, cwd=REPO_ROOT, capture_output=True, text=True)
+    return subprocess.run(command, cwd=REPO_ROOT, env=_subprocess_env(), capture_output=True, text=True)
 
 
 def collect_context_refs(context: dict[str, Any]) -> set[str]:

@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-OUTPUT_ROOT = REPO_ROOT / "artifacts" / "public_demo" / "generated"
-FIXTURE_PATH = REPO_ROOT / "tests" / "fixtures" / "voice_note_intake" / "daily_voice_note_input.json"
-RECOMMENDATION_PAYLOAD_PATH = REPO_ROOT / "artifacts" / "public_demo" / "payloads" / "recommendation_payload_2026-04-09.json"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+OUTPUT_ROOT = REPO_ROOT / "reporting" / "artifacts" / "public_demo" / "generated"
+FIXTURE_PATH = REPO_ROOT / "safety" / "tests" / "fixtures" / "voice_note_intake" / "daily_voice_note_input.json"
+RECOMMENDATION_PAYLOAD_PATH = REPO_ROOT / "reporting" / "artifacts" / "public_demo" / "payloads" / "recommendation_payload_2026-04-09.json"
 BUNDLE_PATH = OUTPUT_ROOT / "shared_input_bundle_2026-04-09.json"
 CONTEXT_PATH = OUTPUT_ROOT / "agent_readable_daily_context_2026-04-09.json"
 EXPECTED_ARTIFACTS = [
@@ -19,6 +20,16 @@ EXPECTED_ARTIFACTS = [
     OUTPUT_ROOT / "agent_recommendation_2026-04-09.json",
     OUTPUT_ROOT / "agent_recommendation_latest.json",
 ]
+
+
+def _subprocess_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join([
+        str(REPO_ROOT / "clean"),
+        str(REPO_ROOT / "safety"),
+        env.get("PYTHONPATH", ""),
+    ]).rstrip(os.pathsep)
+    return env
 
 
 def _reset_output_dir() -> None:
@@ -31,6 +42,7 @@ def _run_step(name: str, *args: str) -> dict:
     completed = subprocess.run(
         [sys.executable, *args],
         cwd=REPO_ROOT,
+        env=_subprocess_env(),
         capture_output=True,
         text=True,
         check=False,
@@ -107,7 +119,7 @@ def main() -> int:
 
     summary = {
         "ok": True,
-        "command": f"{Path(sys.executable).name} scripts/run_canonical_public_demo.py",
+        "command": f"{Path(sys.executable).name} reporting/scripts/run_canonical_public_demo.py",
         "generated_dir": str(OUTPUT_ROOT.relative_to(REPO_ROOT)),
         "generated_artifacts": [str(path.relative_to(REPO_ROOT)) for path in EXPECTED_ARTIFACTS],
         "steps": {

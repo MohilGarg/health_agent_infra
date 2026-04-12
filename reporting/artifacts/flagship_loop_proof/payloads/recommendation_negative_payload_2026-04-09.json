@@ -1,9 +1,9 @@
 {
   "user_id": "user_1",
   "date": "2026-04-09",
-  "context_artifact_path": "tests/fixtures/agent_readable_daily_context/generated_fixture_day_context.json",
+  "context_artifact_path": "safety/tests/fixtures/agent_readable_daily_context/generated_fixture_day_context.json",
   "context_artifact_id": "agent_context_user_1_2026-04-09",
-  "resolution_window_artifact_path": "artifacts/flagship_loop_proof/resolution_window_success_2026-04-08.json",
+  "resolution_window_artifact_path": "reporting/artifacts/flagship_loop_proof/resolution_window_success_2026-04-08.json",
   "recommendation_id": "rec_bad_evidence_01",
   "summary": "Summary",
   "rationale": "Rationale",

@@ -3,7 +3,7 @@
   "error": {
     "code": "ungrounded_evidence_ref",
     "details": {
-      "context_artifact_path": "tests/fixtures/agent_readable_daily_context/generated_fixture_day_context.json"
+      "context_artifact_path": "safety/tests/fixtures/agent_readable_daily_context/generated_fixture_day_context.json"
     },
     "message": "Referenced context artifact failed validation.",
     "retryable": false

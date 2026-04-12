@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -8,9 +9,19 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SCENARIO_PATH = REPO_ROOT / "artifacts" / "synthetic_stress_harness" / "scenarios.json"
-OUTPUT_ROOT = REPO_ROOT / "artifacts" / "synthetic_stress_harness" / "latest"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SCENARIO_PATH = REPO_ROOT / "reporting" / "artifacts" / "synthetic_stress_harness" / "scenarios.json"
+OUTPUT_ROOT = REPO_ROOT / "reporting" / "artifacts" / "synthetic_stress_harness" / "latest"
+
+
+def _subprocess_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join([
+        str(REPO_ROOT / "clean"),
+        str(REPO_ROOT / "safety"),
+        env.get("PYTHONPATH", ""),
+    ]).rstrip(os.pathsep)
+    return env
 
 
 def main() -> int:
@@ -29,7 +40,7 @@ def main() -> int:
     passed = sum(1 for result in scenario_results if result["passed"])
     summary = {
         "ok": passed == len(scenario_results),
-        "command": f"{Path(sys.executable).name} scripts/run_synthetic_recommendation_stress_harness.py",
+        "command": f"{Path(sys.executable).name} reporting/scripts/run_synthetic_recommendation_stress_harness.py",
         "scenario_count": len(scenario_results),
         "passed_count": passed,
         "failed_count": len(scenario_results) - passed,
@@ -341,6 +352,7 @@ def _run_json_command(name: str, args: list[str], expected_returncode: int = 0) 
     completed = subprocess.run(
         [sys.executable, *args],
         cwd=REPO_ROOT,
+        env=_subprocess_env(),
         capture_output=True,
         text=True,
         check=False,
