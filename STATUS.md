@@ -2,7 +2,7 @@
 
 ## Repo status
 
-This repo currently presents a truthful public shell around one proved flagship Health Lab slice. In public-facing terms, `health_agent_infra` is the Health Lab repository: the trust layer for agent-mediated personal health work over user-owned memory, implemented here as a bounded contract-and-proof system rather than a hosted product.
+This repo currently presents a truthful public shell around one proved flagship Health Lab slice. In public-facing terms, `health_agent_infra` is the Health Lab infrastructure repository: the deterministic `PULL` plus `CLEAN` layer for agent-mediated personal health work over user-owned memory, with later human-input merge and model-owned interpretation/reporting outside the infra boundary. It is implemented here as a bounded contract-and-proof system rather than a hosted product.
 
 The frozen canonical definition for this repo-visible slice lives at `docs/health_lab_canonical_definition.md`.
 
@@ -23,19 +23,22 @@ The current bounded closed-loop transition proof is `protocol_proof.recommendati
 
 ## Architecture truth
 
-- CLI / data plane / reporting layer: this repo defines bounded contracts, CLI surfaces, reporting entrypoints, and generated artifacts for the current flagship loop.
-- Agent layer: an external agent performs retrieval, synthesis, recommendation generation, prioritisation, explanation, and writeback decisions against user-owned memory.
-- Policy / proof layer: checked-in proof bundles and fail-closed enforcement own scope validation, rejection behavior, and non-mutation guarantees.
+- PULL layer: this repo defines deterministic connectors, intake surfaces, and scoped acquisition paths for passive-data and machine-readable health inputs.
+- CLEAN layer: this repo defines deterministic normalization, validation, bundle assembly, retrieval shaping, and interpretation-ready dataset preparation.
+- Human-input merge: subjective user input is a separate lane that should merge after PULL/CLEAN and before interpretation.
+- Interpretation + report layers: an external model/agent performs synthesis, recommendation generation, explanation, guidance structure, and final reporting against the merged context.
+- Writeback layer: bounded persisted memory/state updates live behind explicit write surfaces.
+- Policy / proof layer: checked-in proof bundles and fail-closed enforcement own scope validation, rejection behavior, grounding, and non-mutation guarantees.
 - Private memory layer: user-owned health memory lives outside this repo and outside Health Lab.
 
 ## What is proven now
 
-- contract discovery via `health_agent_infra.agent_contract_cli`, with `health_model.agent_contract_cli` retained temporarily for compatibility
-- bundle initialization via `health_agent_infra.agent_bundle_cli`, with `health_model.agent_bundle_cli` retained temporarily for compatibility
-- same-day voice-note submission via `health_agent_infra.agent_voice_note_cli`, with `health_model.agent_voice_note_cli` retained temporarily for compatibility
-- scoped context reads via `health_agent_infra.agent_context_cli`, with `health_model.agent_context_cli` retained temporarily for compatibility
-- recommendation creation with fail-closed behavior via `health_agent_infra.agent_recommendation_cli`, with `health_model.agent_recommendation_cli` retained temporarily for compatibility
-- same-day recommendation judgment writeback with fail-closed non-mutation via `health_agent_infra.agent_memory_write_cli`, with `health_model.agent_memory_write_cli` retained temporarily for compatibility
+- contract discovery via `health_model.agent_contract_cli`, with `health_agent_infra.agent_contract_cli` retained temporarily for compatibility
+- bundle initialization via `health_model.agent_bundle_cli`, with `health_agent_infra.agent_bundle_cli` retained temporarily for compatibility
+- same-day voice-note submission via `health_model.agent_voice_note_cli`, with `health_agent_infra.agent_voice_note_cli` retained temporarily for compatibility
+- scoped context reads via `health_model.agent_context_cli`, with `health_agent_infra.agent_context_cli` retained temporarily for compatibility
+- recommendation creation with fail-closed behavior via `health_model.agent_recommendation_cli`, with `health_agent_infra.agent_recommendation_cli` retained temporarily for compatibility
+- same-day recommendation judgment writeback with fail-closed non-mutation via `health_model.agent_memory_write_cli`, with `health_agent_infra.agent_memory_write_cli` retained temporarily for compatibility
 - one closed-loop recommendation resolution transition proof from `pending_judgment` to judged and feedback-visible state, with rejected non-mutation replay
 
 ## What this repo is not claiming

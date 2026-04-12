@@ -1,30 +1,30 @@
 # Health Lab canonical definition
 
-Health Lab is the trust layer for agent-mediated personal health work over user-owned memory. In repo terms, it is a bounded contract and proof system that gives external agents truthful ways to retrieve scoped health evidence, produce inspectable artifacts, and write structured updates back safely.
+Health Lab is the trust layer for agent-mediated personal health work over user-owned memory. In repo terms, it is a bounded contract and proof system that gives external agents truthful ways to retrieve scoped health evidence, produce inspectable artifacts, and write structured updates back safely. For the current reset slice, `health_model/` is the truthful implementation center and `health_agent_infra/` is a temporary compatibility wrapper namespace.
 
 ## Canonical three-part split
 
 ### 1. CLI / data plane / reporting layer
 This layer owns contract discovery, bundle bootstrap, intake, scoped retrieval, validation entrypoints, replayable manifests, and generated artifacts. In current repo truth it is grounded in:
 
-- `health_agent_infra/agent_contract_cli.py` (canonical)
-- `health_model/agent_contract_cli.py` (temporary compatibility)
-- `health_agent_infra/agent_bundle_cli.py` (canonical)
-- `health_model/agent_bundle_cli.py` (temporary compatibility)
-- `health_agent_infra/agent_voice_note_cli.py` (canonical)
-- `health_model/agent_voice_note_cli.py` (temporary compatibility)
-- `health_agent_infra/agent_submit_cli.py` (canonical)
-- `health_model/agent_submit_cli.py` (temporary compatibility)
-- `health_agent_infra/agent_context_cli.py` (canonical)
-- `health_model/agent_context_cli.py` (temporary compatibility)
-- `health_agent_infra/agent_retrieval_cli.py` (canonical)
-- `health_model/agent_retrieval_cli.py` (temporary compatibility)
-- `health_agent_infra/agent_memory_write_cli.py` (canonical)
-- `health_model/agent_memory_write_cli.py` (temporary compatibility)
-- `health_agent_infra/daily_snapshot.py` (canonical)
-- `health_model/daily_snapshot.py` (temporary compatibility)
-- `health_agent_infra/day_nutrition_brief.py` (canonical)
-- `health_model/day_nutrition_brief.py` (temporary compatibility)
+- `health_model/agent_contract_cli.py` (canonical)
+- `health_agent_infra/agent_contract_cli.py` (temporary compatibility)
+- `health_model/agent_bundle_cli.py` (canonical)
+- `health_agent_infra/agent_bundle_cli.py` (temporary compatibility)
+- `health_model/agent_voice_note_cli.py` (canonical)
+- `health_agent_infra/agent_voice_note_cli.py` (temporary compatibility)
+- `health_model/agent_submit_cli.py` (canonical)
+- `health_agent_infra/agent_submit_cli.py` (temporary compatibility)
+- `health_model/agent_context_cli.py` (canonical)
+- `health_agent_infra/agent_context_cli.py` (temporary compatibility)
+- `health_model/agent_retrieval_cli.py` (canonical)
+- `health_agent_infra/agent_retrieval_cli.py` (temporary compatibility)
+- `health_model/agent_memory_write_cli.py` (canonical)
+- `health_agent_infra/agent_memory_write_cli.py` (temporary compatibility)
+- `health_model/daily_snapshot.py` (canonical)
+- `health_agent_infra/daily_snapshot.py` (temporary compatibility)
+- `health_model/day_nutrition_brief.py` (canonical)
+- `health_agent_infra/day_nutrition_brief.py` (temporary compatibility)
 
 This layer does not own core cognition. It exposes bounded interfaces and produces inspectable artifacts.
 
@@ -49,7 +49,7 @@ The clearest shipped proof in this repo remains the CLI-first reference loop:
 
 `contract describe -> bundle init -> voice-note submit -> context get -> recommendation create`
 
-That loop is implemented canonically under `health_agent_infra/`, with `health_model/` preserved as a temporary compatibility namespace, backed by focused tests and checked-in proof artifacts, and should be read as the current flagship Health Lab slice.
+That loop is implemented canonically under `health_model/`, with `health_agent_infra/` preserved as a temporary compatibility namespace, backed by focused tests and checked-in proof artifacts, and should be read as the current flagship Health Lab slice.
 
 ## What Health Lab is not claiming
 
@@ -61,7 +61,7 @@ That loop is implemented canonically under `health_agent_infra/`, with `health_m
 
 ## Legacy and adjacent repo surfaces
 
-Legacy or adjacent directories remain in-tree, including `dashboard/`, `web/`, and `garmin/`. They should be treated as legacy or adjacent repo surfaces, not as the canonical current Health Lab product slice. Their presence should not redefine the three-part boundary above, and this doc does not claim they are removed or redesigned.
+Legacy or adjacent directories remain in-tree, including `dashboard/`, `web/`, and `garmin/`. They should be treated as quarantined legacy or adjacent repo surfaces, not as the canonical current Health Lab product slice. In particular, Garmin-first web and dashboard flows are out of the flagship review path for this slice. Their presence should not redefine the three-part boundary above, and this doc does not claim they are removed or redesigned.
 
 ## Review path
 
