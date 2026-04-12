@@ -1,10 +1,12 @@
 # Health Lab
 
-Health Lab is the trust layer for agent-mediated personal health work over user-owned memory. In repo terms, it is a bounded contract and proof system that gives external agents truthful ways to retrieve scoped health evidence, produce inspectable artifacts, and write structured updates back safely.
+Health Lab is the trust layer for agent-mediated personal health work over user-owned memory. In repo terms, this `garmin_lab` repository is a bounded contract-and-proof system that lets external agents retrieve scoped health evidence, produce inspectable artifacts, and write structured updates back safely without claiming ownership of a user's durable private memory.
+
+The current public proof is a narrow, CLI-first Health Lab slice, not a hosted product, consumer app, or multi-user runtime.
 
 Note: the repository directory is still named `garmin_lab` for historical reasons, while the current project framing is Health Lab.
 
-See `docs/health_lab_canonical_definition.md` for the frozen canonical definition and three-part architecture boundary used by this repo.
+Start with `docs/health_lab_canonical_definition.md` for the frozen canonical definition, then inspect the canonical public demo and proof surfaces linked below.
 
 ## Architecture boundary
 
@@ -19,7 +21,7 @@ The clearest shipped proof in this repo is a CLI-first reference protocol loop:
 
 `contract describe -> bundle init -> voice-note submit -> context get -> recommendation create`
 
-That loop is implemented under `health_model/`, covered by CLI integration tests, and produces JSON artifacts with explicit scope and fail-closed error envelopes.
+That loop is implemented under `health_model/`, covered by focused test and proof surfaces, and should be read as the current flagship Health Lab slice rather than as a claim that the whole repo or a hosted runtime is already productized.
 
 ## Canonical sample demo path
 

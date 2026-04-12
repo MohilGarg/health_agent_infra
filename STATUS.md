@@ -2,7 +2,9 @@
 
 ## Repo status
 
-This repo currently presents a truthful public shell around one proved flagship Health Lab loop. The frozen canonical definition for this repo-visible slice lives at `docs/health_lab_canonical_definition.md`.
+This repo currently presents a truthful public shell around one proved flagship Health Lab slice. In public-facing terms, `garmin_lab` is being framed as Health Lab: the trust layer for agent-mediated personal health work over user-owned memory, implemented here as a bounded contract-and-proof system rather than a hosted product.
+
+The frozen canonical definition for this repo-visible slice lives at `docs/health_lab_canonical_definition.md`.
 
 The current flagship loop is:
 
@@ -13,7 +15,7 @@ Canonical public-truth surfaces:
 - checked-in public demo bundle: `artifacts/public_demo/captured/`
 - audited flagship proof bundle: `artifacts/flagship_loop_proof/2026-04-09/`
 
-The flagship loop is real, CLI-first, locally runnable, and backed by checked-in proof artifacts plus focused unittest coverage.
+The flagship loop is real, CLI-first, locally runnable, and backed by checked-in proof artifacts plus focused unittest coverage. It should be read as the current flagship proof path, not as a claim that this repo already provides a polished consumer app, hosted runtime, or durable private memory layer.
 
 The current bounded writeback proof slice is `writeback.recommendation_judgment`, frozen under `artifacts/protocol_layer_proof/2026-04-11-writeback-judgment/` with success, wrong-scope rejection, missing-artifact rejection, and non-mutation evidence.
 
