@@ -1,9 +1,9 @@
 {
-  "artifact_path": "/Users/myapplemini01/Projects/garmin_lab/data/health/agent_readable_daily_context_2026-04-10.json",
+  "artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/data/health/agent_readable_daily_context_2026-04-10.json",
   "error": {
     "code": "artifact_date_mismatch",
     "details": {
-      "artifact_path": "/Users/myapplemini01/Projects/garmin_lab/data/health/agent_readable_daily_context_2026-04-10.json",
+      "artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/data/health/agent_readable_daily_context_2026-04-10.json",
       "date": "2026-04-09",
       "user_id": "user_dom"
     },

@@ -1,17 +1,17 @@
 {
   "artifact_state_after": {
-    "dated_bytes": 614,
-    "dated_sha256": "cb77c8a73180aede19e4b5bea4eb5844dc7a9f885a69472aeb6cad7f5197ed94",
-    "latest_bytes": 614,
-    "latest_sha256": "cb77c8a73180aede19e4b5bea4eb5844dc7a9f885a69472aeb6cad7f5197ed94"
+    "dated_bytes": 1128,
+    "dated_sha256": "8f9de307bd5f653b53bfcc39aae34eb6f7b61d7d1230c3ddf13163e8d84cb4a3",
+    "latest_bytes": 1128,
+    "latest_sha256": "8f9de307bd5f653b53bfcc39aae34eb6f7b61d7d1230c3ddf13163e8d84cb4a3"
   },
   "artifact_state_before": {
-    "dated_bytes": 614,
+    "dated_bytes": 1128,
     "dated_path": "artifacts/flagship_loop_proof/2026-04-09/agent_recommendation_2026-04-09.json",
-    "dated_sha256": "cb77c8a73180aede19e4b5bea4eb5844dc7a9f885a69472aeb6cad7f5197ed94",
-    "latest_bytes": 614,
+    "dated_sha256": "8f9de307bd5f653b53bfcc39aae34eb6f7b61d7d1230c3ddf13163e8d84cb4a3",
+    "latest_bytes": 1128,
     "latest_path": "artifacts/flagship_loop_proof/2026-04-09/agent_recommendation_latest.json",
-    "latest_sha256": "cb77c8a73180aede19e4b5bea4eb5844dc7a9f885a69472aeb6cad7f5197ed94"
+    "latest_sha256": "8f9de307bd5f653b53bfcc39aae34eb6f7b61d7d1230c3ddf13163e8d84cb4a3"
   },
   "byte_identical_preserved": true,
   "negative_error_code": "ungrounded_evidence_ref",

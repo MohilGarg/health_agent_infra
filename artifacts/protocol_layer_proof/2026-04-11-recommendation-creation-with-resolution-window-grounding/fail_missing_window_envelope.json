@@ -3,7 +3,7 @@
   "error": {
     "code": "resolution_window_artifact_not_found",
     "details": {
-      "resolution_window_artifact_path": "/Users/myapplemini01/Projects/garmin_lab/artifacts/protocol_layer_proof/2026-04-11-recommendation-creation-with-resolution-window-grounding/missing_window.json"
+      "resolution_window_artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/artifacts/protocol_layer_proof/2026-04-11-recommendation-creation-with-resolution-window-grounding/missing_window.json"
     },
     "message": "Referenced resolution-window artifact file does not exist.",
     "retryable": false

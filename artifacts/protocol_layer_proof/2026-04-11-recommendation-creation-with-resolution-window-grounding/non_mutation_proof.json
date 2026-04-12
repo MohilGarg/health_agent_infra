@@ -1,15 +1,15 @@
 {
   "after": {
-    "dated_artifact_path": "/Users/myapplemini01/Projects/garmin_lab/artifacts/protocol_layer_proof/2026-04-11-recommendation-creation-with-resolution-window-grounding/agent_recommendation_2026-04-11.json",
-    "dated_sha256": "68ef77d4da877d3e9cafa001e0369d7bb2af360a464c5f2b272a56cb9c39f2c0",
-    "latest_artifact_path": "/Users/myapplemini01/Projects/garmin_lab/artifacts/protocol_layer_proof/2026-04-11-recommendation-creation-with-resolution-window-grounding/agent_recommendation_latest.json",
-    "latest_sha256": "68ef77d4da877d3e9cafa001e0369d7bb2af360a464c5f2b272a56cb9c39f2c0"
+    "dated_artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/artifacts/protocol_layer_proof/2026-04-11-recommendation-creation-with-resolution-window-grounding/agent_recommendation_2026-04-11.json",
+    "dated_sha256": "99a36350ba5d2c20361a547ea706efa0f151ac1a30f4a9fc77f7f2c3d8e124af",
+    "latest_artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/artifacts/protocol_layer_proof/2026-04-11-recommendation-creation-with-resolution-window-grounding/agent_recommendation_latest.json",
+    "latest_sha256": "99a36350ba5d2c20361a547ea706efa0f151ac1a30f4a9fc77f7f2c3d8e124af"
   },
   "before": {
-    "dated_artifact_path": "/Users/myapplemini01/Projects/garmin_lab/artifacts/protocol_layer_proof/2026-04-11-recommendation-creation-with-resolution-window-grounding/agent_recommendation_2026-04-11.json",
-    "dated_sha256": "68ef77d4da877d3e9cafa001e0369d7bb2af360a464c5f2b272a56cb9c39f2c0",
-    "latest_artifact_path": "/Users/myapplemini01/Projects/garmin_lab/artifacts/protocol_layer_proof/2026-04-11-recommendation-creation-with-resolution-window-grounding/agent_recommendation_latest.json",
-    "latest_sha256": "68ef77d4da877d3e9cafa001e0369d7bb2af360a464c5f2b272a56cb9c39f2c0"
+    "dated_artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/artifacts/protocol_layer_proof/2026-04-11-recommendation-creation-with-resolution-window-grounding/agent_recommendation_2026-04-11.json",
+    "dated_sha256": "99a36350ba5d2c20361a547ea706efa0f151ac1a30f4a9fc77f7f2c3d8e124af",
+    "latest_artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/artifacts/protocol_layer_proof/2026-04-11-recommendation-creation-with-resolution-window-grounding/agent_recommendation_latest.json",
+    "latest_sha256": "99a36350ba5d2c20361a547ea706efa0f151ac1a30f4a9fc77f7f2c3d8e124af"
   },
   "ok": true
 }

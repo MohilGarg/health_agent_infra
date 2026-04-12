@@ -1,9 +1,9 @@
 {
-  "artifact_path": "/Users/myapplemini01/Projects/garmin_lab/data/health/day_nutrition_brief_2026-04-08.json",
+  "artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/data/health/day_nutrition_brief_2026-04-08.json",
   "error": {
     "code": "artifact_date_mismatch",
     "details": {
-      "artifact_path": "/Users/myapplemini01/Projects/garmin_lab/data/health/day_nutrition_brief_2026-04-08.json",
+      "artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/data/health/day_nutrition_brief_2026-04-08.json",
       "date": "2026-04-09",
       "user_id": "1"
     },

@@ -1,7 +1,7 @@
 {
   "confidence_score": 0.82,
   "context_artifact_id": "agent_context_user_dom_2026-04-11",
-  "context_artifact_path": "/Users/myapplemini01/Projects/garmin_lab/artifacts/protocol_layer_proof/2026-04-11-recommendation-creation-with-resolution-window-grounding/agent_readable_daily_context_2026-04-11.json",
+  "context_artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/artifacts/protocol_layer_proof/2026-04-11-recommendation-creation-with-resolution-window-grounding/agent_readable_daily_context_2026-04-11.json",
   "date": "2026-04-11",
   "evidence_refs": [
     "subjective_voice_20260409",
@@ -23,7 +23,7 @@
   },
   "rationale": "Same-day low-energy context plus the recent window show repeated useful lower-load guidance.",
   "recommendation_id": "rec_20260411_recovery_01",
-  "resolution_window_artifact_path": "/Users/myapplemini01/Projects/garmin_lab/artifacts/protocol_layer_proof/2026-04-11-recommendation-creation-with-resolution-window-grounding/resolution_window_success.json",
+  "resolution_window_artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/artifacts/protocol_layer_proof/2026-04-11-recommendation-creation-with-resolution-window-grounding/resolution_window_success.json",
   "summary": "Keep today light and prioritize recovery basics.",
   "user_id": "user_dom"
 }

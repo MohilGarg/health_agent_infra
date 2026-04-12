@@ -32,10 +32,10 @@ Fail-closed rejection proof:
 python3 -m health_agent_infra.agent_recommendation_cli create \
   # temporary compatibility path remains `python3 -m health_model.agent_recommendation_cli create`
   --output-dir "$DEMO_DIR" \
-  --payload-json '{"user_id":"user_dom","date":"2026-04-09","context_artifact_path":"'"$DEMO_DIR"'/agent_readable_daily_context_2026-04-09.json","context_artifact_id":"agent_context_user_dom_2026-04-09","recommendation_id":"rec_bad_evidence_01","summary":"Summary","rationale":"Rationale","evidence_refs":["not_in_context"],"confidence_score":0.8}'
+  --payload-json '{"user_id":"user_dom","date":"2026-04-09","context_artifact_path":"'"$DEMO_DIR"'/agent_readable_daily_context_2026-04-09.json","context_artifact_id":"agent_context_user_dom_2026-04-09","resolution_window_artifact_path":"artifacts/public_demo/resolution_window_success_2026-04-08.json","recommendation_id":"rec_bad_evidence_01","summary":"Summary","rationale":"Rationale","evidence_refs":["not_in_context"],"confidence_score":0.8,"policy_basis":{"policy_note":"Use the same bounded window input while ensuring invalid evidence still fails closed.","prior_recommendation_refs":[{"date":"2026-04-07","recommendation_id":"rec_window_20260407_recovery_01","resolution_status":"pending_judgment"}],"window_dates_considered":["2026-04-02","2026-04-08"]}}'
 ```
 
-That rejection should fail closed with error code `ungrounded_evidence_ref` and should not mutate the successful recommendation artifact.
+That rejection should fail closed with error code `ungrounded_evidence_ref` and should not mutate the successful recommendation artifact. The payload now also needs `resolution_window_artifact_path` plus `policy_basis`, matching the current recommendation contract.
 
 Captured proof artifacts from this exact lineage:
 - success artifact: `artifacts/public_demo/captured/agent_recommendation_2026-04-09.json`

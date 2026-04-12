@@ -2,7 +2,7 @@
   "artifact_type": "agent_recommendation",
   "confidence_score": 0.82,
   "context_artifact_id": "agent_context_user_dom_2026-04-09",
-  "context_artifact_path": "/Users/myapplemini01/Projects/garmin_lab/artifacts/public_demo/captured/agent_readable_daily_context_2026-04-09.json",
+  "context_artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/artifacts/public_demo/captured/agent_readable_daily_context_2026-04-09.json",
   "date": "2026-04-09",
   "evidence_refs": [
     "subjective_01JQVOICESUBJ01",

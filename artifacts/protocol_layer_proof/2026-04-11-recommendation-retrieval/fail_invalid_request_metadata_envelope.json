@@ -1,5 +1,5 @@
 {
-  "artifact_path": "/Users/myapplemini01/Projects/garmin_lab/artifacts/protocol_layer_proof/2026-04-11-recommendation-retrieval/agent_recommendation_2026-04-10.json",
+  "artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/artifacts/protocol_layer_proof/2026-04-11-recommendation-retrieval/agent_recommendation_2026-04-10.json",
   "error": {
     "code": "invalid_requested_at",
     "details": {
