@@ -1,0 +1,109 @@
+{
+  "policy_version": "daily-health-snapshot-merge-contract-v1",
+  "target_date": "2026-04-12",
+  "declared_claim": "complete_for_declared_lanes",
+  "lanes": {
+    "garmin": {
+      "state": "ready",
+      "reason": null,
+      "used_raw_source_bypass": false,
+      "canonical_artifact": {
+        "artifact_family": "garmin_daily_bundle",
+        "artifact_id": "garmin-day-2026-04-12",
+        "date": "2026-04-12",
+        "sleep_duration_hours": 8.03,
+        "sleep_score": 84,
+        "sleep_awake_count": 2,
+        "resting_hr": 48,
+        "hrv_status": "balanced",
+        "body_battery_or_readiness": 78,
+        "readiness_label": "HIGH",
+        "running_sessions_count": 1,
+        "running_volume_m": 6200
+      },
+      "canonical_provenance": {
+        "provenance_record_id": "provenance:garmin:day:2026-04-12",
+        "supporting_refs": [
+          "canonical://garmin/day/2026-04-12/sleep_daily",
+          "canonical://garmin/day/2026-04-12/readiness_daily",
+          "canonical://garmin/day/2026-04-12/training_session"
+        ]
+      }
+    },
+    "cronometer": {
+      "state": "ready",
+      "reason": null,
+      "used_raw_source_bypass": false,
+      "canonical_artifact": {
+        "artifact_family": "nutrition_daily",
+        "artifact_id": "nutrition-day-2026-04-12",
+        "date": "2026-04-12",
+        "food_logged_bool": true,
+        "calories_kcal": 2510,
+        "protein_g": 181,
+        "carbs_g": 244,
+        "fat_g": 79,
+        "hydration_ml": 3100
+      },
+      "canonical_provenance": {
+        "provenance_record_id": "provenance:cronometer:day:2026-04-12",
+        "supporting_refs": [
+          "canonical://cronometer/day/2026-04-12/nutrition_daily"
+        ]
+      }
+    },
+    "wger": {
+      "state": "ready",
+      "reason": null,
+      "used_raw_source_bypass": false,
+      "canonical_artifact": {
+        "artifact_family": "training_session",
+        "artifact_id": "wger-day-2026-04-12",
+        "date": "2026-04-12",
+        "gym_sessions_count": 1,
+        "gym_total_sets": 18,
+        "gym_total_reps": 126,
+        "gym_total_load_kg": 8420
+      },
+      "canonical_provenance": {
+        "provenance_record_id": "provenance:wger:day:2026-04-12",
+        "supporting_refs": [
+          "canonical://wger/day/2026-04-12/training_session",
+          "canonical://wger/day/2026-04-12/gym_set_record"
+        ]
+      }
+    }
+  },
+  "field_ownership": {
+    "sleep_duration_hours": "garmin",
+    "sleep_score": "garmin",
+    "sleep_awake_count": "garmin",
+    "resting_hr": "garmin",
+    "hrv_status": "garmin",
+    "body_battery_or_readiness": "garmin",
+    "readiness_label": "garmin",
+    "running_sessions_count": "garmin",
+    "running_volume_m": "garmin",
+    "food_logged_bool": "cronometer",
+    "calories_kcal": "cronometer",
+    "protein_g": "cronometer",
+    "carbs_g": "cronometer",
+    "fat_g": "cronometer",
+    "hydration_ml": "cronometer",
+    "gym_sessions_count": "wger",
+    "gym_total_sets": "wger",
+    "gym_total_reps": "wger",
+    "gym_total_load_kg": "wger",
+    "subjective_energy_1_5": "subjective",
+    "subjective_soreness_1_5": "subjective",
+    "subjective_stress_1_5": "subjective",
+    "overall_day_note": "subjective"
+  },
+  "forbid_raw_source_bypass": true,
+  "fail_closed": true,
+  "effective_lane_states": {
+    "garmin": "ready",
+    "cronometer": "ready",
+    "wger": "ready"
+  }
+}

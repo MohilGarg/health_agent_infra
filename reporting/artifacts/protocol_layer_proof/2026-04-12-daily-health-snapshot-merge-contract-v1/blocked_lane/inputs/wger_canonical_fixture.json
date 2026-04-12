@@ -1,0 +1,16 @@
+{
+  "state": "blocked",
+  "reason": "real_runtime_proof_not_passed",
+  "used_raw_source_bypass": false,
+  "canonical_artifact": {
+    "artifact_family": "training_session",
+    "artifact_id": "wger-day-2026-04-10",
+    "date": "2026-04-10"
+  },
+  "canonical_provenance": {
+    "provenance_record_id": "provenance:wger:day:2026-04-10",
+    "supporting_refs": [
+      "contract://wger/runtime-proof-blocked"
+    ]
+  }
+}

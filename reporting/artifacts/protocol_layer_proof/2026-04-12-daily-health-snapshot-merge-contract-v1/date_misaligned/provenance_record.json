@@ -1,0 +1,29 @@
+{
+  "artifact_family": "provenance_record",
+  "provenance_record_id": "provenance_daily_health_snapshot_41094410dbc79e50",
+  "source_record_id": "merge:daily-health-snapshot-merge-contract-v1:2026-04-11",
+  "derivation_method": "cross_source_merge",
+  "supporting_refs": [
+    "canonical://garmin/day/2026-04-11/sleep_daily",
+    "canonical://garmin/day/2026-04-11/readiness_daily",
+    "canonical://garmin/day/2026-04-11/training_session",
+    "canonical://wger/day/2026-04-11/training_session",
+    "canonical://wger/day/2026-04-11/gym_set_record"
+  ],
+  "parser_version": "daily-health-snapshot-merge-contract-v1",
+  "conflict_status": "none",
+  "supporting_artifact_ids": [
+    "garmin-day-2026-04-11",
+    "wger-day-2026-04-11"
+  ],
+  "supporting_provenance_ids": [
+    "provenance:garmin:day:2026-04-11",
+    "provenance:wger:day:2026-04-11"
+  ],
+  "lane_states": {
+    "garmin": "ready",
+    "cronometer": "stale",
+    "wger": "ready"
+  },
+  "merge_policy_version": "daily-health-snapshot-merge-contract-v1"
+}

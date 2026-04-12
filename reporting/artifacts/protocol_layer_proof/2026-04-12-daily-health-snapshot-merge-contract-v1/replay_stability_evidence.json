@@ -1,0 +1,41 @@
+{
+  "blocked_lane": {
+    "first": {
+      "outcome_type": "snapshot_blocked",
+      "daily_health_snapshot_id": null,
+      "provenance_record_id": null
+    },
+    "second": {
+      "outcome_type": "snapshot_blocked",
+      "daily_health_snapshot_id": null,
+      "provenance_record_id": null
+    },
+    "stable": true
+  },
+  "date_misaligned": {
+    "first": {
+      "outcome_type": "snapshot_emitted_partial_truthful",
+      "daily_health_snapshot_id": "daily_health_snapshot_7cbb44de7bdb39a2",
+      "provenance_record_id": "provenance_daily_health_snapshot_41094410dbc79e50"
+    },
+    "second": {
+      "outcome_type": "snapshot_emitted_partial_truthful",
+      "daily_health_snapshot_id": "daily_health_snapshot_7cbb44de7bdb39a2",
+      "provenance_record_id": "provenance_daily_health_snapshot_41094410dbc79e50"
+    },
+    "stable": true
+  },
+  "fully_aligned": {
+    "first": {
+      "outcome_type": "snapshot_emitted_complete_for_declared_lanes",
+      "daily_health_snapshot_id": "daily_health_snapshot_8e30d1a8c62c9eb3",
+      "provenance_record_id": "provenance_daily_health_snapshot_7491efcc02388188"
+    },
+    "second": {
+      "outcome_type": "snapshot_emitted_complete_for_declared_lanes",
+      "daily_health_snapshot_id": "daily_health_snapshot_8e30d1a8c62c9eb3",
+      "provenance_record_id": "provenance_daily_health_snapshot_7491efcc02388188"
+    },
+    "stable": true
+  }
+}
