@@ -16,5 +16,10 @@ jobs:
         with:
           python-version: '3.x'
 
+      - name: Install repo dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r requirements.txt
+
       - name: Run frozen flagship CLI smoke tests
         run: python3 -m unittest tests.test_agent_contract_cli tests.test_agent_bundle_cli tests.test_agent_voice_note_cli tests.test_agent_context_cli tests.test_agent_recommendation_cli
