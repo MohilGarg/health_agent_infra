@@ -8,8 +8,8 @@ from zipfile import ZipFile
 
 import pandas as pd
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "data" / "garmin" / "export"
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "pull" / "data" / "garmin" / "export"
 
 EXPORT_FILES = {
     "uds": "DI_CONNECT/DI-Connect-Aggregator/UDSFile_",

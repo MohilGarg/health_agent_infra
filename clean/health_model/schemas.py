@@ -5,9 +5,43 @@ from typing import Any
 
 
 @dataclass
+class SourceRecord:
+    artifact_family: str = "source_record"
+    source_record_id: str = ""
+    source_name: str = ""
+    source_type: str = ""
+    entry_lane: str = ""
+    raw_location: str = ""
+    raw_format: str = ""
+    effective_date: str | None = None
+    collected_at: str | None = None
+    ingested_at: str | None = None
+    hash_or_version: str | None = None
+    native_record_type: str | None = None
+    native_record_id: str | None = None
+
+
+@dataclass
+class ProvenanceRecord:
+    artifact_family: str = "provenance_record"
+    provenance_record_id: str = ""
+    source_record_id: str = ""
+    derivation_method: str = ""
+    supporting_refs: list[str] = field(default_factory=list)
+    parser_version: str | None = None
+    conflict_status: str = "none"
+
+
+@dataclass
 class SleepDaily:
-    date: str
+    artifact_family: str = "sleep_daily"
+    date: str = ""
     source: str | None = None
+    sleep_daily_id: str | None = None
+    source_name: str | None = None
+    source_record_id: str | None = None
+    provenance_record_id: str | None = None
+    conflict_status: str = "none"
     total_sleep_sec: float | None = None
     deep_sleep_sec: float | None = None
     light_sleep_sec: float | None = None
@@ -21,8 +55,14 @@ class SleepDaily:
 
 @dataclass
 class ReadinessDaily:
-    date: str
+    artifact_family: str = "readiness_daily"
+    date: str = ""
     source: str | None = None
+    readiness_daily_id: str | None = None
+    source_name: str | None = None
+    source_record_id: str | None = None
+    provenance_record_id: str | None = None
+    conflict_status: str = "none"
     readiness_score: float | None = None
     readiness_label: str | None = None
     sleep_factor: float | None = None
@@ -37,10 +77,16 @@ class ReadinessDaily:
 
 @dataclass
 class TrainingSession:
-    session_id: str
-    date: str
-    session_type: str
-    source: str
+    artifact_family: str = "training_session"
+    session_id: str = ""
+    date: str = ""
+    session_type: str = ""
+    source: str = ""
+    training_session_id: str | None = None
+    source_name: str | None = None
+    source_record_id: str | None = None
+    provenance_record_id: str | None = None
+    conflict_status: str = "none"
     start_time_local: str | None = None
     duration_sec: float | None = None
     session_title: str | None = None
@@ -93,7 +139,11 @@ class NutritionDaily:
 
 @dataclass
 class DailyHealthSnapshot:
-    date: str
+    artifact_family: str = "daily_health_snapshot"
+    date: str = ""
+    daily_health_snapshot_id: str | None = None
+    provenance_record_id: str | None = None
+    conflict_status: str = "none"
     sleep_duration_hours: float | None = None
     sleep_score: float | None = None
     sleep_awake_count: int | None = None

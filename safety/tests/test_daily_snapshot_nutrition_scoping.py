@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import sqlite3
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "clean"))
 
 from health_model.daily_snapshot import generate_snapshot
 
