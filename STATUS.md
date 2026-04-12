@@ -52,7 +52,7 @@ The current bounded closed-loop transition proof is `protocol_proof.recommendati
 ## Repo-readiness audit note
 
 Unresolved truths that still matter:
-- older Garmin, dashboard, web, and adjacent project surfaces remain in-tree and can still distract from the flagship proof path, so `dashboard/`, `web/`, and `garmin/` are explicitly constrained as legacy or adjacent surfaces rather than the canonical current slice
+- older Garmin, dashboard, web, and adjacent project surfaces have been moved under `archive/legacy_product_surfaces/`, which reduces root-level review noise but does not make those archived surfaces part of the canonical current slice
 - the cleanest public review path is the checked-in demo and proof bundles, not the whole repo
 - local runtime outputs under `data/` are not public-safe proof artifacts unless explicitly curated
 
@@ -62,4 +62,5 @@ Unresolved truths that still matter:
 - [x] `LICENSE`, `CONTRIBUTING.md`, and this `STATUS.md` exist
 - [x] Proof-facing wording stays within current repo reality
 - [x] Frozen flagship CLI smoke-test command is defined for CI
-- [ ] Any broader legacy-root wording cleanup beyond the renamed upstream repo remains pending beyond this bounded slice
+- [x] Root-level archive move for `dashboard/`, `web/`, and `garmin/` completed under `archive/legacy_product_surfaces/`
+- [ ] Any broader legacy-root wording cleanup beyond this bounded slice remains pending

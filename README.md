@@ -95,7 +95,7 @@ Treat this as a reference proof of agent-operated retrieval, synthesis handoff, 
 - Same-day recommendation judgment writeback via `python3 -m health_model.agent_memory_write_cli recommendation-judgment`
 
 ### Legacy and adjacent repo surfaces
-- Older Garmin, food logging, dashboard, and web-app surfaces remain in-tree as legacy or adjacent code. In particular, `dashboard/`, `web/`, and `garmin/` are explicitly constrained as legacy or adjacent surfaces, not the canonical current Health Lab slice.
+- Older Garmin, food logging, dashboard, and web-app surfaces have been moved under `archive/legacy_product_surfaces/` as legacy or adjacent code. In particular, `archive/legacy_product_surfaces/dashboard/`, `archive/legacy_product_surfaces/web/`, and `archive/legacy_product_surfaces/garmin/` are explicitly archived and are not the canonical current Health Lab slice.
 
 ### Not yet
 - No claim of clinical-grade guidance, diagnosis, or monitoring
@@ -105,7 +105,7 @@ Treat this as a reference proof of agent-operated retrieval, synthesis handoff, 
 
 ## Quick repo orientation
 
-The current flagship loop lives canonically in `health_model/`, with `health_agent_infra/` preserved for temporary compatibility, and its canonical architecture boundary is frozen in `docs/health_lab_canonical_definition.md`. Older project surfaces for Garmin ingestion, dashboards, and the web app still exist in the repo as quarantined legacy or adjacent code, but they are not part of the current flagship proof path.
+The current flagship loop lives canonically in `health_model/`, with `health_agent_infra/` preserved for temporary compatibility, and its canonical architecture boundary is frozen in `docs/health_lab_canonical_definition.md`. Older project surfaces for Garmin ingestion, dashboards, and the web app now live under `archive/legacy_product_surfaces/` as quarantined legacy or adjacent code, but they are not part of the current flagship proof path.
 
 If you want the smallest trustworthy slice first, run `python3 scripts/run_canonical_public_demo.py`, inspect `artifacts/public_demo/generated/`, then compare that disposable run with `artifacts/public_demo/captured/` and the audited flagship proof bundle at `artifacts/flagship_loop_proof/2026-04-09/` or regenerate the stricter proof audit with `python3 scripts/run_flagship_loop_proof_audit.py`.
 
