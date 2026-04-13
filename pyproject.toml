@@ -27,5 +27,5 @@ classifiers = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["clean*", "merge_human_inputs*", "interpretation*", "safety*", "writeback*"]
+include = ["clean*", "health_model*", "merge_human_inputs*", "interpretation*", "safety*", "writeback*"]
 exclude = ["archive*", "data*", "reporting.artifacts*"]

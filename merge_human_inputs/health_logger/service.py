@@ -5,6 +5,8 @@ Every function returns plain data (dicts/strings). The web layer calls these
 and decides how to render the response (JSON, HTML, etc.).
 """
 
+from __future__ import annotations
+
 import json
 import re
 from datetime import datetime, timedelta

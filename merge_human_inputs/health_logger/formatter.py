@@ -2,6 +2,8 @@
 formatter.py — Format parsed health data into human-readable text.
 """
 
+from __future__ import annotations
+
 from datetime import date, datetime
 
 

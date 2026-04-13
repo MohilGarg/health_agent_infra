@@ -37,7 +37,7 @@
     "signal_status_counts": {
       "grounded": 18,
       "inferred": 2,
-      "missing": 4,
+      "missing": 7,
       "conflicted": 2
     },
     "signals": [
@@ -168,6 +168,39 @@
         ],
         "derivation_method": "none",
         "uncertainty_note": null
+      },
+      {
+        "domain": "subjective_state",
+        "signal_key": "soreness_today_1_to_5",
+        "status": "missing",
+        "value": null,
+        "confidence_label": "low",
+        "confidence_score": 0.0,
+        "evidence_refs": [],
+        "derivation_method": "none",
+        "uncertainty_note": "soreness_today_1_to_5 was not provided."
+      },
+      {
+        "domain": "subjective_state",
+        "signal_key": "training_intent_today",
+        "status": "missing",
+        "value": null,
+        "confidence_label": "low",
+        "confidence_score": 0.0,
+        "evidence_refs": [],
+        "derivation_method": "none",
+        "uncertainty_note": "training_intent_today was not provided."
+      },
+      {
+        "domain": "subjective_state",
+        "signal_key": "unusual_constraints_or_stressors",
+        "status": "missing",
+        "value": null,
+        "confidence_label": "low",
+        "confidence_score": 0.0,
+        "evidence_refs": [],
+        "derivation_method": "none",
+        "uncertainty_note": "unusual_constraints_or_stressors was not provided."
       },
       {
         "domain": "subjective_state",
@@ -585,6 +618,33 @@
         ],
         "derivation_method": "none",
         "uncertainty_note": null
+      },
+      "soreness_today_1_to_5": {
+        "status": "missing",
+        "value": null,
+        "confidence_label": "low",
+        "confidence_score": 0.0,
+        "evidence_refs": [],
+        "derivation_method": "none",
+        "uncertainty_note": "soreness_today_1_to_5 was not provided."
+      },
+      "training_intent_today": {
+        "status": "missing",
+        "value": null,
+        "confidence_label": "low",
+        "confidence_score": 0.0,
+        "evidence_refs": [],
+        "derivation_method": "none",
+        "uncertainty_note": "training_intent_today was not provided."
+      },
+      "unusual_constraints_or_stressors": {
+        "status": "missing",
+        "value": null,
+        "confidence_label": "low",
+        "confidence_score": 0.0,
+        "evidence_refs": [],
+        "derivation_method": "none",
+        "uncertainty_note": "unusual_constraints_or_stressors was not provided."
       },
       "free_text_human_summary": {
         "status": "grounded",

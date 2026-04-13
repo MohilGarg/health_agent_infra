@@ -14,6 +14,8 @@ Nutrition pipeline (when ML model available):
   3. For unknown foods → fall back to Claude's original estimate
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import anthropic

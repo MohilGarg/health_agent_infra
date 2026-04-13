@@ -13,6 +13,8 @@ Tables:
   targets       – per-user daily targets
 """
 
+from __future__ import annotations
+
 import secrets
 import sqlite3
 from datetime import datetime, timedelta
