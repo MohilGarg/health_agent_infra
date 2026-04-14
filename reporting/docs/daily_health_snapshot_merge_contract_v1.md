@@ -6,7 +6,7 @@ This bounded contract freezes truthfulness behavior for `daily_health_snapshot` 
 
 - Garmin owns sleep, readiness, resting HR, HRV, body battery/readiness, and running rollups.
 - Cronometer owns food-logging and nutrition totals, plus hydration only when canonicalized for the same target date. It remains a bridge/reference lane rather than a flagship day-proof requirement.
-- wger owns gym rollups when present, but remains an exploratory non-flagship connector rather than a flagship day-proof requirement.
+- The canonical `resistance_training` lane owns gym rollups when present, with manual structured gym logs as the current ready source. `wger` remains an exploratory non-flagship connector upstream of canonical gym artifacts rather than a flagship day-proof requirement or direct merge owner.
 - Subjective fields remain reserved for the typed manual readiness or equivalent canonical subjective lane and stay unset unless that lane is ready.
 
 ## allowed lane states
@@ -21,7 +21,7 @@ This bounded contract freezes truthfulness behavior for `daily_health_snapshot` 
 - `daily_health_snapshot` may consume only canonical lane artifacts, never raw-source receipts directly.
 - if an owning lane is `missing`, `stale`, `blocked`, or date-misaligned, that lane's owned fields stay unset.
 - a declared flagship-complete claim must fail closed unless Garmin and the typed manual readiness or subjective lane are both `ready` for the same target date.
-- Cronometer and external gym connectors may enrich the snapshot when they are `ready`, but they do not gate truthful flagship day proof.
+- Cronometer and the canonical `resistance_training` lane may enrich the snapshot when they are `ready`, but they do not gate truthful flagship day proof.
 - truthful outcomes are limited to:
   - `snapshot_emitted_partial_truthful`
   - `snapshot_emitted_complete_for_declared_lanes`

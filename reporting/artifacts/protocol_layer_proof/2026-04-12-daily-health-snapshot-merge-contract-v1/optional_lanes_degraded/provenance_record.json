@@ -1,6 +1,6 @@
 {
   "artifact_family": "provenance_record",
-  "provenance_record_id": "provenance_daily_health_snapshot_f4b4f08e91facbcc",
+  "provenance_record_id": "provenance_daily_health_snapshot_b1e7cd6baa4afeb8",
   "source_record_id": "merge:daily-health-snapshot-merge-contract-v1:2026-04-11",
   "derivation_method": "cross_source_merge",
   "supporting_refs": [
@@ -24,7 +24,7 @@
     "garmin": "ready",
     "subjective": "ready",
     "cronometer": "stale",
-    "wger": "blocked"
+    "resistance_training": "missing"
   },
   "merge_policy_version": "daily-health-snapshot-merge-contract-v1"
 }

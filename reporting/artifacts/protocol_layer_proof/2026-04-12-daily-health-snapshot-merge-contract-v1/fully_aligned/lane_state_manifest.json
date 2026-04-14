@@ -73,13 +73,13 @@
         ]
       }
     },
-    "wger": {
+    "resistance_training": {
       "state": "ready",
       "reason": null,
       "used_raw_source_bypass": false,
       "canonical_artifact": {
-        "artifact_family": "training_session",
-        "artifact_id": "wger-day-2026-04-12",
+        "artifact_family": "resistance_training_daily",
+        "artifact_id": "resistance-training-day-2026-04-12",
         "date": "2026-04-12",
         "gym_sessions_count": 1,
         "gym_total_sets": 18,
@@ -87,10 +87,11 @@
         "gym_total_load_kg": 8420
       },
       "canonical_provenance": {
-        "provenance_record_id": "provenance:wger:day:2026-04-12",
+        "provenance_record_id": "provenance:resistance_training:day:2026-04-12",
         "supporting_refs": [
-          "canonical://wger/day/2026-04-12/training_session",
-          "canonical://wger/day/2026-04-12/gym_set_record"
+          "canonical://resistance_training/day/2026-04-12/training_session",
+          "canonical://resistance_training/day/2026-04-12/gym_exercise_set",
+          "manual://manual_gym_log/day/2026-04-12/session_log"
         ]
       }
     }
@@ -111,10 +112,10 @@
     "carbs_g": "cronometer",
     "fat_g": "cronometer",
     "hydration_ml": "cronometer",
-    "gym_sessions_count": "wger",
-    "gym_total_sets": "wger",
-    "gym_total_reps": "wger",
-    "gym_total_load_kg": "wger",
+    "gym_sessions_count": "resistance_training",
+    "gym_total_sets": "resistance_training",
+    "gym_total_reps": "resistance_training",
+    "gym_total_load_kg": "resistance_training",
     "subjective_energy_1_5": "subjective",
     "subjective_soreness_1_5": "subjective",
     "subjective_stress_1_5": "subjective",
@@ -126,6 +127,6 @@
     "garmin": "ready",
     "subjective": "ready",
     "cronometer": "ready",
-    "wger": "ready"
+    "resistance_training": "ready"
   }
 }

@@ -72,19 +72,19 @@
         ]
       }
     },
-    "wger": {
-      "state": "blocked",
-      "reason": "non_flagship_connector_not_required_for_day_proof",
+    "resistance_training": {
+      "state": "missing",
+      "reason": "manual_structured_gym_logs_not_available_for_target_date",
       "used_raw_source_bypass": false,
       "canonical_artifact": {
-        "artifact_family": "training_session",
-        "artifact_id": "wger-day-2026-04-11",
+        "artifact_family": "resistance_training_daily",
+        "artifact_id": "resistance-training-day-2026-04-11",
         "date": "2026-04-11"
       },
       "canonical_provenance": {
-        "provenance_record_id": "provenance:wger:day:2026-04-11",
+        "provenance_record_id": "provenance:resistance_training:day:2026-04-11",
         "supporting_refs": [
-          "contract://wger/non-flagship-connector"
+          "contract://resistance_training/manual_structured_gym_logs_not_available"
         ]
       }
     }

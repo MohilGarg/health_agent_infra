@@ -118,31 +118,31 @@ def _subjective_blocked(date: str) -> dict:
     }
 
 
-def _wger_blocked(date: str) -> dict:
+def _resistance_training_missing(date: str) -> dict:
     return {
-        "state": "blocked",
-        "reason": "non_flagship_connector_not_required_for_day_proof",
+        "state": "missing",
+        "reason": "manual_structured_gym_logs_not_available_for_target_date",
         "used_raw_source_bypass": False,
         "canonical_artifact": {
-            "artifact_family": "training_session",
-            "artifact_id": f"wger-day-{date}",
+            "artifact_family": "resistance_training_daily",
+            "artifact_id": f"resistance-training-day-{date}",
             "date": date,
         },
         "canonical_provenance": {
-            "provenance_record_id": f"provenance:wger:day:{date}",
-            "supporting_refs": ["contract://wger/non-flagship-connector"],
+            "provenance_record_id": f"provenance:resistance_training:day:{date}",
+            "supporting_refs": ["contract://resistance_training/manual_structured_gym_logs_not_available"],
         },
     }
 
 
-def _wger_ready(date: str) -> dict:
+def _resistance_training_ready(date: str) -> dict:
     return {
         "state": "ready",
         "reason": None,
         "used_raw_source_bypass": False,
         "canonical_artifact": {
-            "artifact_family": "training_session",
-            "artifact_id": f"wger-day-{date}",
+            "artifact_family": "resistance_training_daily",
+            "artifact_id": f"resistance-training-day-{date}",
             "date": date,
             "gym_sessions_count": 1,
             "gym_total_sets": 18,
@@ -150,10 +150,11 @@ def _wger_ready(date: str) -> dict:
             "gym_total_load_kg": 8420,
         },
         "canonical_provenance": {
-            "provenance_record_id": f"provenance:wger:day:{date}",
+            "provenance_record_id": f"provenance:resistance_training:day:{date}",
             "supporting_refs": [
-                f"canonical://wger/day/{date}/training_session",
-                f"canonical://wger/day/{date}/gym_set_record",
+                f"canonical://resistance_training/day/{date}/training_session",
+                f"canonical://resistance_training/day/{date}/gym_exercise_set",
+                f"manual://manual_gym_log/day/{date}/session_log",
             ],
         },
     }
@@ -171,7 +172,7 @@ def build_cases() -> dict[str, dict]:
                 "garmin": _garmin_ready(blocked_date),
                 "subjective": _subjective_blocked(blocked_date),
                 "cronometer": _cronometer_ready(blocked_date),
-                "wger": _wger_blocked(blocked_date),
+                "resistance_training": _resistance_training_missing(blocked_date),
             },
         },
         "optional_lanes_degraded": {
@@ -181,7 +182,7 @@ def build_cases() -> dict[str, dict]:
                 "garmin": _garmin_ready(optional_gap_date),
                 "subjective": _subjective_ready(optional_gap_date),
                 "cronometer": _cronometer_ready("2026-04-10"),
-                "wger": _wger_blocked(optional_gap_date),
+                "resistance_training": _resistance_training_missing(optional_gap_date),
             },
         },
         "fully_aligned": {
@@ -191,7 +192,7 @@ def build_cases() -> dict[str, dict]:
                 "garmin": _garmin_ready(aligned_date),
                 "subjective": _subjective_ready(aligned_date),
                 "cronometer": _cronometer_ready(aligned_date),
-                "wger": _wger_ready(aligned_date),
+                "resistance_training": _resistance_training_ready(aligned_date),
             },
         },
     }
@@ -212,7 +213,7 @@ def main() -> None:
         "raw_source_bypass": "forbidden",
         "date_alignment_rule": "owning lane must have same target date or field stays unset; declared flagship completeness claims fail closed only on the Garmin plus typed-manual-readiness boundary",
         "declared_complete_required_lanes": ["garmin", "subjective"],
-        "optional_bridge_or_connector_lanes": ["cronometer", "wger"],
+        "optional_bridge_or_connector_lanes": ["cronometer", "resistance_training"],
     }
     _write_json(PROOF_DIR / "merge_policy.json", merge_policy)
 
@@ -257,13 +258,23 @@ def main() -> None:
     aligned_provenance = json.loads((PROOF_DIR / "fully_aligned" / "provenance_record.json").read_text())
 
     smoke_checks["blocked_case_requires_typed_manual_readiness_lane"] = blocked_snapshot["outcome_type"] == "snapshot_blocked" and blocked_snapshot["blocked_lanes"] == ["subjective"]
-    smoke_checks["optional_bridge_and_connector_lanes_do_not_block_flagship_claim"] = (
+    smoke_checks["optional_non_flagship_lanes_do_not_block_flagship_claim"] = (
         optional_gap_snapshot["outcome_type"] == "snapshot_emitted_complete_for_declared_lanes"
         and optional_gap_snapshot["calories_kcal"] is None
         and optional_gap_snapshot["gym_sessions_count"] is None
+        and optional_gap_snapshot["source_flags"]["resistance_training"] is False
         and optional_gap_snapshot["subjective_energy_1_5"] == 4
     )
     smoke_checks["fully_aligned_case_emits_truthful_snapshot_with_provenance"] = aligned_snapshot["outcome_type"] == "snapshot_emitted_complete_for_declared_lanes" and aligned_snapshot["provenance_record_id"] == aligned_provenance["provenance_record_id"]
+    smoke_checks["resistance_training_lane_owns_aligned_gym_rollups"] = (
+        aligned_snapshot["gym_sessions_count"] == 1
+        and aligned_snapshot["gym_total_sets"] == 18
+        and aligned_snapshot["gym_total_reps"] == 126
+        and aligned_snapshot["gym_total_load_kg"] == 8420
+        and aligned_snapshot["source_flags"]["resistance_training"] is True
+        and any("resistance_training" in ref for ref in aligned_provenance["supporting_refs"])
+        and all("wger" not in ref for ref in aligned_provenance["supporting_refs"])
+    )
     smoke_checks["rerun_preserves_snapshot_and_provenance_ids"] = all(entry["stable"] for entry in replay_summary.values())
     _write_json(PROOF_DIR / "replay_stability_evidence.json", replay_summary)
     _write_json(PROOF_DIR / "smoke_checks.json", smoke_checks)
