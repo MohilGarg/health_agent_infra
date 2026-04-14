@@ -23,6 +23,21 @@ Source plan: `reporting/docs/health_lab_repo_transformation_plan_2026-04-09.md`
 - current_truth: the last several local slices mainly hardened Phase 2 foundations and the Phase 2 -> Phase 3 handoff, and Phase 4 now has a first bounded manual-gym prototype deliverable surfaced on the tree
 - blocker: the connector/source-registry lane was interrupted, and repo-facing doctrine still needs to be reconciled cleanly against the intended stack
 
+## Current Phase 3 review path
+
+For truthful source-scope and connector review, route through:
+
+- `reporting/docs/v1_source_scope.md`
+- `reporting/docs/source_registry_v1.md`
+- `reporting/docs/source_adapter_contract_v1.md`
+
+Current doctrine to preserve:
+
+- manual structured gym logs are the source-of-truth path for this doctrine interval
+- `wger` remains the bounded exploratory non-flagship connector prototype
+- next bounded deliverable: Phase 3 connector-truth/source-registry reconciliation
+- manual `program_block` is explicitly out of scope for the current slice
+
 ## Canonical repo framing
 
 This repo should be read through the canonical eight-bucket model only:
@@ -63,6 +78,9 @@ That proof is currently taught through bucketed implementation paths, mainly `cl
 
 Public review surfaces:
 
+- `reporting/docs/v1_source_scope.md`
+- `reporting/docs/source_registry_v1.md`
+- `reporting/docs/source_adapter_contract_v1.md`
 - `reporting/docs/health_lab_canonical_definition.md`
 - `reporting/docs/health_lab_canonical_public_demo.md`
 - `reporting/artifacts/public_demo/captured/`

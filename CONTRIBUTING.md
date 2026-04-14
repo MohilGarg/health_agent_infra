@@ -24,9 +24,18 @@ This repo is currently easiest to review as a bounded proof repo with one CLI-fi
 Start here:
 - `README.md`
 - `STATUS.md`
+- `reporting/docs/v1_source_scope.md`
+- `reporting/docs/source_registry_v1.md`
+- `reporting/docs/source_adapter_contract_v1.md`
 - `reporting/docs/health_lab_canonical_definition.md`
 - `reporting/docs/health_lab_canonical_public_demo.md`
 - `reporting/artifacts/public_demo/captured/`
+
+For current source-scope and connector-truth review, preserve this doctrine:
+- manual structured gym logs are the current source-of-truth path
+- `wger` remains bounded exploratory non-flagship only
+- the next bounded deliverable is Phase 3 connector-truth/source-registry reconciliation
+- manual `program_block` is not the current next slice
 
 ## Contribution boundaries
 
@@ -42,8 +51,9 @@ Please keep contributions truthful to current repo reality:
 
 1. Check that your change fits one of the eight canonical buckets.
 2. Keep README, STATUS, and reporting docs aligned with actual repo paths and proofs.
-3. If you touch the flagship loop, run the relevant bounded tests.
-4. If you change proof-facing docs or artifacts, make sure links resolve from repo root and claims stay narrower than the checked-in evidence.
+3. If you touch source-scope or connector-truth docs, keep the three Phase 3 source-truth docs above aligned with the root review surfaces.
+4. If you touch the flagship loop, run the relevant bounded tests.
+5. If you change proof-facing docs or artifacts, make sure links resolve from repo root and claims stay narrower than the checked-in evidence.
 
 Current flagship smoke test command:
 

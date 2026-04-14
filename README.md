@@ -74,6 +74,21 @@ That target flagship is a frozen direction for the next slices, not a claim that
 
 Repo-facing truth should follow the transformation plan. For the current gym-source doctrine interval, manual structured gym logs remain the source-of-truth path, `wger` is a bounded exploratory non-flagship connector prototype, and leftover connector surfaces outside that doctrine are not the canonical current direction unless the plan explicitly promotes them.
 
+## Current Phase 3 source-truth review path
+
+For truthful source-scope and connector review from repo root, route through:
+
+- `reporting/docs/v1_source_scope.md`
+- `reporting/docs/source_registry_v1.md`
+- `reporting/docs/source_adapter_contract_v1.md`
+
+Current doctrine to preserve:
+
+- manual structured gym logs are the current source-of-truth path
+- `wger` remains a bounded exploratory non-flagship connector only
+- the next bounded deliverable is Phase 3 connector-truth/source-registry reconciliation
+- manual `program_block` remains explicitly out of scope for the current slice
+
 There is now one explicit bounded Phase 4 manual-gym prototype on the tree. Review it here:
 
 - `reporting/artifacts/protocol_layer_proof/2026-04-14-manual-gym-phase-4-prototype/`
@@ -85,6 +100,9 @@ That slice proves manual structured session input, canonical `training_session` 
 
 Start with:
 
+- `reporting/docs/v1_source_scope.md`
+- `reporting/docs/source_registry_v1.md`
+- `reporting/docs/source_adapter_contract_v1.md`
 - `reporting/docs/health_lab_canonical_definition.md`
 - `reporting/docs/health_lab_canonical_public_demo.md`
 - `reporting/artifacts/public_demo/captured/`
@@ -134,5 +152,8 @@ For truthful review and contribution guidance, see:
 
 - `STATUS.md`
 - `CONTRIBUTING.md`
+- `reporting/docs/v1_source_scope.md`
+- `reporting/docs/source_registry_v1.md`
+- `reporting/docs/source_adapter_contract_v1.md`
 - `reporting/docs/offline_garmin_export_adapter.md`
 - `reporting/docs/health_lab_canonical_definition.md`
