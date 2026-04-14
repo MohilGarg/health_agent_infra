@@ -1,0 +1,29 @@
+{
+  "count": 2,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 101,
+      "uuid": "exercise-uuid-101",
+      "last_update_global": "2026-04-10T09:00:00Z",
+      "category": {"name": "Strength"},
+      "equipment": [{"name": "Barbell"}],
+      "muscles": [{"name": "Chest"}],
+      "muscles_secondary": [{"name": "Triceps"}],
+      "translations": [{"name": "Bench Press"}],
+      "aliases": [{"alias": "Barbell Bench Press"}]
+    },
+    {
+      "id": 102,
+      "uuid": "exercise-uuid-102",
+      "last_update_global": "2026-04-10T09:05:00Z",
+      "category": {"name": "Strength"},
+      "equipment": [{"name": "Cable"}],
+      "muscles": [{"name": "Back"}],
+      "muscles_secondary": [{"name": "Biceps"}],
+      "translations": [{"name": "Lat Pulldown"}],
+      "aliases": [{"alias": "Wide Grip Lat Pulldown"}]
+    }
+  ]
+}

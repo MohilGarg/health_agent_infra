@@ -41,15 +41,15 @@ Machine-readable discovery is published by `python3 -m health_model.agent_contra
   - explicit missingness, never fabricated zeros
   - no unsupported micronutrient or coaching claims
 
-### `retrieve.day_trio_brief`
-- Purpose: return a bounded one-day trio brief over recovery, nutrition, and training coverage from an accepted `daily_health_snapshot` artifact.
+### `retrieve.day_snapshot`
+- Purpose: return a bounded flagship day-snapshot review from an accepted `daily_health_snapshot` artifact, centered on Garmin plus subjective coverage with optional bridge enrichment surfaced separately.
 - Current implementation status: proof-complete in v1.
 - Required scope: `user_id`, `date`, `artifact_path`, `request_id`, `requested_at`.
 - Semantics:
   - validate `request_id` as a non-empty string and `requested_at` as an ISO 8601 datetime with timezone information, then echo both under `validation.request_echo`
   - fail closed if the artifact is missing, invalid JSON, wrong `artifact_type`, wrong `user_id`, or wrong `date`
-  - preserve explicit coverage flags for recovery, nutrition, and training
-  - when training artifacts are absent, surface `training_summary.status` as `missing` or `blocked` and do not infer a workout from other signals
+  - preserve explicit Garmin and subjective flagship lane status
+  - treat Cronometer and manual gym surfaces as optional bridge enrichment only, never as flagship completeness gates
   - preserve inspectable provenance refs for each populated section
 
 ### `retrieve.sleep_review`
@@ -198,16 +198,16 @@ The `retrieval` object contains:
 
 ## Proof expectation for v1
 
-The frozen proof bundles for this slice live under:
-- `artifacts/protocol_layer_proof/2026-04-11/` for `retrieve.day_context`
-- `artifacts/protocol_layer_proof/2026-04-11-day-nutrition-brief/` for `retrieve.day_nutrition_brief`
-- `artifacts/protocol_layer_proof/2026-04-11-sleep-review/` for `retrieve.sleep_review`
-- `artifacts/protocol_layer_proof/2026-04-11-recommendation-retrieval/` for `retrieve.recommendation`
-- `artifacts/protocol_layer_proof/2026-04-11-recommendation-judgment-retrieval/` for `retrieve.recommendation_judgment`
-- `artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/` for `retrieve.recommendation_feedback`
-- `artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/` for `retrieve.recommendation_feedback_window`
-- `artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window/` for `retrieve.recommendation_resolution_window`
-- `artifacts/protocol_layer_proof/2026-04-11-weekly-pattern-review/` for `retrieve.weekly_pattern_review`
+The frozen proof bundles for this slice live under the canonical checked-in proof root:
+- `reporting/artifacts/protocol_layer_proof/2026-04-11/` for `retrieve.day_context`
+- `reporting/artifacts/protocol_layer_proof/2026-04-11-day-nutrition-brief/` for `retrieve.day_nutrition_brief`
+- `reporting/artifacts/protocol_layer_proof/2026-04-11-sleep-review/` for `retrieve.sleep_review`
+- `reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-retrieval/` for `retrieve.recommendation`
+- `reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-judgment-retrieval/` for `retrieve.recommendation_judgment`
+- `reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/` for `retrieve.recommendation_feedback`
+- `reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/` for `retrieve.recommendation_feedback_window`
+- `reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window/` for `retrieve.recommendation_resolution_window`
+- `reporting/artifacts/protocol_layer_proof/2026-04-11-weekly-pattern-review/` for `retrieve.weekly_pattern_review`
 
 Each bundle includes:
 - retrieval request artifact

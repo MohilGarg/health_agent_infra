@@ -9,6 +9,7 @@
   ],
   "rationale": "Bounded proof recommendation for 2026-04-10.",
   "recommendation_id": "rec_window_20260410_recovery_01",
+  "recommendation_class": "prioritize_recovery",
   "summary": "Keep the evening light and prioritize recovery basics.",
   "user_id": "user_dom"
 }

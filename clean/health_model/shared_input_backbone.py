@@ -173,6 +173,9 @@ class SubjectiveDailyEntryModel(BaseModel):
     mood_self_rating: Optional[int] = Field(default=None, ge=1, le=5)
     perceived_sleep_quality: Optional[int] = Field(default=None, ge=1, le=5)
     illness_or_soreness_flag: Optional[bool] = None
+    soreness_today_1_to_5: Optional[int] = Field(default=None, ge=1, le=5)
+    training_intent_today: Optional[str] = Field(default=None, min_length=1)
+    unusual_constraints_or_stressors: Optional[str] = None
     free_text_summary: str
     extraction_status: ExtractionStatus
     source_artifact_ids: list[str] = Field(min_length=1)

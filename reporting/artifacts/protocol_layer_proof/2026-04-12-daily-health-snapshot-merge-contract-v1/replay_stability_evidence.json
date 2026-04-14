@@ -1,5 +1,5 @@
 {
-  "blocked_lane": {
+  "blocked_flagship_lane": {
     "first": {
       "outcome_type": "snapshot_blocked",
       "daily_health_snapshot_id": null,
@@ -12,29 +12,29 @@
     },
     "stable": true
   },
-  "date_misaligned": {
+  "optional_lanes_degraded": {
     "first": {
-      "outcome_type": "snapshot_emitted_partial_truthful",
-      "daily_health_snapshot_id": "daily_health_snapshot_7cbb44de7bdb39a2",
-      "provenance_record_id": "provenance_daily_health_snapshot_41094410dbc79e50"
+      "outcome_type": "snapshot_emitted_complete_for_declared_lanes",
+      "daily_health_snapshot_id": "daily_health_snapshot_5e59d4f40ffc173a",
+      "provenance_record_id": "provenance_daily_health_snapshot_f4b4f08e91facbcc"
     },
     "second": {
-      "outcome_type": "snapshot_emitted_partial_truthful",
-      "daily_health_snapshot_id": "daily_health_snapshot_7cbb44de7bdb39a2",
-      "provenance_record_id": "provenance_daily_health_snapshot_41094410dbc79e50"
+      "outcome_type": "snapshot_emitted_complete_for_declared_lanes",
+      "daily_health_snapshot_id": "daily_health_snapshot_5e59d4f40ffc173a",
+      "provenance_record_id": "provenance_daily_health_snapshot_f4b4f08e91facbcc"
     },
     "stable": true
   },
   "fully_aligned": {
     "first": {
       "outcome_type": "snapshot_emitted_complete_for_declared_lanes",
-      "daily_health_snapshot_id": "daily_health_snapshot_8e30d1a8c62c9eb3",
-      "provenance_record_id": "provenance_daily_health_snapshot_7491efcc02388188"
+      "daily_health_snapshot_id": "daily_health_snapshot_f7cbbff6ff2efc69",
+      "provenance_record_id": "provenance_daily_health_snapshot_9c2f3d22d3d72717"
     },
     "second": {
       "outcome_type": "snapshot_emitted_complete_for_declared_lanes",
-      "daily_health_snapshot_id": "daily_health_snapshot_8e30d1a8c62c9eb3",
-      "provenance_record_id": "provenance_daily_health_snapshot_7491efcc02388188"
+      "daily_health_snapshot_id": "daily_health_snapshot_f7cbbff6ff2efc69",
+      "provenance_record_id": "provenance_daily_health_snapshot_9c2f3d22d3d72717"
     },
     "stable": true
   }

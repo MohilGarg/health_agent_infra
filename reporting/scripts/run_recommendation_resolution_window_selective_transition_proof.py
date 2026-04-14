@@ -2,19 +2,21 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 BUNDLE_ROOT = (
     REPO_ROOT
+    / "reporting"
     / "artifacts"
     / "protocol_layer_proof"
     / "2026-04-11-recommendation-resolution-window-selective-transition"
 )
-SOURCE_WINDOW_ROOT = REPO_ROOT / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-resolution-window"
+SOURCE_WINDOW_ROOT = REPO_ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-resolution-window"
 
 WINDOW_START = "2026-04-04"
 WINDOW_END = "2026-04-10"
@@ -27,15 +29,27 @@ NEIGHBOR_DATES = ["2026-04-04", "2026-04-10"]
 
 
 def _bundle_rel(*parts: str) -> str:
-    return str(Path("artifacts") / "protocol_layer_proof" / "2026-04-11-recommendation-resolution-window-selective-transition" / Path(*parts))
+    return str(Path("reporting") / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-resolution-window-selective-transition" / Path(*parts))
 
 
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _subprocess_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join(
+        [
+            str(REPO_ROOT / "clean"),
+            str(REPO_ROOT / "safety"),
+            env.get("PYTHONPATH", ""),
+        ]
+    ).rstrip(os.pathsep)
+    return env
+
+
 def _run_json(command: list[str], expected_returncode: int) -> dict:
-    completed = subprocess.run(command, cwd=REPO_ROOT, capture_output=True, text=True, check=False)
+    completed = subprocess.run(command, cwd=REPO_ROOT, env=_subprocess_env(), capture_output=True, text=True, check=False)
     if completed.returncode != expected_returncode:
         raise RuntimeError(
             f"unexpected return code {completed.returncode}:\nSTDOUT:\n{completed.stdout}\nSTDERR:\n{completed.stderr}"
@@ -468,7 +482,7 @@ def main() -> int:
     manifest = {
         "date": "2026-04-11",
         "slice": "protocol_proof.recommendation_resolution_window_selective_transition",
-        "frozen_command": "python3 scripts/run_recommendation_resolution_window_selective_transition_proof.py",
+        "frozen_command": "python3 reporting/scripts/run_recommendation_resolution_window_selective_transition_proof.py",
         "inputs": [
             "agent_recommendation_2026-04-04.json",
             "agent_recommendation_2026-04-07.json",
@@ -506,23 +520,24 @@ def main() -> int:
             "linkage_summary_output": "linkage_summary.json",
         },
         "deterministic_replay_commands": [
-            "python3 scripts/run_recommendation_resolution_window_selective_transition_proof.py",
-            "python3 -m health_model.agent_retrieval_cli recommendation-resolution-window --user-id user_dom --start-date 2026-04-04 --end-date 2026-04-10 --memory-locator artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition/recommendation_resolution_window_before_memory.json --request-id req_window_selective_transition_resolution_before_2026_04_11 --requested-at 2026-04-11T14:30:00+01:00 --include-conflicts false --include-missingness true",
-            "python3 -m health_model.agent_memory_write_cli recommendation-judgment --output-dir artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition --payload-path artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition/writeback_success_request.json",
-            "python3 -m health_model.agent_retrieval_cli recommendation-resolution-window --user-id user_dom --start-date 2026-04-04 --end-date 2026-04-10 --memory-locator artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition/recommendation_resolution_window_after_memory.json --request-id req_window_selective_transition_resolution_after_2026_04_11 --requested-at 2026-04-11T14:32:00+01:00 --include-conflicts false --include-missingness true",
-            "python3 -m health_model.agent_retrieval_cli recommendation-feedback-window --user-id user_dom --start-date 2026-04-04 --end-date 2026-04-10 --memory-locator artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition/recommendation_feedback_window_after_memory.json --request-id req_window_selective_transition_feedback_after_2026_04_11 --requested-at 2026-04-11T14:33:00+01:00",
-            "python3 -m health_model.agent_memory_write_cli recommendation-judgment --output-dir artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition --payload-path artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition/writeback_rejected_request.json",
+            "python3 reporting/scripts/run_recommendation_resolution_window_selective_transition_proof.py",
+            "PYTHONPATH=clean:safety python3 -m health_model.agent_retrieval_cli recommendation-resolution-window --user-id user_dom --start-date 2026-04-04 --end-date 2026-04-10 --memory-locator reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition/recommendation_resolution_window_before_memory.json --request-id req_window_selective_transition_resolution_before_2026_04_11 --requested-at 2026-04-11T14:30:00+01:00 --include-conflicts false --include-missingness true",
+            "PYTHONPATH=clean:safety python3 -m health_model.agent_memory_write_cli recommendation-judgment --output-dir reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition --payload-path reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition/writeback_success_request.json",
+            "PYTHONPATH=clean:safety python3 -m health_model.agent_retrieval_cli recommendation-resolution-window --user-id user_dom --start-date 2026-04-04 --end-date 2026-04-10 --memory-locator reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition/recommendation_resolution_window_after_memory.json --request-id req_window_selective_transition_resolution_after_2026_04_11 --requested-at 2026-04-11T14:32:00+01:00 --include-conflicts false --include-missingness true",
+            "PYTHONPATH=clean:safety python3 -m health_model.agent_retrieval_cli recommendation-feedback-window --user-id user_dom --start-date 2026-04-04 --end-date 2026-04-10 --memory-locator reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition/recommendation_feedback_window_after_memory.json --request-id req_window_selective_transition_feedback_after_2026_04_11 --requested-at 2026-04-11T14:33:00+01:00",
+            "PYTHONPATH=clean:safety python3 -m health_model.agent_memory_write_cli recommendation-judgment --output-dir reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition --payload-path reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition/writeback_rejected_request.json",
         ],
         "deterministic_replay_tests": [
-            "python3 -m unittest tests.test_agent_retrieval_cli tests.test_agent_memory_write_cli tests.test_agent_contract_cli",
+            "PYTHONPATH=clean:safety python3 -m unittest safety.tests.test_agent_retrieval_cli safety.tests.test_agent_memory_write_cli safety.tests.test_agent_contract_cli",
         ],
         "smoke_checks": [
             "pre-write window contains target pending item, neighboring judged items, and explicit no-recommendation gaps",
             "successful writeback succeeds via writeback.recommendation_judgment for the 2026-04-07 target only",
+            "the 2026-04-07 target explicitly carries recommendation_class=insufficient_evidence_ask_follow_up under the same downstream doctrine",
             "post-write resolution shows only the target transition from pending_judgment to judged",
             "neighbor_stability_proof shows 2026-04-04 and 2026-04-10 judged entries unchanged",
             "neighbor_stability_proof shows 2026-04-05, 2026-04-06, 2026-04-08, and 2026-04-09 remain explicit no-recommendation gaps",
-            "post-write feedback truthfully returns the linked 2026-04-04, 2026-04-07, and 2026-04-10 recommendation/judgment pairs",
+            "post-write feedback truthfully returns the linked 2026-04-04, 2026-04-07, and 2026-04-10 recommendation/judgment pairs with recommendation_class preserved",
             "rejected writeback returns ok=false with code=recommendation_artifact_id_mismatch and non_mutation_proof confirms no further artifact mutation",
             "deterministic replay commands and tests are frozen in this manifest",
         ],

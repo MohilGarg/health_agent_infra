@@ -1,5 +1,5 @@
 {
-  "artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-judgment-retrieval/recommendation_judgment_2026-04-10.json",
+  "artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-judgment-retrieval/recommendation_judgment_2026-04-10.json",
   "error": null,
   "ok": true,
   "retrieval": {
@@ -22,7 +22,7 @@
       "written_at": "2026-04-10T20:15:00+01:00"
     },
     "generated_from": {
-      "artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-judgment-retrieval/recommendation_judgment_2026-04-10.json",
+      "artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-judgment-retrieval/recommendation_judgment_2026-04-10.json",
       "recommendation_artifact_path": "data/health/agent_recommendation_2026-04-10.json",
       "request_id": "req_writeback_20260410_01"
     },

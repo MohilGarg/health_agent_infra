@@ -2,27 +2,42 @@
 
 This document defines the bounded v1 role of **wger** inside Health Lab.
 
-Core rule:
+Core rules:
 - wger is a **gym-domain source system / component**
 - wger is **not** the architecture
 - Health Lab keeps its own canonical schema, provenance rules, and agent-facing contracts
+- manual structured gym logs remain the source-of-truth path for this doctrine interval
 
-## Why wger for v1
+## Why keep a bounded wger surface in v1
 
-wger is a better v1 resistance-training source-system fit than a closed consumer UI because it is:
+wger remains a useful exploratory connector substrate because it is:
 - open-source
 - API-exposed
-- more controllable as an integration substrate
-- more aligned with the project thesis of agent-first health infrastructure over open and inspectable source systems
+- more controllable as an integration substrate than a closed consumer UI
+- aligned with the project thesis of agent-first health infrastructure over inspectable source systems
+
+Those benefits justify a bounded prototype surface. They do **not** make wger the preferred flagship source of truth.
 
 ## v1 role
 
-wger is the preferred v1 resistance-training connector source.
+wger is a bounded exploratory non-flagship connector prototype.
 
-Interpretation:
-- Garmin = recovery / activity / physiology
-- wger = resistance training
-- Cronometer = nutrition / supplements
+Interpretation for this doctrine interval:
+- Garmin = passive recovery / activity / physiology flagship anchor
+- typed manual readiness and manual structured gym logs = Health Lab-owned human-input anchors
+- wger = optional mock-backed connector prototype for later convergence into canonical gym objects
+- Cronometer = nutrition / supplements bridge/reference
+
+## Current proof maturity
+
+The live repo proof for wger is bounded to a disposable local mock of published wger API endpoints plus deterministic transform outputs and replay checks.
+
+That is enough to classify wger as a real prototype connector surface on the tree.
+
+It is **not** a claim that:
+- a live self-hosted or Docker-backed wger runtime was proved on this host
+- wger is required for flagship completion
+- the legacy trio day gate should be reopened as current flagship truth
 
 ## Architectural rule
 
@@ -35,11 +50,11 @@ Agent-facing tools must operate over Health Lab normalized state, not directly o
 
 ### pull
 - `pull/sources/wger/`
-  - source acquisition
+  - bounded source acquisition
   - raw receipts
-  - auth/session handling if needed
+  - auth/session handling where needed for the prototype surface
   - incremental sync state
-  - runtime durability and retry logic
+  - retry and resume behavior inside the bounded proof surface
 
 ### clean
 - `clean/transforms/wger/` or `clean/transforms/resistance_training/`
@@ -67,7 +82,7 @@ Derived metrics expected around the same domain:
 
 ## v1 adapter contract intent
 
-The wger adapter should:
+The bounded wger prototype should:
 - preserve stable source identity from wger receipts
 - emit stable Health Lab canonical IDs
 - attach provenance on every normalized output
@@ -78,6 +93,7 @@ The wger adapter should:
 ## Non-goals for this slice
 
 This document does not:
+- make wger the flagship or preferred v1 resistance-training source of truth
 - make wger the only possible future gym source
 - require Health Lab to mirror wger-native data structures exactly
 - remove support for manual gym inputs as a fallback or coexistence path

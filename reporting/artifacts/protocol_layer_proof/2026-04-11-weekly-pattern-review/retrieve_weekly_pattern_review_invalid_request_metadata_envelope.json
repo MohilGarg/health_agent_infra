@@ -1,5 +1,5 @@
 {
-  "artifact_path": "artifacts/protocol_layer_proof/2026-04-11-weekly-pattern-review/weekly_pattern_review_memory.json",
+  "artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-weekly-pattern-review/weekly_pattern_review_memory.json",
   "error": {
     "code": "invalid_requested_at",
     "details": {

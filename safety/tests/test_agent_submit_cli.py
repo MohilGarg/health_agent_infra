@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -11,7 +12,19 @@ from health_model.agent_interface import load_persisted_bundle, write_persisted_
 
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "agent_readable_daily_context"
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _subprocess_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join(
+        [
+            str(REPO_ROOT / "clean"),
+            str(REPO_ROOT / "safety"),
+            env.get("PYTHONPATH", ""),
+        ]
+    ).rstrip(os.pathsep)
+    return env
 
 
 class AgentSubmitCliIntegrationTest(unittest.TestCase):
@@ -158,6 +171,7 @@ class AgentSubmitCliIntegrationTest(unittest.TestCase):
         completed = subprocess.run(
             [sys.executable, "-m", "health_model.agent_submit_cli", *args],
             cwd=REPO_ROOT,
+            env=_subprocess_env(),
             capture_output=True,
             text=True,
             check=False,

@@ -2,25 +2,38 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-BUNDLE_ROOT = REPO_ROOT / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-resolution-transition"
-SOURCE_RECOMMENDATION = REPO_ROOT / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-resolution-window" / "agent_recommendation_2026-04-07.json"
-TARGET_RECOMMENDATION_REL = "artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/agent_recommendation_2026-04-07.json"
-TARGET_JUDGMENT_REL = "artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/recommendation_judgment_2026-04-07.json"
-TARGET_JUDGMENT_LATEST_REL = "artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/recommendation_judgment_latest.json"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+BUNDLE_ROOT = REPO_ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-resolution-transition"
+SOURCE_RECOMMENDATION = REPO_ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-resolution-window" / "agent_recommendation_2026-04-07.json"
+TARGET_RECOMMENDATION_REL = "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/agent_recommendation_2026-04-07.json"
+TARGET_JUDGMENT_REL = "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/recommendation_judgment_2026-04-07.json"
+TARGET_JUDGMENT_LATEST_REL = "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/recommendation_judgment_latest.json"
 
 
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _subprocess_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join(
+        [
+            str(REPO_ROOT / "clean"),
+            str(REPO_ROOT / "safety"),
+            env.get("PYTHONPATH", ""),
+        ]
+    ).rstrip(os.pathsep)
+    return env
+
+
 def _run_json(command: list[str], expected_returncode: int) -> dict:
-    completed = subprocess.run(command, cwd=REPO_ROOT, capture_output=True, text=True, check=False)
+    completed = subprocess.run(command, cwd=REPO_ROOT, env=_subprocess_env(), capture_output=True, text=True, check=False)
     if completed.returncode != expected_returncode:
         raise RuntimeError(f"unexpected return code {completed.returncode}:\nSTDOUT:\n{completed.stdout}\nSTDERR:\n{completed.stderr}")
     if completed.stderr.strip():
@@ -259,7 +272,7 @@ def main() -> int:
     manifest = {
         "date": "2026-04-11",
         "slice": "protocol_proof.recommendation_resolution_transition",
-        "frozen_command": "python3 scripts/run_recommendation_resolution_transition_proof.py",
+        "frozen_command": "python3 reporting/scripts/run_recommendation_resolution_transition_proof.py",
         "inputs": [
             "agent_recommendation_2026-04-07.json",
             "recommendation_resolution_window_before_memory.json",
@@ -280,18 +293,18 @@ def main() -> int:
             "linkage_summary.json",
         ],
         "deterministic_replay_commands": [
-            "python3 scripts/run_recommendation_resolution_transition_proof.py",
-            "python3 -m health_model.agent_retrieval_cli recommendation-resolution-window --user-id user_dom --start-date 2026-04-04 --end-date 2026-04-10 --memory-locator artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/recommendation_resolution_window_before_memory.json --request-id req_transition_resolution_before_2026_04_11 --requested-at 2026-04-11T14:10:00+01:00 --include-conflicts false --include-missingness true",
-            "python3 -m health_model.agent_memory_write_cli recommendation-judgment --output-dir artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition --payload-path artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/writeback_success_request.json",
-            "python3 -m health_model.agent_retrieval_cli recommendation-resolution-window --user-id user_dom --start-date 2026-04-04 --end-date 2026-04-10 --memory-locator artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/recommendation_resolution_window_after_memory.json --request-id req_transition_resolution_after_2026_04_11 --requested-at 2026-04-11T14:12:00+01:00 --include-conflicts false --include-missingness true",
-            "python3 -m health_model.agent_retrieval_cli recommendation-feedback-window --user-id user_dom --start-date 2026-04-04 --end-date 2026-04-10 --memory-locator artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/recommendation_feedback_window_after_memory.json --request-id req_transition_feedback_after_2026_04_11 --requested-at 2026-04-11T14:13:00+01:00",
-            "python3 -m health_model.agent_memory_write_cli recommendation-judgment --output-dir artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition --payload-path artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/writeback_rejected_request.json"
+            "python3 reporting/scripts/run_recommendation_resolution_transition_proof.py",
+            "PYTHONPATH=clean:safety python3 -m health_model.agent_retrieval_cli recommendation-resolution-window --user-id user_dom --start-date 2026-04-04 --end-date 2026-04-10 --memory-locator reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/recommendation_resolution_window_before_memory.json --request-id req_transition_resolution_before_2026_04_11 --requested-at 2026-04-11T14:10:00+01:00 --include-conflicts false --include-missingness true",
+            "PYTHONPATH=clean:safety python3 -m health_model.agent_memory_write_cli recommendation-judgment --output-dir reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition --payload-path reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/writeback_success_request.json",
+            "PYTHONPATH=clean:safety python3 -m health_model.agent_retrieval_cli recommendation-resolution-window --user-id user_dom --start-date 2026-04-04 --end-date 2026-04-10 --memory-locator reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/recommendation_resolution_window_after_memory.json --request-id req_transition_resolution_after_2026_04_11 --requested-at 2026-04-11T14:12:00+01:00 --include-conflicts false --include-missingness true",
+            "PYTHONPATH=clean:safety python3 -m health_model.agent_retrieval_cli recommendation-feedback-window --user-id user_dom --start-date 2026-04-04 --end-date 2026-04-10 --memory-locator reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/recommendation_feedback_window_after_memory.json --request-id req_transition_feedback_after_2026_04_11 --requested-at 2026-04-11T14:13:00+01:00",
+            "PYTHONPATH=clean:safety python3 -m health_model.agent_memory_write_cli recommendation-judgment --output-dir reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition --payload-path reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/writeback_rejected_request.json"
         ],
         "smoke_checks": [
             "before-state shows pending_judgment for 2026-04-07",
             "successful writeback returns ok=true and writes recommendation_judgment_2026-04-07.json",
             "post-write resolution reclassifies 2026-04-07 as judged",
-            "post-write feedback returns the same linked recommendation plus judgment pair",
+            "post-write feedback returns the same linked recommendation plus judgment pair with recommendation_class preserved",
             "rejected writeback returns ok=false with code=recommendation_artifact_id_mismatch",
             "non_mutation_proof shows dated and latest judgment artifacts unchanged after rejection"
         ],

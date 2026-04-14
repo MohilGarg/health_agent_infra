@@ -200,7 +200,7 @@
     "latest_recommendation_resolution_window_memory_artifact": "{output_dir}/recommendation_resolution_window_memory_latest.json"
   },
   "proof_artifacts": {
-    "recommendation_resolution_transition_writeback_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition-writeback/",
-    "contract_describe_writeback_transition_parity_proof_bundle": "artifacts/protocol_layer_proof/2026-04-12-contract-describe-writeback-transition-parity/"
+    "recommendation_resolution_transition_writeback_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition-writeback/",
+    "contract_describe_writeback_transition_parity_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-12-contract-describe-writeback-transition-parity/"
   }
 }

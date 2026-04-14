@@ -1,5 +1,27 @@
 # Status
 
+## Report-phase tracker
+
+Source plan: `reporting/docs/health_lab_repo_transformation_plan_2026-04-09.md`
+
+- Phase 1 — identity and contract correction: mostly done locally
+  - evidence: `README.md` and `STATUS.md` now frame the repo as Health Lab rather than a Garmin-only repo, and distinguish current proof from target flagship doctrine
+- Phase 2 — canonical data model introduction: partially done locally
+  - evidence: the repo has a schema-backed daily snapshot path under `clean/health_model/`, and the deterministic day-snapshot reconciliation lane passed as a bounded proof slice
+- Phase 3 — adapter reframing: in progress
+  - evidence: Garmin is being treated as an adapter into the shared health model, but source-registry / connector-truth cleanup is still incomplete and the current lane was interrupted before completion
+- Phase 4 — gym ingestion introduction: not yet landed as an interpretable phase deliverable
+- Phase 5 — nutrition surface cleanup: not yet landed as an interpretable phase deliverable
+- Phase 6 — ClawSuite-facing outputs: not yet landed as an interpretable phase deliverable
+
+## Current plan position
+
+- current_phase: Phase 3 — adapter reframing
+- current_bounded_lane: source-registry and connector-truth reconciliation
+- intended_stack_to_reconcile: Garmin + manual logging surfaces + nutrition pipeline, with exploratory external connectors kept clearly non-flagship until deliberately promoted
+- current_truth: the last several local slices mainly hardened Phase 2 foundations and the Phase 2 -> Phase 3 handoff, not the later MVP phases
+- blocker: the connector/source-registry lane was interrupted, and repo-facing doctrine still needs to be reconciled cleanly against the intended stack
+
 ## Canonical repo framing
 
 This repo should be read through the canonical eight-bucket model only:
@@ -45,14 +67,31 @@ Public review surfaces:
 - `reporting/artifacts/public_demo/captured/`
 - `reporting/artifacts/flagship_loop_proof/2026-04-09/`
 
+For checked-in proof review, `reporting/artifacts/` is the sole canonical root.
+
 Additional bounded writeback proof:
 
 - `reporting/artifacts/protocol_layer_proof/2026-04-11-writeback-judgment/`
 - `reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/`
 
+## Frozen target flagship doctrine, not yet current proof
+
+The approved target flagship for the next slices is:
+
+`Garmin passive pull -> typed manual readiness intake -> deterministic normalization/bundle/context -> bounded recommendation -> bounded writeback`
+
+That is the frozen doctrine, not a claim that the full end-to-end target loop is already implemented.
+
+For truthful review right now:
+- treat the CLI-first loop above as the proved public path
+- treat Garmin plus typed manual readiness as the approved target flagship path still being formalized and built
+- treat Cronometer as a bridge/reference nutrition surface rather than a flagship-completion dependency
+- treat external gym connectors such as `wger` or `Hevy` as non-flagship or exploratory surfaces rather than the source of truth for the flagship path
+
 ## Pathing truth to keep straight
 
-- checked-in proof artifacts live under `reporting/artifacts/`
+- checked-in proof artifacts live under the canonical root `reporting/artifacts/`
+- there is no separate repo-root `artifacts/` proof tree anymore
 - some runtime examples still write to `data/` paths
 - current bucket-local runtime data also exists under `pull/data/`
 
@@ -65,12 +104,16 @@ So `data/...` should not be taught as the universal canonical repo layout.
 - not a polished install flow for general users
 - not a claim that `health_model` is a canonical project-shape category
 - not a claim that all older adjacent material has been deleted or reorganized
+- not a claim that the frozen Garmin plus typed-manual-readiness flagship doctrine is already fully landed end-to-end
 
 ## Reviewer checklist
 
-- [x] Root docs now frame the repo through the canonical eight buckets
+- [x] Root docs frame the repo through the canonical eight buckets
+- [x] Root docs distinguish current proof from the frozen target flagship doctrine
 - [x] Touched public/operator-facing docs demote `health_model` to implementation-namespace status
 - [x] Current path teaching avoids treating `data/...` as universal repo truth
 - [x] Public proof surfaces remain rooted in `reporting/`
+- [x] Cronometer is described as bridge/reference rather than flagship-critical
+- [x] External gym connectors stay non-flagship in repo-facing doctrine
 - [x] Legacy material stays explicitly non-canonical
 - [ ] Destructive cleanup, moves, and archive pruning remain deferred to later slices

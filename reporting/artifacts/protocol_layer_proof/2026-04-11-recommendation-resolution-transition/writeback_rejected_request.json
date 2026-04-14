@@ -8,7 +8,7 @@
   "judgment_id": "judgment_transition_rejected_20260407_01",
   "judgment_label": "useful",
   "recommendation_artifact_id": "wrong_recommendation_id",
-  "recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/agent_recommendation_2026-04-07.json",
+  "recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/agent_recommendation_2026-04-07.json",
   "request_id": "req_transition_writeback_rejected_20260407_01",
   "requested_at": "2026-04-07T20:14:00+01:00",
   "time_cost_note": "Under 10 minutes including payload review.",

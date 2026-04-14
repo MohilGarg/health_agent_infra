@@ -1,0 +1,45 @@
+{
+  "source_artifacts": [
+    {
+      "artifact_id": "artifact_typed_readiness_20260409",
+      "user_id": "user_dom",
+      "source_type": "manual",
+      "source_name": "manual_structured_readiness",
+      "collected_at": "2026-04-09T07:30:00+01:00",
+      "ingested_at": "2026-04-09T07:31:00+01:00",
+      "raw_location": "healthlab://manual/readiness/2026-04-09/morning-checkin",
+      "raw_format": "json",
+      "parser_version": "typed-manual-readiness-v1"
+    }
+  ],
+  "input_events": [],
+  "subjective_daily_entries": [
+    {
+      "entry_id": "subjective_typed_readiness_20260409",
+      "user_id": "user_dom",
+      "date": "2026-04-09",
+      "source_name": "manual_structured_readiness",
+      "source_record_id": "subjective:artifact_typed_readiness_20260409:day:2026-04-09",
+      "provenance_record_id": "provenance:subjective:artifact_typed_readiness_20260409:day:2026-04-09",
+      "conflict_status": "none",
+      "energy_self_rating": 4,
+      "stress_self_rating": 2,
+      "mood_self_rating": 4,
+      "perceived_sleep_quality": 4,
+      "illness_or_soreness_flag": false,
+      "soreness_today_1_to_5": 2,
+      "training_intent_today": "easy_run",
+      "unusual_constraints_or_stressors": "light travel fatigue",
+      "free_text_summary": "easy_run | light travel fatigue",
+      "extraction_status": "complete",
+      "source_artifact_ids": [
+        "artifact_typed_readiness_20260409"
+      ],
+      "confidence_label": "high",
+      "confidence_score": 0.92,
+      "readiness_input_type": "typed_manual_readiness_v1",
+      "derived_soreness_flag_rule": "soreness_today_1_to_5 >= 3"
+    }
+  ],
+  "manual_log_entries": []
+}

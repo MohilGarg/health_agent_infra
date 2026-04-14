@@ -1,0 +1,8 @@
+{
+  "artifact_family": "merge_outcome",
+  "target_date": "2026-04-11",
+  "outcome_type": "snapshot_emitted_complete_for_declared_lanes",
+  "policy_version": "daily-health-snapshot-merge-contract-v1",
+  "daily_health_snapshot_id": "daily_health_snapshot_5e59d4f40ffc173a",
+  "provenance_record_id": "provenance_daily_health_snapshot_f4b4f08e91facbcc"
+}

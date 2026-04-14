@@ -189,6 +189,7 @@ class DailyHealthSnapshot:
     running_sessions: list[dict[str, Any]] = field(default_factory=list)
     gym_sessions: list[dict[str, Any]] = field(default_factory=list)
     gym_exercise_sets: list[dict[str, Any]] = field(default_factory=list)
+    subjective_daily: dict[str, Any] | None = None
     nutrition_daily: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:

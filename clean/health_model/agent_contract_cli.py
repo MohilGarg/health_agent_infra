@@ -8,6 +8,12 @@ from typing import Any
 
 CONTRACT_ID = "health_lab_agent_contract"
 CONTRACT_VERSION = "2026-04-11"
+APPROVED_RECOMMENDATION_CLASSES = [
+    "proceed_as_planned",
+    "reduce_intensity",
+    "prioritize_recovery",
+    "insufficient_evidence_ask_follow_up",
+]
 SHARED_ARGS = {
     "bundle_path": {
         "flag": "--bundle-path",
@@ -463,11 +469,11 @@ def _contract_payload() -> dict[str, Any]:
                 "produces": ["retrieval_response_envelope"],
                 "response_envelope": "retrieval",
             },
-            "retrieve.day_trio_brief": {
+            "retrieve.day_snapshot": {
                 "module": "health_model.agent_retrieval_cli",
-                "command": "day-trio-brief",
+                "command": "day-snapshot",
                 "mode": "read",
-                "description": "Return one bounded day-scoped trio brief from an accepted daily_health_snapshot artifact, preserving explicit missingness for unavailable training evidence and provenance refs for populated sections.",
+                "description": "Return one bounded flagship day-snapshot review from an accepted daily_health_snapshot artifact, preserving explicit Garmin-plus-subjective lane status and treating nutrition or gym surfaces as optional bridge enrichment only.",
                 "implementation_status": "proof_complete",
                 "args": [
                     _shared_arg("user_id"),
@@ -505,7 +511,7 @@ def _contract_payload() -> dict[str, Any]:
                 "module": "health_model.agent_retrieval_cli",
                 "command": "recommendation",
                 "mode": "read",
-                "description": "Return one bounded recommendation artifact from an accepted agent_recommendation artifact, with request metadata validated and echoed under validation.request_echo.",
+                "description": "Return one bounded recommendation artifact from an accepted agent_recommendation artifact, preserving the approved recommendation_class taxonomy in the surfaced evidence and validating request metadata under validation.request_echo.",
                 "implementation_status": "proof_complete",
                 "args": [
                     _shared_arg("user_id"),
@@ -543,7 +549,7 @@ def _contract_payload() -> dict[str, Any]:
                 "module": "health_model.agent_retrieval_cli",
                 "command": "recommendation-feedback",
                 "mode": "read",
-                "description": "Return one bounded recommendation plus same-day judgment pair, failing closed unless both artifacts validate and their id and path linkage match.",
+                "description": "Return one bounded recommendation plus same-day judgment pair, preserving recommendation_class inside the surfaced recommendation payload and failing closed unless both artifacts validate and their id and path linkage match.",
                 "implementation_status": "proof_complete",
                 "args": [
                     _shared_arg("user_id"),
@@ -563,7 +569,7 @@ def _contract_payload() -> dict[str, Any]:
                 "module": "health_model.agent_retrieval_cli",
                 "command": "recommendation-feedback-window",
                 "mode": "read",
-                "description": "Return one bounded seven-day window of linked recommendation plus same-day judgment pairs aggregated only from a scoped memory locator fixture, failing closed on locator, scope, or linkage violations.",
+                "description": "Return one bounded seven-day window of linked recommendation plus same-day judgment pairs aggregated only from a scoped memory locator fixture, preserving recommendation_class inside each surfaced recommendation payload and failing closed on locator, scope, or linkage violations.",
                 "implementation_status": "proof_complete",
                 "args": [
                     _shared_arg("user_id"),
@@ -592,7 +598,7 @@ def _contract_payload() -> dict[str, Any]:
                 "module": "health_model.agent_retrieval_cli",
                 "command": "recommendation-resolution-window",
                 "mode": "read",
-                "description": "Return one bounded seven-day window of accepted recommendations from a scoped memory locator fixture, separating judged items, pending_judgment items, and no-recommendation dates while failing closed on locator, scope, or linkage violations.",
+                "description": "Return one bounded seven-day window of accepted recommendations from a scoped memory locator fixture, preserving recommendation_class inside each surfaced recommendation payload while separating judged items, pending_judgment items, and no-recommendation dates and failing closed on locator, scope, or linkage violations.",
                 "implementation_status": "proof_complete",
                 "args": [
                     _shared_arg("user_id"),
@@ -678,13 +684,15 @@ def _contract_payload() -> dict[str, Any]:
                         "context_artifact_id",
                         "resolution_window_artifact_path",
                         "recommendation_id",
+                        "recommendation_class",
                         "summary",
                         "rationale",
                         "evidence_refs",
                         "confidence_score",
                         "policy_basis",
                     ],
-                    "notes": "All evidence_refs must already exist in the referenced agent_readable_daily_context. recommendation.create also requires one accepted seven-day retrieve.recommendation_resolution_window envelope and policy_basis refs that truthfully match that supplied window artifact.",
+                    "accepted_recommendation_classes": APPROVED_RECOMMENDATION_CLASSES,
+                    "notes": "All evidence_refs must already exist in the referenced agent_readable_daily_context. recommendation.create also requires one accepted seven-day retrieve.recommendation_resolution_window envelope, policy_basis refs that truthfully match that supplied window artifact, and a recommendation_class that is exactly one of the approved four values.",
                 },
             },
             "writeback.recommendation_judgment": {
@@ -734,7 +742,7 @@ def _contract_payload() -> dict[str, Any]:
                     ],
                     "optional_fields": ["caveat", "time_cost_note", "friction_points", "gym_note"],
                     "accepted_judgment_labels": ["useful", "obvious", "wrong", "ignored"],
-                    "notes": "The payload user_id/date must match the referenced recommendation artifact scope, request metadata must include timezone-aware requested_at, and failure must be non-mutating.",
+                    "notes": "The payload user_id/date must match the referenced recommendation artifact scope, request metadata must include timezone-aware requested_at, and failure must be non-mutating. Existing recommendation artifacts that already carry recommendation_class are consumed as-is and do not introduce any new judgment labels.",
                 },
                 "response_envelope": "writeback",
             },
@@ -784,7 +792,7 @@ def _contract_payload() -> dict[str, Any]:
                         "requested_at"
                     ],
                     "optional_fields": ["feedback_window_memory_path"],
-                    "notes": "The payload must stay within one seven-day locator-scoped window, validate the supplied recommendation and judgment linkage, mutate only the targeted recommendation entry by attaching judgment_artifact_path, and fail closed without mutating written locator artifacts on rejection.",
+                    "notes": "The payload must stay within one seven-day locator-scoped window, validate the supplied recommendation and judgment linkage, mutate only the targeted recommendation entry by attaching judgment_artifact_path, and fail closed without mutating written locator artifacts on rejection. recommendation_class remains inspectable on the referenced recommendation artifact but does not change transition semantics.",
                 },
                 "response_envelope": "writeback",
             },
@@ -798,7 +806,7 @@ def _contract_payload() -> dict[str, Any]:
             "retrieval_operations": [
                 "retrieve.day_context",
                 "retrieve.day_nutrition_brief",
-                "retrieve.day_trio_brief",
+                "retrieve.day_snapshot",
                 "retrieve.sleep_review",
                 "retrieve.recommendation",
                 "retrieve.recommendation_judgment",
@@ -812,6 +820,7 @@ def _contract_payload() -> dict[str, Any]:
             "writeback_operations": ["writeback.recommendation_judgment", "writeback.recommendation_resolution_transition"],
             "writeback_payload_inputs": ["payload_json", "payload_path"],
             "judgment_labels": ["useful", "obvious", "wrong", "ignored"],
+            "recommendation_classes": APPROVED_RECOMMENDATION_CLASSES,
             "contract_commands": ["describe"],
             "completeness_state": ["partial", "complete", "corrected"],
             "estimated": ["true", "false"],
@@ -881,7 +890,7 @@ def _contract_payload() -> dict[str, Any]:
                         "{output_dir}/agent_recommendation_{date}.json",
                         "{output_dir}/agent_recommendation_latest.json",
                     ],
-                    "notes": "recommendation.create writes exactly one day-scoped recommendation artifact and fails closed on malformed payloads, scope mismatches, invalid context artifacts, missing or invalid resolution-window artifacts, or ungrounded evidence refs. Produced artifacts preserve both same-day context linkage and explicit policy_basis grounding into the supplied resolution window.",
+                    "notes": "recommendation.create writes exactly one day-scoped recommendation artifact and fails closed on malformed payloads, scope mismatches, invalid context artifacts, missing or invalid resolution-window artifacts, ungrounded evidence refs, or non-approved recommendation_class values. Produced artifacts preserve both same-day context linkage, the explicit recommendation_class taxonomy, and explicit policy_basis grounding into the supplied resolution window.",
                 },
                 {
                     "artifact_type": "recommendation_judgment",
@@ -979,21 +988,21 @@ def _contract_payload() -> dict[str, Any]:
         },
         "proof_artifacts": {
             "human_contract": "docs/retrieval_contract_v1.md",
-            "machine_contract": "artifacts/contracts/retrieval_contract_v1.json",
+            "machine_contract": "reporting/artifacts/contracts/retrieval_contract_v1.json",
             "memory_write_human_contract": "docs/memory_write_contract_v1.md",
-            "memory_write_machine_contract": "artifacts/contracts/memory_write_contract_v1.json",
-            "day_context_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11/",
-            "day_nutrition_brief_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11-day-nutrition-brief/",
-            "sleep_review_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11-sleep-review/",
-            "weekly_pattern_review_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11-weekly-pattern-review/",
-            "recommendation_retrieval_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11-recommendation-retrieval/",
-            "recommendation_judgment_retrieval_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11-recommendation-judgment-retrieval/",
-            "recommendation_feedback_retrieval_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/",
-            "recommendation_feedback_window_retrieval_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/",
-            "recommendation_resolution_window_retrieval_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window/",
-            "recommendation_creation_with_resolution_window_grounding_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11-recommendation-creation-with-resolution-window-grounding/",
-            "recommendation_resolution_transition_writeback_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition-writeback/",
-            "contract_describe_writeback_transition_parity_proof_bundle": "artifacts/protocol_layer_proof/2026-04-12-contract-describe-writeback-transition-parity/",
+            "memory_write_machine_contract": "reporting/artifacts/contracts/memory_write_contract_v1.json",
+            "day_context_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11/",
+            "day_nutrition_brief_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11-day-nutrition-brief/",
+            "sleep_review_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11-sleep-review/",
+            "weekly_pattern_review_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11-weekly-pattern-review/",
+            "recommendation_retrieval_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-retrieval/",
+            "recommendation_judgment_retrieval_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-judgment-retrieval/",
+            "recommendation_feedback_retrieval_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/",
+            "recommendation_feedback_window_retrieval_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/",
+            "recommendation_resolution_window_retrieval_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window/",
+            "recommendation_creation_with_resolution_window_grounding_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-creation-with-resolution-window-grounding/",
+            "recommendation_resolution_transition_writeback_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition-writeback/",
+            "contract_describe_writeback_transition_parity_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-12-contract-describe-writeback-transition-parity/",
         },
     }
 

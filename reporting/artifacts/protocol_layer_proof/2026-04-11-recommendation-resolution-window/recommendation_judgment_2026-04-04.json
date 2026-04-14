@@ -5,7 +5,7 @@
   "judgment_id": "judgment_window_20260404_01",
   "judgment_label": "useful",
   "recommendation_artifact_id": "rec_window_20260404_hydration_01",
-  "recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window/agent_recommendation_2026-04-04.json",
+  "recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window/agent_recommendation_2026-04-04.json",
   "recommendation_evidence_refs": [
     "evidence_20260404_01"
   ],

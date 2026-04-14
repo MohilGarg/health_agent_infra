@@ -1,5 +1,5 @@
 {
-  "artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/recommendation_judgment_2026-04-10.json",
+  "artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/recommendation_judgment_2026-04-10.json",
   "error": null,
   "ok": true,
   "retrieval": {
@@ -11,7 +11,7 @@
         "judgment_id": "judgment_self_usage_20260410_01",
         "judgment_label": "useful",
         "recommendation_artifact_id": "rec_self_usage_20260410_recovery_01",
-        "recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/agent_recommendation_2026-04-10.json",
+        "recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/agent_recommendation_2026-04-10.json",
         "recommendation_evidence_refs": [
           "subjective_self_usage_20260410",
           "event_self_usage_recovery_20260410",
@@ -32,20 +32,21 @@
           "manual_a820ae4fab3f43378d385ad48ed3243c"
         ],
         "rationale": "The context shows low energy, soreness, a logged recovery caution signal, and same-day hydration plus meal inputs, so the safest useful recommendation is a recovery-focused evening rather than extra load.",
+        "recommendation_class": "prioritize_recovery",
         "recommendation_id": "rec_self_usage_20260410_recovery_01",
         "summary": "Keep the evening light and prioritize recovery basics."
       }
     },
     "generated_from": {
-      "judgment_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/recommendation_judgment_2026-04-10.json",
-      "recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/agent_recommendation_2026-04-10.json"
+      "judgment_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/recommendation_judgment_2026-04-10.json",
+      "recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/agent_recommendation_2026-04-10.json"
     },
     "important_gaps": [],
     "linkage": {
       "judgment_recommendation_artifact_id": "rec_self_usage_20260410_recovery_01",
-      "judgment_recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/agent_recommendation_2026-04-10.json",
+      "judgment_recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/agent_recommendation_2026-04-10.json",
       "recommendation_artifact_id": "rec_self_usage_20260410_recovery_01",
-      "supplied_recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/agent_recommendation_2026-04-10.json"
+      "supplied_recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/agent_recommendation_2026-04-10.json"
     },
     "operation": "retrieve.recommendation_feedback",
     "scope": {

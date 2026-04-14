@@ -1,12 +1,12 @@
 {
-  "artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/recommendation_judgment_mismatched_path_2026-04-10.json",
+  "artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/recommendation_judgment_mismatched_path_2026-04-10.json",
   "error": {
     "code": "recommendation_artifact_path_mismatch",
     "details": {
-      "judgment_artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/recommendation_judgment_mismatched_path_2026-04-10.json",
+      "judgment_artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/recommendation_judgment_mismatched_path_2026-04-10.json",
       "judgment_recommendation_artifact_id": "rec_self_usage_20260410_recovery_01",
-      "judgment_recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/agent_recommendation_2026-04-09.json",
-      "recommendation_artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/agent_recommendation_2026-04-10.json",
+      "judgment_recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/agent_recommendation_2026-04-09.json",
+      "recommendation_artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/agent_recommendation_2026-04-10.json",
       "recommendation_id": "rec_self_usage_20260410_recovery_01"
     },
     "message": "Recommendation feedback linkage validation failed.",

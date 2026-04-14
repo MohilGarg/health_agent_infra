@@ -1,10 +1,10 @@
 {
-  "artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/recommendation_feedback_window_memory.json",
+  "artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/recommendation_feedback_window_memory.json",
   "error": {
     "code": "range_limit_exceeded",
     "details": {
       "end_date": "2026-04-10",
-      "memory_locator": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/recommendation_feedback_window_memory.json",
+      "memory_locator": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/recommendation_feedback_window_memory.json",
       "start_date": "2026-04-01",
       "user_id": "user_dom"
     },

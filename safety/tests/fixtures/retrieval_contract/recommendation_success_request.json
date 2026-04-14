@@ -1,5 +1,5 @@
 {
-  "artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-retrieval/agent_recommendation_2026-04-10.json",
+  "artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-retrieval/agent_recommendation_2026-04-10.json",
   "date": "2026-04-10",
   "include_conflicts": "true",
   "include_missingness": "true",

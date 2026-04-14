@@ -2,22 +2,35 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SEED_ROOT = REPO_ROOT / 'artifacts' / 'protocol_layer_proof' / '2026-04-11-recommendation-resolution-window-selective-transition'
-BUNDLE_ROOT = REPO_ROOT / 'artifacts' / 'protocol_layer_proof' / '2026-04-11-recommendation-resolution-transition-writeback'
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SEED_ROOT = REPO_ROOT / 'reporting' / 'artifacts' / 'protocol_layer_proof' / '2026-04-11-recommendation-resolution-window-selective-transition'
+BUNDLE_ROOT = REPO_ROOT / 'reporting' / 'artifacts' / 'protocol_layer_proof' / '2026-04-11-recommendation-resolution-transition-writeback'
 
 
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _subprocess_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join(
+        [
+            str(REPO_ROOT / "clean"),
+            str(REPO_ROOT / "safety"),
+            env.get("PYTHONPATH", ""),
+        ]
+    ).rstrip(os.pathsep)
+    return env
+
+
 def _run_json(command: list[str], expected_returncode: int) -> dict:
-    completed = subprocess.run(command, cwd=REPO_ROOT, capture_output=True, text=True, check=False)
+    completed = subprocess.run(command, cwd=REPO_ROOT, env=_subprocess_env(), capture_output=True, text=True, check=False)
     if completed.returncode != expected_returncode:
         raise RuntimeError(f'unexpected return code {completed.returncode}:\nSTDOUT:\n{completed.stdout}\nSTDERR:\n{completed.stderr}')
     if completed.stderr.strip():
@@ -138,19 +151,20 @@ def main() -> int:
     _write_json(BUNDLE_ROOT / 'proof_manifest.json', {
         'date': '2026-04-11',
         'slice': 'protocol_proof.recommendation_resolution_transition_writeback',
-        'frozen_command': 'python3 scripts/run_recommendation_resolution_transition_writeback_proof.py',
+        'frozen_command': 'python3 reporting/scripts/run_recommendation_resolution_transition_writeback_proof.py',
         'deterministic_replay_commands': [
-            'python3 scripts/run_recommendation_resolution_transition_writeback_proof.py',
-            'python3 -m health_model.agent_memory_write_cli recommendation-resolution-transition --output-dir artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition-writeback --payload-path artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition-writeback/writeback_success_request.json'
+            'python3 reporting/scripts/run_recommendation_resolution_transition_writeback_proof.py',
+            'PYTHONPATH=clean:safety python3 -m health_model.agent_memory_write_cli recommendation-resolution-transition --output-dir reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition-writeback --payload-path reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition-writeback/writeback_success_request.json'
         ],
         'deterministic_replay_tests': [
-            'python3 -m unittest tests.test_agent_memory_write_cli tests.test_agent_contract_cli'
+            'PYTHONPATH=clean:safety python3 -m unittest -v safety.tests.test_agent_memory_write_cli safety.tests.test_agent_contract_cli'
         ],
         'smoke_checks': [
             'pre-write window shows the 2026-04-07 target as pending_judgment',
             'successful transition returns ok=true and explicit written locator paths',
             'post-write resolution shows only the target item moving to judged',
-            'post-write feedback exposes the linked recommendation plus judgment pair for 2026-04-07',
+            'post-write feedback exposes the linked recommendation plus judgment pair for 2026-04-07 with recommendation_class preserved',
+            'the 2026-04-07 target proves insufficient_evidence_ask_follow_up uses the same downstream writeback doctrine',
             'neighbor judged entries remain field-stable and no-recommendation gaps remain unchanged',
             'rejected transition fails closed and does not mutate written locator artifacts'
         ]

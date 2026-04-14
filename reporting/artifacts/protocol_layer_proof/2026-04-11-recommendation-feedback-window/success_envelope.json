@@ -1,5 +1,5 @@
 {
-  "artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/recommendation_feedback_window_memory.json",
+  "artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/recommendation_feedback_window_memory.json",
   "error": null,
   "ok": true,
   "retrieval": {
@@ -17,7 +17,7 @@
             "judgment_id": "judgment_window_20260404_01",
             "judgment_label": "useful",
             "recommendation_artifact_id": "rec_window_20260404_hydration_01",
-            "recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-04.json",
+            "recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-04.json",
             "recommendation_evidence_refs": [
               "evidence_20260404_01"
             ],
@@ -28,9 +28,9 @@
           },
           "linkage": {
             "judgment_recommendation_artifact_id": "rec_window_20260404_hydration_01",
-            "judgment_recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-04.json",
+            "judgment_recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-04.json",
             "recommendation_artifact_id": "rec_window_20260404_hydration_01",
-            "supplied_recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-04.json"
+            "supplied_recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-04.json"
           },
           "recommendation": {
             "confidence_score": 0.8,
@@ -52,7 +52,7 @@
             "judgment_id": "judgment_window_20260407_01",
             "judgment_label": "obvious",
             "recommendation_artifact_id": "rec_window_20260407_walk_01",
-            "recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-07.json",
+            "recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-07.json",
             "recommendation_evidence_refs": [
               "evidence_20260407_01"
             ],
@@ -63,9 +63,9 @@
           },
           "linkage": {
             "judgment_recommendation_artifact_id": "rec_window_20260407_walk_01",
-            "judgment_recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-07.json",
+            "judgment_recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-07.json",
             "recommendation_artifact_id": "rec_window_20260407_walk_01",
-            "supplied_recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-07.json"
+            "supplied_recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-07.json"
           },
           "recommendation": {
             "confidence_score": 0.8,
@@ -75,6 +75,7 @@
               "evidence_20260407_01"
             ],
             "rationale": "Bounded proof recommendation for 2026-04-07.",
+            "recommendation_class": "insufficient_evidence_ask_follow_up",
             "recommendation_id": "rec_window_20260407_walk_01",
             "summary": "Choose walking and mobility over intensity."
           }
@@ -87,7 +88,7 @@
             "judgment_id": "judgment_window_20260410_01",
             "judgment_label": "useful",
             "recommendation_artifact_id": "rec_window_20260410_recovery_01",
-            "recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-10.json",
+            "recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-10.json",
             "recommendation_evidence_refs": [
               "evidence_20260410_01"
             ],
@@ -98,9 +99,9 @@
           },
           "linkage": {
             "judgment_recommendation_artifact_id": "rec_window_20260410_recovery_01",
-            "judgment_recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-10.json",
+            "judgment_recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-10.json",
             "recommendation_artifact_id": "rec_window_20260410_recovery_01",
-            "supplied_recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-10.json"
+            "supplied_recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-10.json"
           },
           "recommendation": {
             "confidence_score": 0.8,
@@ -110,6 +111,7 @@
               "evidence_20260410_01"
             ],
             "rationale": "Bounded proof recommendation for 2026-04-10.",
+            "recommendation_class": "prioritize_recovery",
             "recommendation_id": "rec_window_20260410_recovery_01",
             "summary": "Keep the evening light and prioritize recovery basics."
           }
@@ -120,21 +122,21 @@
       "accepted_feedback_pairs": [
         {
           "date": "2026-04-04",
-          "judgment_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/recommendation_judgment_2026-04-04.json",
-          "recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-04.json"
+          "judgment_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/recommendation_judgment_2026-04-04.json",
+          "recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-04.json"
         },
         {
           "date": "2026-04-07",
-          "judgment_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/recommendation_judgment_2026-04-07.json",
-          "recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-07.json"
+          "judgment_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/recommendation_judgment_2026-04-07.json",
+          "recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-07.json"
         },
         {
           "date": "2026-04-10",
-          "judgment_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/recommendation_judgment_2026-04-10.json",
-          "recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-10.json"
+          "judgment_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/recommendation_judgment_2026-04-10.json",
+          "recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-10.json"
         }
       ],
-      "memory_locator": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/recommendation_feedback_window_memory.json"
+      "memory_locator": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/recommendation_feedback_window_memory.json"
     },
     "important_gaps": [
       {

@@ -1,7 +1,7 @@
 """
 main.py — Initialize the health logger backend.
 
-Run with: python -m bot.main
+Run with: python -m merge_human_inputs.health_logger.main
 """
 
 import os

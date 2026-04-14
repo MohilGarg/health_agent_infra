@@ -58,13 +58,21 @@ Explicit persisted state or memory update surfaces.
 ### `safety`
 Compatibility wrappers, tests, fail-closed checks, and trust-boundary enforcement.
 
-## Current flagship proof path
+## Current proof path and frozen target flagship
 
 The clearest public proof is still the CLI-first loop:
 
 `contract describe -> bundle init -> voice-note submit -> context get -> recommendation create`
 
 Today that loop is implemented mainly from `clean/health_model/`, with compatibility wrappers also present under `safety/health_agent_infra/` and the writeback surface exposed under `writeback/`.
+
+The approved target flagship doctrine is narrower and different from that current public proof path:
+
+`Garmin passive pull -> typed manual readiness intake -> deterministic normalization/bundle/context -> bounded recommendation -> bounded writeback`
+
+That target flagship is a frozen direction for the next slices, not a claim that the repo already ships that exact end-to-end loop today.
+
+Cronometer export surfaces remain useful bridge/reference nutrition inputs. External gym connectors such as `wger` and `Hevy` remain non-flagship or exploratory connector surfaces. They are not required for truthful description of either the current proved path or the frozen target flagship.
 
 Start with:
 
@@ -73,6 +81,8 @@ Start with:
 - `reporting/artifacts/public_demo/captured/`
 - `reporting/artifacts/flagship_loop_proof/2026-04-09/`
 - `STATUS.md`
+
+For checked-in proof review, `reporting/artifacts/` is the sole canonical proof root for this repo.
 
 Run the canonical public demo from repo root:
 
@@ -84,7 +94,7 @@ python3 reporting/scripts/run_canonical_public_demo.py
 
 Older docs often taught runtime outputs under top-level `data/`. Current repo truth is more mixed:
 
-- checked-in public proof artifacts live under `reporting/artifacts/`
+- checked-in public proof artifacts live under the canonical root `reporting/artifacts/`
 - many disposable demo/runtime examples still write under `data/` paths in command examples
 - current repo-local runtime data also exists under bucketed locations such as `pull/data/`
 
@@ -106,6 +116,7 @@ When updating docs or commands, prefer the real path used by the specific script
 - not a polished general-user install flow
 - not a claim that `health_model` is a canonical project layer
 - not a claim that every repo surface has already been reorganized around the bucket model
+- not a claim that the frozen Garmin plus typed-manual-readiness flagship path is already implemented end-to-end
 
 ## Contributing and review
 

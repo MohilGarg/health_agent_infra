@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -8,14 +9,27 @@ import unittest
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-RECOMMENDATION_FIXTURE = REPO_ROOT / "data" / "health" / "agent_recommendation_2026-04-10.json"
-TRANSITION_FIXTURE_ROOT = REPO_ROOT / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-resolution-window-selective-transition"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+RECOMMENDATION_FIXTURE = REPO_ROOT / "pull" / "data" / "health" / "agent_recommendation_2026-04-10.json"
+TRANSITION_FIXTURE_ROOT = REPO_ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-resolution-window-selective-transition"
+
+
+def _subprocess_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join(
+        [
+            str(REPO_ROOT / "clean"),
+            str(REPO_ROOT / "safety"),
+            env.get("PYTHONPATH", ""),
+        ]
+    ).rstrip(os.pathsep)
+    return env
 
 
 class AgentMemoryWriteCliIntegrationTest(unittest.TestCase):
     def test_legacy_health_model_entrypoint_remains_compatible(self) -> None:
         recommendation = json.loads(RECOMMENDATION_FIXTURE.read_text())
+        self.assertEqual(recommendation["recommendation_class"], "prioritize_recovery")
 
         with tempfile.TemporaryDirectory() as temp_dir:
             health_dir = Path(temp_dir) / "data" / "health"
@@ -36,6 +50,7 @@ class AgentMemoryWriteCliIntegrationTest(unittest.TestCase):
             completed = subprocess.run(
                 [sys.executable, "-m", "health_model.agent_memory_write_cli", "recommendation-judgment", "--output-dir", str(health_dir), "--payload-json", json.dumps(payload)],
                 cwd=REPO_ROOT,
+                env=_subprocess_env(),
                 capture_output=True,
                 text=True,
                 check=False,
@@ -48,6 +63,7 @@ class AgentMemoryWriteCliIntegrationTest(unittest.TestCase):
 
     def test_recommendation_judgment_writes_dated_and_latest_artifacts_for_valid_payload(self) -> None:
         recommendation = json.loads(RECOMMENDATION_FIXTURE.read_text())
+        self.assertEqual(recommendation["recommendation_class"], "prioritize_recovery")
 
         with tempfile.TemporaryDirectory() as temp_dir:
             health_dir = Path(temp_dir) / "data" / "health"
@@ -195,6 +211,9 @@ class AgentMemoryWriteCliIntegrationTest(unittest.TestCase):
             self.assertEqual(latest_path.read_bytes(), original_bytes)
 
     def test_recommendation_resolution_transition_writes_updated_resolution_and_feedback_locators(self) -> None:
+        target_recommendation = json.loads((TRANSITION_FIXTURE_ROOT / "agent_recommendation_2026-04-07.json").read_text())
+        self.assertEqual(target_recommendation["recommendation_class"], "insufficient_evidence_ask_follow_up")
+
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir) / "out"
             payload = {
@@ -278,6 +297,7 @@ class AgentMemoryWriteCliIntegrationTest(unittest.TestCase):
         completed = subprocess.run(
             [sys.executable, "-m", "health_agent_infra.agent_memory_write_cli", *args],
             cwd=REPO_ROOT,
+            env=_subprocess_env(),
             capture_output=True,
             text=True,
             check=False,

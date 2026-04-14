@@ -40,7 +40,7 @@ FIELD_OWNERSHIP = {
     "overall_day_note": "subjective",
 }
 
-REQUIRED_LANES_FOR_DECLARED_TRIO = ["garmin", "cronometer", "wger"]
+REQUIRED_LANES_FOR_FLAGSHIP_DAY_PROOF = ["garmin", "subjective"]
 
 
 @dataclass(frozen=True)
@@ -100,7 +100,7 @@ def merge_daily_health_snapshot(case_payload: dict[str, Any]) -> MergeResult:
     if declared_claim == "complete_for_declared_lanes":
         missing_required = [
             lane_name
-            for lane_name in REQUIRED_LANES_FOR_DECLARED_TRIO
+            for lane_name in REQUIRED_LANES_FOR_FLAGSHIP_DAY_PROOF
             if effective_lane_status.get(lane_name) != "ready"
         ]
         if missing_required:
@@ -155,7 +155,7 @@ def merge_daily_health_snapshot(case_payload: dict[str, Any]) -> MergeResult:
             if ref not in supporting_refs:
                 supporting_refs.append(ref)
 
-    has_partial = any(effective_lane_status.get(lane_name) != "ready" for lane_name in REQUIRED_LANES_FOR_DECLARED_TRIO)
+    has_partial = any(effective_lane_status.get(lane_name) != "ready" for lane_name in REQUIRED_LANES_FOR_FLAGSHIP_DAY_PROOF)
     outcome_type = TRUTHFUL_OUTCOMES["partial"] if has_partial else TRUTHFUL_OUTCOMES["complete"]
 
     provenance_record = {

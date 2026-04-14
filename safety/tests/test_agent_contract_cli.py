@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -8,9 +9,21 @@ import unittest
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-VOICE_NOTE_FIXTURE = REPO_ROOT / "tests" / "fixtures" / "voice_note_intake" / "daily_voice_note_input.json"
-RETRIEVAL_FIXTURE_DIR = REPO_ROOT / "tests" / "fixtures" / "retrieval_contract"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+VOICE_NOTE_FIXTURE = REPO_ROOT / "safety" / "tests" / "fixtures" / "voice_note_intake" / "daily_voice_note_input.json"
+RETRIEVAL_FIXTURE_DIR = REPO_ROOT / "safety" / "tests" / "fixtures" / "retrieval_contract"
+
+
+def _subprocess_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join(
+        [
+            str(REPO_ROOT / "clean"),
+            str(REPO_ROOT / "safety"),
+            env.get("PYTHONPATH", ""),
+        ]
+    ).rstrip(os.pathsep)
+    return env
 
 
 class AgentContractCliIntegrationTest(unittest.TestCase):
@@ -38,6 +51,7 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
             [
                 "retrieve.day_context",
                 "retrieve.day_nutrition_brief",
+                "retrieve.day_snapshot",
                 "retrieve.sleep_review",
                 "retrieve.recommendation",
                 "retrieve.recommendation_judgment",
@@ -52,6 +66,15 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
         self.assertEqual(contract["accepted_enums"]["writeback_operations"], ["writeback.recommendation_judgment", "writeback.recommendation_resolution_transition"])
         self.assertEqual(contract["accepted_enums"]["writeback_payload_inputs"], ["payload_json", "payload_path"])
         self.assertEqual(contract["accepted_enums"]["judgment_labels"], ["useful", "obvious", "wrong", "ignored"])
+        self.assertEqual(
+            contract["accepted_enums"]["recommendation_classes"],
+            [
+                "proceed_as_planned",
+                "reduce_intensity",
+                "prioritize_recovery",
+                "insufficient_evidence_ask_follow_up",
+            ],
+        )
         self.assertEqual(contract["accepted_enums"]["completeness_state"], ["partial", "complete", "corrected"])
         self.assertEqual(contract["accepted_enums"]["estimated"], ["true", "false"])
         self.assertEqual(contract["accepted_enums"]["retrieval_boolean_flags"], ["true", "false"])
@@ -165,6 +188,7 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
         self.assertEqual(recommendation["command"], "recommendation")
         self.assertEqual(recommendation["implementation_status"], "proof_complete")
         self.assertEqual(recommendation["consumes"], ["agent_recommendation"])
+        self.assertIn("recommendation_class", recommendation["description"])
         self.assertEqual(recommendation_args["artifact_path"]["flag"], "--artifact-path")
         self.assertNotIn("timezone", recommendation_args)
         self.assertNotIn("max_evidence_items", recommendation_args)
@@ -185,6 +209,7 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
         self.assertEqual(recommendation_feedback["command"], "recommendation-feedback")
         self.assertEqual(recommendation_feedback["implementation_status"], "proof_complete")
         self.assertEqual(recommendation_feedback["consumes"], ["agent_recommendation", "recommendation_judgment"])
+        self.assertIn("recommendation_class", recommendation_feedback["description"])
         self.assertEqual(recommendation_feedback_args["recommendation_artifact_path"]["flag"], "--recommendation-artifact-path")
         self.assertEqual(recommendation_feedback_args["judgment_artifact_path"]["flag"], "--judgment-artifact-path")
         self.assertNotIn("timezone", recommendation_feedback_args)
@@ -200,6 +225,7 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
             recommendation_feedback_window["consumes"],
             ["user_owned_private_memory_locator", "agent_recommendation", "recommendation_judgment"],
         )
+        self.assertIn("recommendation_class", recommendation_feedback_window["description"])
         self.assertEqual(recommendation_feedback_window_args["memory_locator"]["flag"], "--memory-locator")
         self.assertEqual(recommendation_feedback_window_args["max_feedback_items"]["flag"], "--max-feedback-items")
 
@@ -213,6 +239,7 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
             recommendation_resolution_window["consumes"],
             ["user_owned_private_memory_locator", "agent_recommendation", "recommendation_judgment"],
         )
+        self.assertIn("recommendation_class", recommendation_resolution_window["description"])
         self.assertEqual(recommendation_resolution_window_args["memory_locator"]["flag"], "--memory-locator")
         self.assertEqual(recommendation_resolution_window_args["max_recommendation_items"]["flag"], "--max-recommendation-items")
 
@@ -251,11 +278,21 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
                 "context_artifact_id",
                 "resolution_window_artifact_path",
                 "recommendation_id",
+                "recommendation_class",
                 "summary",
                 "rationale",
                 "evidence_refs",
                 "confidence_score",
                 "policy_basis",
+            ],
+        )
+        self.assertEqual(
+            recommendation_create["payload_shape"]["accepted_recommendation_classes"],
+            [
+                "proceed_as_planned",
+                "reduce_intensity",
+                "prioritize_recovery",
+                "insufficient_evidence_ask_follow_up",
             ],
         )
         self.assertEqual(recommendation_args["payload_json"]["type"], "json_object")
@@ -273,6 +310,7 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
         self.assertEqual(writeback_args["payload_json"]["type"], "json_object")
         self.assertFalse(writeback_args["payload_json"]["required"])
         self.assertFalse(writeback_args["payload_path"]["required"])
+        self.assertIn("recommendation_class", writeback_judgment["payload_shape"]["notes"])
 
         writeback_transition = contract["supported_operations"]["writeback.recommendation_resolution_transition"]
         writeback_transition_args = {arg["name"]: arg for arg in writeback_transition["args"]}
@@ -287,6 +325,7 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
         self.assertEqual(writeback_transition_args["output_dir"]["flag"], "--output-dir")
         self.assertFalse(writeback_transition_args["payload_json"]["required"])
         self.assertFalse(writeback_transition_args["payload_path"]["required"])
+        self.assertIn("recommendation_class", writeback_transition["payload_shape"]["notes"])
         self.assertEqual(
             writeback_judgment["payload_shape"]["required_fields"],
             [
@@ -318,6 +357,7 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
         self.assertIn("{output_dir}/agent_recommendation_latest.json", produced[2]["paths"])
         self.assertIn("recommendation.create", produced[2]["notes"])
         self.assertIn("policy_basis", produced[2]["notes"])
+        self.assertIn("recommendation_class", produced[2]["notes"])
         self.assertEqual(produced[3]["artifact_type"], "recommendation_judgment")
         self.assertIn("{output_dir}/recommendation_judgment_latest.json", produced[3]["paths"])
         self.assertIn("writeback.recommendation_judgment", produced[3]["notes"])
@@ -351,40 +391,40 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
             ],
         )
         self.assertEqual(contract["proof_artifacts"]["human_contract"], "docs/retrieval_contract_v1.md")
-        self.assertEqual(contract["proof_artifacts"]["machine_contract"], "artifacts/contracts/retrieval_contract_v1.json")
+        self.assertEqual(contract["proof_artifacts"]["machine_contract"], "reporting/artifacts/contracts/retrieval_contract_v1.json")
         self.assertEqual(contract["proof_artifacts"]["memory_write_human_contract"], "docs/memory_write_contract_v1.md")
-        self.assertEqual(contract["proof_artifacts"]["memory_write_machine_contract"], "artifacts/contracts/memory_write_contract_v1.json")
+        self.assertEqual(contract["proof_artifacts"]["memory_write_machine_contract"], "reporting/artifacts/contracts/memory_write_contract_v1.json")
         self.assertEqual(
             contract["proof_artifacts"]["weekly_pattern_review_proof_bundle"],
-            "artifacts/protocol_layer_proof/2026-04-11-weekly-pattern-review/",
+            "reporting/artifacts/protocol_layer_proof/2026-04-11-weekly-pattern-review/",
         )
         self.assertEqual(
             contract["proof_artifacts"]["recommendation_retrieval_proof_bundle"],
-            "artifacts/protocol_layer_proof/2026-04-11-recommendation-retrieval/",
+            "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-retrieval/",
         )
         self.assertEqual(
             contract["proof_artifacts"]["recommendation_judgment_retrieval_proof_bundle"],
-            "artifacts/protocol_layer_proof/2026-04-11-recommendation-judgment-retrieval/",
+            "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-judgment-retrieval/",
         )
         self.assertEqual(
             contract["proof_artifacts"]["recommendation_feedback_retrieval_proof_bundle"],
-            "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/",
+            "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/",
         )
         self.assertEqual(
             contract["proof_artifacts"]["recommendation_feedback_window_retrieval_proof_bundle"],
-            "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/",
+            "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/",
         )
         self.assertEqual(
             contract["proof_artifacts"]["recommendation_creation_with_resolution_window_grounding_proof_bundle"],
-            "artifacts/protocol_layer_proof/2026-04-11-recommendation-creation-with-resolution-window-grounding/",
+            "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-creation-with-resolution-window-grounding/",
         )
         self.assertEqual(
             contract["proof_artifacts"]["recommendation_resolution_transition_writeback_proof_bundle"],
-            "artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition-writeback/",
+            "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition-writeback/",
         )
         self.assertEqual(
             contract["proof_artifacts"]["contract_describe_writeback_transition_parity_proof_bundle"],
-            "artifacts/protocol_layer_proof/2026-04-12-contract-describe-writeback-transition-parity/",
+            "reporting/artifacts/protocol_layer_proof/2026-04-12-contract-describe-writeback-transition-parity/",
         )
 
     def test_contract_describe_bootstrap_voice_note_submit_and_context_get_prove_external_agent_loop(self) -> None:
@@ -508,6 +548,10 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
         self.assertEqual(recommendation_feedback_window["module"], "health_model.agent_retrieval_cli")
         self.assertEqual(recommendation_feedback_window["command"], "recommendation-feedback-window")
         self.assertEqual(recommendation_feedback_window["implementation_status"], "proof_complete")
+        self.assertIn("recommendation_class", recommendation_feedback_window["description"])
+
+        recommendation_resolution_window = result["contract"]["supported_operations"]["retrieve.recommendation_resolution_window"]
+        self.assertIn("recommendation_class", recommendation_resolution_window["description"])
 
         weekly_review = result["contract"]["supported_operations"]["retrieve.weekly_pattern_review"]
         self.assertEqual(weekly_review["module"], "health_model.agent_context_cli")
@@ -617,6 +661,7 @@ class AgentContractCliIntegrationTest(unittest.TestCase):
         completed = subprocess.run(
             [sys.executable, "-m", module, *args],
             cwd=REPO_ROOT,
+            env=_subprocess_env(),
             capture_output=True,
             text=True,
             check=False,

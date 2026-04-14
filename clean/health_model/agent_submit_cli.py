@@ -10,6 +10,7 @@ from health_model.agent_interface import (
     append_fragment_and_regenerate_daily_context,
     submit_hydration_log,
     submit_nutrition_text_note,
+    submit_structured_readiness_intake,
 )
 
 
@@ -28,18 +29,23 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    for entry_type in ("hydration", "meal"):
+    for entry_type in ("hydration", "meal", "readiness"):
         subparser = subparsers.add_parser(entry_type)
         _add_shared_arguments(subparser)
         if entry_type == "hydration":
             subparser.add_argument("--amount-ml", type=float, required=True)
             subparser.add_argument("--beverage-type")
             subparser.add_argument("--notes")
-        else:
+        elif entry_type == "meal":
             subparser.add_argument("--note-text", required=True)
             subparser.add_argument("--meal-label")
             subparser.add_argument("--estimated", required=True, choices=("true", "false"))
             subparser.add_argument("--notes")
+        else:
+            subparser.add_argument("--energy-today-1-to-5", type=int, required=True, choices=range(1, 6))
+            subparser.add_argument("--soreness-today-1-to-5", type=int, required=True, choices=range(1, 6))
+            subparser.add_argument("--training-intent-today", required=True)
+            subparser.add_argument("--unusual-constraints-or-stressors")
 
     return parser
 
@@ -119,6 +125,21 @@ def run_command(args: argparse.Namespace) -> dict[str, Any]:
             source_name=args.source_name or "manual_nutrition_log",
             notes=args.notes,
         )
+    elif args.command == "readiness":
+        intake = submit_structured_readiness_intake(
+            user_id=args.user_id,
+            date=args.date,
+            energy_today_1_to_5=args.energy_today_1_to_5,
+            soreness_today_1_to_5=args.soreness_today_1_to_5,
+            training_intent_today=args.training_intent_today,
+            unusual_constraints_or_stressors=args.unusual_constraints_or_stressors,
+            completeness_state=args.completeness_state,
+            collected_at=args.collected_at,
+            ingested_at=args.ingested_at,
+            raw_location=args.raw_location,
+            confidence_score=args.confidence_score,
+            source_name=args.source_name or "manual_structured_readiness",
+        )
     else:
         raise ValueError(f"Unsupported command: {args.command}")
 
@@ -146,11 +167,13 @@ def run_command(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _accepted_provenance_from_intake(intake: dict[str, Any]) -> dict[str, list[str]]:
+    entry_kind = intake.get("entry_kind")
+    entry_id = intake.get("entry", {}).get("entry_id") if intake.get("entry") else None
     return {
         "source_artifact_ids": [intake["artifact"]["artifact_id"]] if intake.get("artifact") else [],
         "input_event_ids": [event["event_id"] for event in intake.get("derived_events", [])],
-        "subjective_entry_ids": [],
-        "manual_log_entry_ids": [intake["entry"]["entry_id"]] if intake.get("entry") else [],
+        "subjective_entry_ids": [entry_id] if entry_kind == "subjective_daily_entry" and entry_id else [],
+        "manual_log_entry_ids": [entry_id] if entry_kind == "manual_log_entry" and entry_id else [],
     }
 
 

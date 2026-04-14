@@ -1,5 +1,5 @@
 {
-  "artifact_path": "artifacts/flagship_loop_proof/resolution_window_memory_2026-04-02_2026-04-08.json",
+  "artifact_path": "reporting/artifacts/flagship_loop_proof/resolution_window_memory_2026-04-02_2026-04-08.json",
   "error": null,
   "ok": true,
   "retrieval": {
@@ -34,10 +34,10 @@
       "accepted_recommendations": [
         {
           "date": "2026-04-07",
-          "recommendation_artifact_path": "artifacts/flagship_loop_proof/2026-04-07/agent_recommendation_2026-04-07.json"
+          "recommendation_artifact_path": "reporting/artifacts/flagship_loop_proof/2026-04-07/agent_recommendation_2026-04-07.json"
         }
       ],
-      "memory_locator": "artifacts/flagship_loop_proof/resolution_window_memory_2026-04-02_2026-04-08.json"
+      "memory_locator": "reporting/artifacts/flagship_loop_proof/resolution_window_memory_2026-04-02_2026-04-08.json"
     },
     "important_gaps": [
       {

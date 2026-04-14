@@ -3,8 +3,8 @@
   "error": {
     "code": "judgment_artifact_id_mismatch",
     "details": {
-      "judgment_artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition/recommendation_judgment_2026-04-07.json",
-      "recommendation_artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition/agent_recommendation_2026-04-07.json"
+      "judgment_artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition/recommendation_judgment_2026-04-07.json",
+      "recommendation_artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition/agent_recommendation_2026-04-07.json"
     },
     "message": "Recommendation resolution transition linkage validation failed.",
     "retryable": false

@@ -29,8 +29,7 @@ from health_model.schemas import (
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_EXPORT_DIR = PROJECT_ROOT / "pull" / "data" / "garmin" / "export"
-DEFAULT_GYM_LOG_PATH = PROJECT_ROOT / "pull" / "data" / "health" / "manual_gym_sessions.json"
-DEFAULT_DB_PATH = PROJECT_ROOT / "pull" / "data" / "health_log.db"
+DEFAULT_SUBJECTIVE_INPUT_PATH = PROJECT_ROOT / "pull" / "data" / "health"
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "clean" / "data" / "health"
 PARSER_VERSION = "garmin-source-hardening-v1"
 MANUAL_GYM_SOURCE_NAME = "resistance_training"
@@ -46,10 +45,11 @@ READINESS_SCORE_MAP = {
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate Health Lab daily snapshots from available Garmin, gym, and nutrition inputs.")
+    parser = argparse.ArgumentParser(description="Generate flagship Health Lab daily snapshots from Garmin plus subjective inputs, with optional bridge enrichment when available.")
     parser.add_argument("--export-dir", default=str(DEFAULT_EXPORT_DIR))
-    parser.add_argument("--gym-log-path", default=str(DEFAULT_GYM_LOG_PATH))
-    parser.add_argument("--db-path", default=str(DEFAULT_DB_PATH))
+    parser.add_argument("--gym-log-path", help="Optional manual gym log path for non-flagship enrichment.")
+    parser.add_argument("--subjective-bundle-path", default=str(DEFAULT_SUBJECTIVE_INPUT_PATH), help="Shared-input bundle JSON or directory of shared_input_bundle_*.json files used for the required subjective flagship lane.")
+    parser.add_argument("--db-path", help="Optional nutrition bridge database path.")
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
     parser.add_argument("--date", help="Optional YYYY-MM-DD target date. Defaults to latest available date across inputs.")
     parser.add_argument("--user-id", type=int, default=1, help="Intended nutrition user_id for SQLite nutrition loading. Defaults to 1.")
@@ -264,8 +264,8 @@ def _build_top_meals_summary(conn: sqlite3.Connection, user_id: int, date_for: s
     return shorten(", ".join(parts), width=120, placeholder="...")
 
 
-def load_manual_gym(path: Path) -> tuple[dict[str, list[dict]], list[str]]:
-    if not path.exists():
+def load_manual_gym(path: Path | None) -> tuple[dict[str, list[dict]], list[str]]:
+    if path is None or not path.exists():
         return {}, []
 
     payload = json.loads(path.read_text())
@@ -280,8 +280,76 @@ def load_manual_gym(path: Path) -> tuple[dict[str, list[dict]], list[str]]:
     return sessions_by_date, dates
 
 
-def load_nutrition_rows(db_path: Path, user_id: int) -> tuple[dict[str, dict], list[str]]:
-    if not db_path.exists():
+def _subjective_bundle_paths(path: Path | None) -> list[Path]:
+    if path is None or not path.exists():
+        return []
+    if path.is_file():
+        return [path]
+    return sorted(path.glob("shared_input_bundle_*.json"))
+
+
+def _derived_subjective_source_record_id(entry: dict) -> str | None:
+    explicit = entry.get("source_record_id")
+    if explicit:
+        return str(explicit)
+    source_artifact_ids = entry.get("source_artifact_ids") or []
+    if source_artifact_ids:
+        return f"subjective:{source_artifact_ids[0]}:day:{entry['date']}"
+    return None
+
+
+def _derived_subjective_provenance_record_id(entry: dict, source_record_id: str | None) -> str | None:
+    explicit = entry.get("provenance_record_id")
+    if explicit:
+        return str(explicit)
+    if source_record_id:
+        return f"provenance:{source_record_id}"
+    return None
+
+
+def load_subjective_entries(path: Path | None) -> tuple[dict[str, dict], list[str]]:
+    mapped: dict[str, dict] = {}
+    dates: list[str] = []
+
+    for bundle_path in _subjective_bundle_paths(path):
+        try:
+            payload = json.loads(bundle_path.read_text())
+        except json.JSONDecodeError:
+            continue
+        for raw_entry in payload.get("subjective_daily_entries", []):
+            date = _truthy_date(raw_entry.get("date"))
+            if not date:
+                continue
+            entry = dict(raw_entry)
+            source_record_id = _derived_subjective_source_record_id(entry)
+            entry.setdefault("source_record_id", source_record_id)
+            entry.setdefault("provenance_record_id", _derived_subjective_provenance_record_id(entry, source_record_id))
+            entry.setdefault("source_name", "manual_subjective_recovery")
+            mapped[date] = entry
+            dates.append(date)
+    return mapped, dates
+
+
+def build_subjective_daily(entry: dict | None, date: str) -> dict[str, object] | None:
+    if not entry:
+        return None
+    return {
+        "date": date,
+        "source_name": entry.get("source_name") or "manual_subjective_recovery",
+        "source_record_id": entry.get("source_record_id"),
+        "provenance_record_id": entry.get("provenance_record_id"),
+        "conflict_status": entry.get("conflict_status") or "none",
+        "subjective_energy_1_5": safe_float(entry.get("energy_self_rating")),
+        "subjective_soreness_1_5": safe_float(entry.get("soreness_today_1_to_5")),
+        "subjective_stress_1_5": safe_float(entry.get("stress_self_rating")),
+        "overall_day_note": entry.get("free_text_summary") or entry.get("unusual_constraints_or_stressors") or entry.get("training_intent_today"),
+        "training_intent_today": entry.get("training_intent_today"),
+        "readiness_input_type": entry.get("readiness_input_type"),
+    }
+
+
+def load_nutrition_rows(db_path: Path | None, user_id: int) -> tuple[dict[str, dict], list[str]]:
+    if db_path is None or not db_path.exists():
         return {}, []
 
     conn = sqlite3.connect(db_path)
@@ -555,7 +623,7 @@ def build_gym_sessions(session_payloads: list[dict], date: str, *, source_artifa
     return sessions, sets
 
 
-def build_nutrition(nutrition_rows: dict[str, dict], db_path: Path, date: str) -> NutritionDaily:
+def build_nutrition(nutrition_rows: dict[str, dict], db_path: Path | None, date: str) -> NutritionDaily:
     row = nutrition_rows.get(date)
     if not row:
         return NutritionDaily(date=date)
@@ -580,20 +648,43 @@ def build_nutrition(nutrition_rows: dict[str, dict], db_path: Path, date: str) -
     )
 
 
-def _pick_target_date(daily: pd.DataFrame, gym_dates: list[str], nutrition_dates: list[str], explicit_date: str | None) -> str:
+def _pick_target_date(
+    daily: pd.DataFrame,
+    gym_dates: list[str],
+    nutrition_dates: list[str],
+    subjective_dates: list[str],
+    explicit_date: str | None,
+    *,
+    require_subjective: bool,
+) -> str:
     if explicit_date:
         return explicit_date
     dates = []
+    daily_dates: list[str] = []
     if not daily.empty:
-        dates.extend(daily["date"].dropna().astype(str).tolist())
+        daily_dates = daily["date"].dropna().astype(str).tolist()
+        dates.extend(daily_dates)
     dates.extend(gym_dates)
     dates.extend(nutrition_dates)
+    dates.extend(subjective_dates)
+    if require_subjective:
+        overlapping_flagship_dates = sorted(set(daily_dates) & set(subjective_dates))
+        if overlapping_flagship_dates:
+            return overlapping_flagship_dates[-1]
     if not dates:
         raise ValueError("No input dates available for snapshot generation.")
     return max(dates)
 
 
-def generate_snapshot(export_dir: Path, gym_log_path: Path, db_path: Path, target_date: str | None = None, user_id: int = 1) -> DailyHealthSnapshot:
+def generate_snapshot(
+    export_dir: Path,
+    gym_log_path: Path | None,
+    db_path: Path | None,
+    target_date: str | None = None,
+    user_id: int = 1,
+    subjective_bundle_path: Path | None = None,
+    require_subjective: bool = False,
+) -> DailyHealthSnapshot:
     daily = load_csv(export_dir / "daily_summary_export.csv")
     activities = load_csv(export_dir / "activities_export.csv")
     hydration = load_csv(export_dir / "hydration_events_export.csv") if (export_dir / "hydration_events_export.csv").exists() else pd.DataFrame()
@@ -602,12 +693,26 @@ def generate_snapshot(export_dir: Path, gym_log_path: Path, db_path: Path, targe
     activities["date"] = pd.to_datetime(activities["start_time_local"], errors="coerce").dt.strftime("%Y-%m-%d")
 
     gym_by_date, gym_dates = load_manual_gym(gym_log_path)
-    manual_gym_source_artifact = gym_log_path.stem
+    manual_gym_source_artifact = gym_log_path.stem if gym_log_path else "manual_gym_sessions"
     nutrition_rows, nutrition_dates = load_nutrition_rows(db_path, user_id=user_id)
-    date = _pick_target_date(daily, gym_dates, nutrition_dates, target_date)
+    subjective_entries, subjective_dates = load_subjective_entries(subjective_bundle_path)
+    date = _pick_target_date(
+        daily,
+        gym_dates,
+        nutrition_dates,
+        subjective_dates,
+        target_date,
+        require_subjective=require_subjective,
+    )
 
     daily_rows = daily[daily["date"] == date]
     daily_row = daily_rows.iloc[-1] if not daily_rows.empty else pd.Series(dtype=object)
+    subjective_daily = build_subjective_daily(subjective_entries.get(date), date)
+
+    if require_subjective and daily_rows.empty:
+        raise ValueError(f"Required garmin lane not ready for target date {date}.")
+    if require_subjective and subjective_daily is None:
+        raise ValueError(f"Required subjective lane not ready for target date {date}.")
 
     sleep = build_sleep(daily_row, date, export_dir) if not daily_rows.empty else SleepDaily(date=date)
     readiness = build_readiness(daily_row, date, export_dir) if not daily_rows.empty else ReadinessDaily(date=date)
@@ -630,14 +735,21 @@ def generate_snapshot(export_dir: Path, gym_log_path: Path, db_path: Path, targe
             "hrv_status", "body_battery_or_readiness", "readiness_label",
             "running_sessions_count", "running_volume_m",
         ])
-    if hydration_ml is not None:
-        data_backed_fields.append("hydration_ml")
-    if gym_sessions:
-        data_backed_fields.extend(["gym_sessions_count", "gym_total_sets", "gym_total_reps", "gym_total_load_kg"])
     if nutrition.source_name:
         data_backed_fields.extend(["food_logged_bool", "calories_kcal", "protein_g", "carbs_g", "fat_g"])
+        if hydration_ml is not None:
+            data_backed_fields.append("hydration_ml")
     else:
         generic_fields.append("nutrition_unavailable_in_v1")
+    if gym_sessions:
+        data_backed_fields.extend(["gym_sessions_count", "gym_total_sets", "gym_total_reps", "gym_total_load_kg"])
+        generic_fields.append("manual_gym_log_non_flagship_enrichment_present")
+    if subjective_daily:
+        for field_name in ["subjective_energy_1_5", "subjective_soreness_1_5", "subjective_stress_1_5", "overall_day_note"]:
+            if subjective_daily.get(field_name) is not None:
+                data_backed_fields.append(field_name)
+    elif require_subjective:
+        generic_fields.append("subjective_required_for_flagship")
     if readiness.generic_guidance:
         generic_fields.append("readiness_daily.generic_guidance")
 
@@ -664,19 +776,26 @@ def generate_snapshot(export_dir: Path, gym_log_path: Path, db_path: Path, targe
         protein_g=nutrition.protein_g,
         carbs_g=nutrition.carbs_g,
         fat_g=nutrition.fat_g,
-        hydration_ml=hydration_ml,
+        hydration_ml=hydration_ml if nutrition.source_name else None,
+        subjective_energy_1_5=safe_float(subjective_daily.get("subjective_energy_1_5")) if subjective_daily else None,
+        subjective_soreness_1_5=safe_float(subjective_daily.get("subjective_soreness_1_5")) if subjective_daily else None,
+        subjective_stress_1_5=safe_float(subjective_daily.get("subjective_stress_1_5")) if subjective_daily else None,
+        overall_day_note=str(subjective_daily.get("overall_day_note")) if subjective_daily and subjective_daily.get("overall_day_note") is not None else None,
         data_backed_fields=sorted(set(data_backed_fields)),
         generic_fields=sorted(set(generic_fields)),
         source_flags={
-            "garmin_export": not daily_rows.empty,
+            "garmin": not daily_rows.empty,
+            "subjective": subjective_daily is not None,
+            "cronometer": bool(nutrition.source_name),
             "manual_gym_log": bool(gym_sessions),
-            "nutrition_sqlite": bool(nutrition.source_name),
+            "wger": False,
         },
         sleep_daily=asdict(sleep),
         readiness_daily=asdict(readiness),
         running_sessions=[asdict(s) for s in running_sessions],
         gym_sessions=[asdict(s) for s in gym_sessions],
         gym_exercise_sets=[asdict(s) for s in gym_sets],
+        subjective_daily=subjective_daily,
         nutrition_daily=asdict(nutrition),
     )
     return snapshot
@@ -686,7 +805,9 @@ def write_outputs(snapshot: DailyHealthSnapshot, output_dir: Path) -> tuple[Path
     output_dir.mkdir(parents=True, exist_ok=True)
     latest_path = output_dir / "daily_snapshot_latest.json"
     dated_path = output_dir / f"daily_snapshot_{snapshot.date}.json"
-    payload = json.dumps(snapshot.to_dict(), indent=2)
+    payload_dict = snapshot.to_dict()
+    payload_dict.setdefault("artifact_type", payload_dict.get("artifact_family", "daily_health_snapshot"))
+    payload = json.dumps(payload_dict, indent=2)
     latest_path.write_text(payload)
     dated_path.write_text(payload)
     return latest_path, dated_path
@@ -695,8 +816,8 @@ def write_outputs(snapshot: DailyHealthSnapshot, output_dir: Path) -> tuple[Path
 def build_garmin_canonical_bundle(export_dir: Path, target_date: str) -> dict[str, object]:
     snapshot = generate_snapshot(
         export_dir=export_dir,
-        gym_log_path=PROJECT_ROOT / "pull" / "data" / "health" / "manual_gym_sessions.json",
-        db_path=DEFAULT_DB_PATH,
+        gym_log_path=None,
+        db_path=None,
         target_date=target_date,
         user_id=1,
     )
@@ -737,7 +858,7 @@ def build_garmin_canonical_bundle(export_dir: Path, target_date: str) -> dict[st
 def build_nutrition_canonical_bundle(export_dir: Path, db_path: Path, target_date: str, user_id: int = 1) -> dict[str, object]:
     snapshot = generate_snapshot(
         export_dir=export_dir,
-        gym_log_path=PROJECT_ROOT / "pull" / "data" / "health" / "manual_gym_sessions.json",
+        gym_log_path=None,
         db_path=db_path,
         target_date=target_date,
         user_id=user_id,
@@ -881,10 +1002,12 @@ def main() -> None:
     export_dir = Path(args.export_dir)
     snapshot = generate_snapshot(
         export_dir=export_dir,
-        gym_log_path=Path(args.gym_log_path),
-        db_path=Path(args.db_path),
+        gym_log_path=Path(args.gym_log_path) if args.gym_log_path else None,
+        db_path=Path(args.db_path) if args.db_path else None,
         target_date=args.date,
         user_id=args.user_id,
+        subjective_bundle_path=Path(args.subjective_bundle_path) if args.subjective_bundle_path else None,
+        require_subjective=True,
     )
     latest_path, dated_path = write_outputs(snapshot, Path(args.output_dir))
     print(f"wrote {latest_path}")

@@ -23,6 +23,23 @@ The repo also needs one frozen contract for:
 - proof artifact expectations
 - exact `pull` vs `clean` vs `merge_human_inputs` responsibilities
 
+## Current proof versus frozen target flagship
+
+The current public proof path is still the broader CLI-first lineage:
+
+`contract describe -> bundle init -> voice-note submit -> context get -> recommendation create`
+
+The approved target flagship doctrine for later slices is:
+
+`Garmin passive pull -> typed manual readiness intake -> deterministic normalization/bundle/context -> bounded recommendation -> bounded writeback`
+
+This contract names many source families. That does not make them all flagship-critical.
+
+For this doctrine interval:
+- Garmin plus typed manual readiness is the frozen target flagship path
+- Cronometer is a bridge/reference nutrition source, not a flagship-completion dependency
+- external gym connectors such as `wger` or `Hevy` are non-flagship or exploratory connector surfaces
+
 ## Lane ownership contract
 
 ### `pull`
@@ -58,6 +75,7 @@ The repo also needs one frozen contract for:
 
 `merge_human_inputs` owns:
 - voice-note intake
+- typed manual readiness intake
 - manual logs
 - manual subjective entries
 - manual resistance-training entries
@@ -95,7 +113,7 @@ Minimum receipt requirements:
 - source name
 - enough batch, artifact, or account metadata to reconstruct where the data came from
 
-If the source is human-authored, the raw receipt may be a voice-note artifact, transcript ref, uploaded report, or manual-entry artifact rather than an external export.
+If the source is human-authored, the raw receipt may be a voice-note artifact, typed manual readiness artifact, transcript ref, uploaded report, or manual-entry artifact rather than an external export.
 
 ## Idempotency contract
 
@@ -221,6 +239,8 @@ If Cronometer and manual supplements both describe what appears to be the same r
 - when the overlap cannot be resolved safely, the normalized supplement output must remain explicit about `coexists_conflicted`
 - replay of the same Cronometer receipt or manual artifact must preserve the same source identities; cross-source overlap must never collapse source IDs by accident
 
+That preference does not make Cronometer a flagship-completion dependency.
+
 Recommended stable-ID patterns for this slice:
 - Cronometer day anchor: `nutrition:cronometer:day:<date>`
 - Cronometer supplement intake subkey: derived from the same day receipt family plus stable intake-local anchors
@@ -273,9 +293,10 @@ V1 rule:
 Resistance training is in v1.
 
 Adapter-level freeze:
-- manual logging through `merge_human_inputs` is the required initial lane
-- normalized outputs must be `training_session` and `gym_exercise_set`
-- future imported lifting sources must converge into the same canonical outputs
+- manual structured logging through `merge_human_inputs` is the required source-of-truth initial lane
+- normalized outputs must be `training_session`, `gym_set_record`, `exercise_catalog`, `exercise_alias`, and `program_block`
+- future imported lifting sources such as `wger` or `Hevy` must converge into the same canonical outputs
+- those external gym connectors remain non-flagship or exploratory in this doctrine interval
 - deeper exercise taxonomy and progression logic are deferred to a later bounded spec
 
 ## Out-of-scope confirmation
@@ -286,3 +307,4 @@ This contract does not:
 - redesign retrieval around source names
 - require a new canonical bucket
 - require a full resistance-training deep model in the same slice
+- require Cronometer or any external gym connector for flagship completion

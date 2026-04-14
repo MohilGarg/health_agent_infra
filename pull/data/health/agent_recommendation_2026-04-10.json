@@ -11,6 +11,7 @@
   ],
   "rationale": "The context shows low energy, soreness, a logged recovery caution signal, and same-day hydration plus meal inputs, so the safest useful recommendation is a recovery-focused evening rather than extra load.",
   "recommendation_id": "rec_self_usage_20260410_recovery_01",
+  "recommendation_class": "prioritize_recovery",
   "summary": "Keep the evening light and prioritize recovery basics.",
   "user_id": "user_dom"
 }

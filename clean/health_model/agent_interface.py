@@ -17,6 +17,7 @@ from health_model.manual_logging import (
     build_simple_gym_set_manual_log_entry,
 )
 from health_model.shared_input_backbone import ValidationResult, validate_shared_input_bundle
+from health_model.typed_manual_readiness_intake import canonicalize_typed_manual_readiness_payload
 
 
 ALLOWED_ATOMIC_APPEND_LOG_TYPES = {"meal", "hydration"}
@@ -63,7 +64,7 @@ class IntakeProvenance(TypedDict, total=False):
 
 class IntakeResponse(TypedDict, total=False):
     ok: bool
-    entry_kind: Literal["manual_log_entry"]
+    entry_kind: Literal["manual_log_entry", "subjective_daily_entry"]
     artifact: dict[str, Any] | None
     entry: dict[str, Any] | None
     derived_events: list[dict[str, Any]]
@@ -271,6 +272,83 @@ def submit_gym_set(
         bundle_fragment=bundle_fragment,
         derived_events=[],
     )
+
+
+def submit_structured_readiness_intake(
+    *,
+    user_id: str,
+    date: str,
+    energy_today_1_to_5: int,
+    soreness_today_1_to_5: int,
+    training_intent_today: str,
+    unusual_constraints_or_stressors: str | None,
+    collected_at: str,
+    ingested_at: str,
+    raw_location: str,
+    confidence_score: float,
+    completeness_state: Literal["partial", "complete", "corrected"],
+    source_name: str = "manual_structured_readiness",
+) -> IntakeResponse:
+    bundle_fragment = canonicalize_typed_manual_readiness_payload(
+        {
+            "artifact_id": _new_id("artifact"),
+            "user_id": user_id,
+            "manual_readiness": {
+                "source_name": source_name,
+                "collected_at": collected_at,
+                "ingested_at": ingested_at,
+                "raw_location": raw_location,
+                "raw_format": "json",
+            },
+            "subjective_entry": {
+                "entry_id": _new_id("subjective"),
+                "date": date,
+                "extraction_status": "partial" if completeness_state == "partial" else "complete",
+                "confidence_score": confidence_score,
+                "energy_self_rating": energy_today_1_to_5,
+                "soreness_today_1_to_5": soreness_today_1_to_5,
+                "training_intent_today": training_intent_today,
+                "unusual_constraints_or_stressors": unusual_constraints_or_stressors,
+                "free_text_summary": unusual_constraints_or_stressors or training_intent_today,
+                "readiness_input_type": "structured_readiness_v1",
+            },
+        }
+    )
+    artifact = bundle_fragment["source_artifacts"][0]
+    entry = bundle_fragment["subjective_daily_entries"][0]
+    validation = validate_shared_input_bundle(bundle_fragment)
+    if not validation.is_valid:
+        return {
+            "ok": False,
+            "entry_kind": "subjective_daily_entry",
+            "artifact": artifact,
+            "entry": entry,
+            "bundle_fragment": bundle_fragment,
+            "provenance": {
+                "artifact_id": artifact["artifact_id"],
+                "entry_id": entry["entry_id"],
+            },
+            "validation": _validation_payload(validation),
+            "error": {
+                "code": "invalid_bundle_fragment",
+                "message": "Generated structured readiness fragment failed canonical validation.",
+                "retryable": False,
+            },
+        }
+    return {
+        "ok": True,
+        "entry_kind": "subjective_daily_entry",
+        "artifact": artifact,
+        "entry": entry,
+        "derived_events": [],
+        "bundle_fragment": bundle_fragment,
+        "provenance": {
+            "artifact_id": artifact["artifact_id"],
+            "entry_id": entry["entry_id"],
+        },
+        "validation": _validation_payload(validation),
+        "error": None,
+    }
 
 
 def load_persisted_bundle(*, bundle_path: str) -> dict[str, Any]:
@@ -662,3 +740,11 @@ def _validation_payload(validation: ValidationResult) -> ValidationPayload:
 
 def _new_id(prefix: str) -> str:
     return f"{prefix}_{uuid4().hex}"
+
+
+def _confidence_label_for_score(score: float) -> str:
+    if score >= 0.8:
+        return "high"
+    if score >= 0.5:
+        return "medium"
+    return "low"

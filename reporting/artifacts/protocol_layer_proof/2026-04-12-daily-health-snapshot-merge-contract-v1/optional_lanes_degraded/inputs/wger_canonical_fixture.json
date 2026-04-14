@@ -1,0 +1,16 @@
+{
+  "state": "blocked",
+  "reason": "non_flagship_connector_not_required_for_day_proof",
+  "used_raw_source_bypass": false,
+  "canonical_artifact": {
+    "artifact_family": "training_session",
+    "artifact_id": "wger-day-2026-04-11",
+    "date": "2026-04-11"
+  },
+  "canonical_provenance": {
+    "provenance_record_id": "provenance:wger:day:2026-04-11",
+    "supporting_refs": [
+      "contract://wger/non-flagship-connector"
+    ]
+  }
+}

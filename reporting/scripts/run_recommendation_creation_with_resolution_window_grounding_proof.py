@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-BUNDLE_ROOT = REPO_ROOT / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-creation-with-resolution-window-grounding"
-SOURCE_WINDOW = REPO_ROOT / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-resolution-window" / "success_envelope.json"
-SOURCE_CONTEXT = REPO_ROOT / "tests" / "fixtures" / "agent_readable_daily_context" / "generated_fixture_day_context.json"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+BUNDLE_ROOT = REPO_ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-creation-with-resolution-window-grounding"
+SOURCE_WINDOW = REPO_ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-resolution-window" / "success_envelope.json"
+SOURCE_CONTEXT = REPO_ROOT / "safety" / "tests" / "fixtures" / "agent_readable_daily_context" / "generated_fixture_day_context.json"
 
 
 def _write_json(path: Path, payload: dict) -> None:
@@ -25,8 +26,20 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _subprocess_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join(
+        [
+            str(REPO_ROOT / "clean"),
+            str(REPO_ROOT / "safety"),
+            env.get("PYTHONPATH", ""),
+        ]
+    ).rstrip(os.pathsep)
+    return env
+
+
 def _run_json(command: list[str], expected_returncode: int) -> dict:
-    completed = subprocess.run(command, cwd=REPO_ROOT, capture_output=True, text=True, check=False)
+    completed = subprocess.run(command, cwd=REPO_ROOT, env=_subprocess_env(), capture_output=True, text=True, check=False)
     if completed.returncode != expected_returncode:
         raise RuntimeError(f"unexpected return code {completed.returncode}:\nSTDOUT:\n{completed.stdout}\nSTDERR:\n{completed.stderr}")
     if completed.stderr.strip():
@@ -139,13 +152,13 @@ def main() -> int:
 
     manifest = {
         "slice": "protocol_proof.recommendation_creation_with_resolution_window_grounding",
-        "frozen_command": "python3 scripts/run_recommendation_creation_with_resolution_window_grounding_proof.py",
+        "frozen_command": "python3 reporting/scripts/run_recommendation_creation_with_resolution_window_grounding_proof.py",
         "replay_commands": [
-            "python3 scripts/run_recommendation_creation_with_resolution_window_grounding_proof.py",
-            "python3 -m unittest tests.test_agent_recommendation_cli tests.test_agent_contract_cli",
-            f"python3 -m health_model.agent_recommendation_cli create --output-dir {BUNDLE_ROOT} --payload-path {success_payload_path}",
-            f"python3 -m health_model.agent_recommendation_cli create --output-dir {BUNDLE_ROOT} --payload-path {missing_window_payload_path}",
-            f"python3 -m health_model.agent_recommendation_cli create --output-dir {BUNDLE_ROOT} --payload-path {inconsistent_payload_path}",
+            "python3 reporting/scripts/run_recommendation_creation_with_resolution_window_grounding_proof.py",
+            "PYTHONPATH=clean:safety python3 -m unittest safety.tests.test_agent_recommendation_cli safety.tests.test_agent_contract_cli",
+            f"PYTHONPATH=clean:safety python3 -m health_model.agent_recommendation_cli create --output-dir {BUNDLE_ROOT} --payload-path {success_payload_path}",
+            f"PYTHONPATH=clean:safety python3 -m health_model.agent_recommendation_cli create --output-dir {BUNDLE_ROOT} --payload-path {missing_window_payload_path}",
+            f"PYTHONPATH=clean:safety python3 -m health_model.agent_recommendation_cli create --output-dir {BUNDLE_ROOT} --payload-path {inconsistent_payload_path}",
         ],
         "artifacts": [
             "agent_readable_daily_context_2026-04-11.json",

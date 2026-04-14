@@ -4,6 +4,7 @@ This lane owns the bounded slice of human-authored input surfaces introduced in 
 
 Contents:
 - `intake/voice_note_intake.py`: canonical voice-note intake and bundle shaping
+- `intake/typed_manual_readiness_intake.py`: canonical typed/manual readiness intake and subjective-day normalization
 - `manual_logs/manual_logging.py`: canonical manual logging builders for hydration, meals, and gym sets
 - `examples/manual_gym_sessions.example.json`: manual gym logging example payload
 - `health_logger/`: migrated logger app surfaces previously rooted at `bot/`
@@ -11,6 +12,6 @@ Contents:
 Compatibility shims remain at:
 - `health_model.voice_note_intake`
 - `health_model.manual_logging`
-- `bot.*`
+- `merge_human_inputs.bot.*`
 
 Those wrappers preserve current entrypoints while the new canonical lane becomes the architectural source of truth for this slice.

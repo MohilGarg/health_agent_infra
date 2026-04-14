@@ -5,7 +5,7 @@
   "judgment_id": "judgment_window_20260407_01",
   "judgment_label": "obvious",
   "recommendation_artifact_id": "rec_wrong_id",
-  "recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window/agent_recommendation_2026-04-07.json",
+  "recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window/agent_recommendation_2026-04-07.json",
   "recommendation_evidence_refs": [
     "evidence_20260407_01"
   ],

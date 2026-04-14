@@ -8,7 +8,7 @@ python3 scripts/run_self_usage_day.py \
   --date "$DATE" \
   --user-id "$USER_ID" \
   --voice-note-payload-path "$PROOF_DIR/voice_note_payload.json" \
-  --recommendation-payload-path artifacts/self_usage/templates/recommendation_payload_example_2026-04-10.json \
+  --recommendation-payload-path reporting/artifacts/self_usage/templates/recommendation_payload_example_2026-04-10.json \
   --judgment-label useful \
   --action-taken "Chose a lighter evening and skipped extra training load." \
   --why "The recommendation matched the low-energy and soreness context and was specific enough to act on immediately." \
@@ -16,7 +16,7 @@ python3 scripts/run_self_usage_day.py \
   --time-cost-note "About 10 minutes including one payload review." \
   --friction-points "manual recommendation payload review" "proof copy now automated"
 ```
-The runner keeps recommendation authorship explicit, validates evidence refs against the day context before acceptance, copies the proof bundle, and records compact friction/usefulness capture in `artifacts/self_usage/week1/YYYY-MM-DD/runner_capture_YYYY-MM-DD.json`.
+The runner keeps recommendation authorship explicit, validates evidence refs against the day context before acceptance, copies the proof bundle, and records compact friction/usefulness capture in `reporting/artifacts/self_usage/week1/YYYY-MM-DD/runner_capture_YYYY-MM-DD.json`.
 
 ## Fixed conventions
 - user_id: `user_dom`
@@ -24,7 +24,7 @@ The runner keeps recommendation authorship explicit, validates evidence refs aga
 - dated bundle: `data/health/shared_input_bundle_YYYY-MM-DD.json`
 - dated context: `data/health/agent_readable_daily_context_YYYY-MM-DD.json`
 - dated recommendation: `data/health/agent_recommendation_YYYY-MM-DD.json`
-- proof bundle root: `artifacts/self_usage/week1/YYYY-MM-DD/`
+- proof bundle root: `reporting/artifacts/self_usage/week1/YYYY-MM-DD/`
 - gym logging rule: log gym only in `data/health/manual_gym_sessions.json`, then add a same-day gym note in the judgment log if training occurred
 
 ## 0. Set the day once
@@ -32,7 +32,7 @@ The runner keeps recommendation authorship explicit, validates evidence refs aga
 export DATE=2026-04-10
 export USER_ID=user_dom
 export HEALTH_DIR=data/health
-export PROOF_DIR=artifacts/self_usage/week1/$DATE
+export PROOF_DIR=reporting/artifacts/self_usage/week1/$DATE
 mkdir -p "$PROOF_DIR/screenshots"
 ```
 
@@ -63,13 +63,13 @@ python3 -m health_model.agent_context_cli get   --artifact-path "$HEALTH_DIR/age
 ```
 
 ## 6. Validate and write one recommendation artifact
-Start from `artifacts/self_usage/templates/recommendation_payload_example_2026-04-10.json`, then update the date and evidence refs if your live context differs.
+Start from `reporting/artifacts/self_usage/templates/recommendation_payload_example_2026-04-10.json`, then update the date and evidence refs if your live context differs.
 ```bash
-python3 -m health_model.agent_recommendation_cli create   --output-dir "$HEALTH_DIR"   --payload-path artifacts/self_usage/templates/recommendation_payload_example_2026-04-10.json
+python3 -m health_model.agent_recommendation_cli create   --output-dir "$HEALTH_DIR"   --payload-path reporting/artifacts/self_usage/templates/recommendation_payload_example_2026-04-10.json
 ```
 
 ## 7. Record judgment immediately
-Append one row using `artifacts/self_usage/templates/judgment_log_template.csv` as the shape.
+Append one row using `reporting/artifacts/self_usage/templates/judgment_log_template.csv` as the shape.
 - label must be one of: `useful`, `obvious`, `wrong`, `ignored`
 - keep why to 1 to 2 honest lines
 - if you trained today, add the gym note here and confirm gym logging stayed in `data/health/manual_gym_sessions.json`
@@ -86,5 +86,5 @@ Then add or update:
 
 ## Done when
 - the dated bundle, context, and recommendation exist under `data/health/`
-- the copied bundle, copied context, copied recommendation, and judgment log row exist under `artifacts/self_usage/week1/$DATE/`
+- the copied bundle, copied context, copied recommendation, and judgment log row exist under `reporting/artifacts/self_usage/week1/$DATE/`
 - the day can be understood from checked-in files without hidden steps

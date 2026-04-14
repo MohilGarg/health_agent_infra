@@ -1,16 +1,16 @@
 {
-  "artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/recommendation_feedback_window_memory_malformed_linkage.json",
+  "artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/recommendation_feedback_window_memory_malformed_linkage.json",
   "error": {
     "code": "recommendation_linkage_mismatch",
     "details": {
-      "judgment_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/recommendation_judgment_mismatched_id_2026-04-07.json",
-      "memory_locator": "/Users/myapplemini01/Projects/health_agent_infra/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/recommendation_feedback_window_memory_malformed_linkage.json",
+      "judgment_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/recommendation_judgment_mismatched_id_2026-04-07.json",
+      "memory_locator": "/Users/myapplemini01/Projects/health_agent_infra/reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/recommendation_feedback_window_memory_malformed_linkage.json",
       "pair_entry": {
         "date": "2026-04-07",
-        "judgment_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/recommendation_judgment_mismatched_id_2026-04-07.json",
-        "recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-07.json"
+        "judgment_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/recommendation_judgment_mismatched_id_2026-04-07.json",
+        "recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-07.json"
       },
-      "recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-07.json"
+      "recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/agent_recommendation_2026-04-07.json"
     },
     "message": "Recommendation feedback window linkage validation failed.",
     "retryable": false

@@ -1,0 +1,110 @@
+{
+  "artifact_path": "data/health/daily_health_snapshot_2026-04-08.json",
+  "error": null,
+  "ok": true,
+  "retrieval": {
+    "conflicts": [],
+    "coverage_status": "present",
+    "evidence": {
+      "agent_notes": {
+        "data_backed_notes": [
+          "Garmin export shows low readiness with about 24.1 recovery hours remaining.",
+          "Felt normal."
+        ],
+        "generic_or_missingness_notes": [
+          "Garmin and subjective flagship lanes are ready for this date.",
+          "Cronometer remains optional bridge enrichment and does not gate the flagship day snapshot.",
+          "Manual gym or external gym connectors remain optional and do not gate the flagship day snapshot.",
+          "Garmin export coverage is bounded and unsupported fields stay null."
+        ]
+      },
+      "bridge_enrichment": {
+        "manual_gym_summary": {
+          "present": false,
+          "session_count": 0,
+          "sessions": [],
+          "total_load_kg": null,
+          "total_reps": null,
+          "total_sets": null
+        },
+        "nutrition_summary": {
+          "calories_kcal": null,
+          "carbs_g": null,
+          "fat_g": null,
+          "food_log_completeness": null,
+          "present": false,
+          "protein_g": null,
+          "source_name": null
+        }
+      },
+      "coverage_status": {
+        "blocked_sources": [],
+        "garmin_ready": true,
+        "manual_gym_present": false,
+        "missing_sources": [],
+        "nutrition_present": false,
+        "subjective_ready": true
+      },
+      "date": "2026-04-08",
+      "flagship_summary": {
+        "data_backed_observation": "Garmin export shows low readiness with about 24.1 recovery hours remaining.",
+        "overall_day_note": "Felt normal.",
+        "readiness_label": "LOW",
+        "readiness_score": 2,
+        "running_sessions_count": 1,
+        "running_volume_m": 7470.58,
+        "sleep_duration_hours": 9.05,
+        "sleep_score": 84.0,
+        "subjective_energy_1_5": 4.0,
+        "subjective_soreness_1_5": null,
+        "subjective_stress_1_5": 2.0
+      },
+      "provenance_refs": [
+        {
+          "provenance_record_id": "provenance_sleep_daily_0d6e6e3192d089bb",
+          "section": "garmin",
+          "source_name": "garmin",
+          "source_record_id": "garmin:558e4554e7e43bb4:daily_summary:2026-04-08"
+        },
+        {
+          "provenance_record_id": "provenance_readiness_daily_0d6e6e3192d089bb",
+          "section": "garmin",
+          "source_name": "garmin",
+          "source_record_id": "garmin:558e4554e7e43bb4:daily_summary:2026-04-08"
+        },
+        {
+          "provenance_record_id": "provenance:subjective:artifact_voice_20260408:day:2026-04-08",
+          "section": "subjective",
+          "source_name": "manual_subjective_recovery",
+          "source_record_id": "subjective:artifact_voice_20260408:day:2026-04-08"
+        },
+        {
+          "provenance_record_id": "provenance_training_session_6e616cd07aaf4e49",
+          "section": "garmin",
+          "source_name": "garmin",
+          "source_record_id": "garmin:558e4554e7e43bb4:activity:22450873403"
+        }
+      ]
+    },
+    "generated_from": {
+      "artifact_path": "data/health/daily_health_snapshot_2026-04-08.json",
+      "daily_health_snapshot_id": "daily_health_snapshot_954dc29a6d4ff2f3"
+    },
+    "important_gaps": [],
+    "operation": "retrieve.day_snapshot",
+    "scope": {
+      "date": "2026-04-08",
+      "user_id": "user_dom"
+    },
+    "unsupported_claims": []
+  },
+  "validation": {
+    "is_valid": true,
+    "request_echo": {
+      "request_id": "req_day_snapshot_proof_2026_04_14",
+      "requested_at": "2026-04-14T10:55:00+01:00"
+    },
+    "schema_issues": [],
+    "semantic_issues": []
+  }
+}

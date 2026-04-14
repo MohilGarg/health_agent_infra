@@ -160,6 +160,9 @@ class SubjectiveStateSemanticSummary:
     mood: WrappedField = field(default_factory=lambda: _missing_field())
     perceived_recovery: WrappedField = field(default_factory=lambda: _missing_field())
     soreness_or_illness: WrappedField = field(default_factory=lambda: _missing_field())
+    soreness_today_1_to_5: WrappedField = field(default_factory=lambda: _missing_field())
+    training_intent_today: WrappedField = field(default_factory=lambda: _missing_field())
+    unusual_constraints_or_stressors: WrappedField = field(default_factory=lambda: _missing_field())
     free_text_human_summary: WrappedField = field(default_factory=lambda: _missing_field())
     extraction_confidence: SummaryConfidence = field(default_factory=lambda: SummaryConfidence("low", 0.0))
     unresolved_ambiguity_markers: WrappedField = field(default_factory=lambda: _missing_field())
@@ -276,6 +279,9 @@ def build_subjective_state_semantic_summary(bundle: Mapping[str, Any], user_id: 
     stress = _entry_rating_field(entry, "stress_self_rating")
     mood = _entry_rating_field(entry, "mood_self_rating")
     soreness_or_illness = _entry_boolean_field(entry, "illness_or_soreness_flag")
+    soreness_today_1_to_5 = _entry_rating_field(entry, "soreness_today_1_to_5")
+    training_intent_today = _entry_string_field(entry, "training_intent_today")
+    unusual_constraints_or_stressors = _entry_string_field(entry, "unusual_constraints_or_stressors")
     free_text_human_summary = _entry_string_field(entry, "free_text_summary")
     perceived_recovery = _build_perceived_recovery_field(bundle, entry, user_id, date, conflicts)
     unresolved_ambiguity_markers = _build_ambiguity_markers_field(entry, len(entries) > 1)
@@ -288,7 +294,18 @@ def build_subjective_state_semantic_summary(bundle: Mapping[str, Any], user_id: 
 
     extraction_confidence = _entry_confidence(entry)
     summary_confidence = _summary_confidence(
-        [energy, stress, mood, perceived_recovery, soreness_or_illness, free_text_human_summary, unresolved_ambiguity_markers],
+        [
+            energy,
+            stress,
+            mood,
+            perceived_recovery,
+            soreness_or_illness,
+            soreness_today_1_to_5,
+            training_intent_today,
+            unusual_constraints_or_stressors,
+            free_text_human_summary,
+            unresolved_ambiguity_markers,
+        ],
         fallback=extraction_confidence,
     )
 
@@ -304,6 +321,9 @@ def build_subjective_state_semantic_summary(bundle: Mapping[str, Any], user_id: 
         mood=mood,
         perceived_recovery=perceived_recovery,
         soreness_or_illness=soreness_or_illness,
+        soreness_today_1_to_5=soreness_today_1_to_5,
+        training_intent_today=training_intent_today,
+        unusual_constraints_or_stressors=unusual_constraints_or_stressors,
         free_text_human_summary=free_text_human_summary,
         extraction_confidence=extraction_confidence,
         unresolved_ambiguity_markers=unresolved_ambiguity_markers,

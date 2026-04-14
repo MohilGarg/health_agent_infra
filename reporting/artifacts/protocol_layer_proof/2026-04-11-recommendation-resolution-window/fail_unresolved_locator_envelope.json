@@ -1,9 +1,9 @@
 {
-  "artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window/missing_memory_locator.json",
+  "artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window/missing_memory_locator.json",
   "error": {
     "code": "memory_locator_not_found",
     "details": {
-      "memory_locator": "/Users/myapplemini01/Projects/health_agent_infra/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window/missing_memory_locator.json"
+      "memory_locator": "/Users/myapplemini01/Projects/health_agent_infra/reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window/missing_memory_locator.json"
     },
     "message": "memory_locator could not be resolved.",
     "retryable": false

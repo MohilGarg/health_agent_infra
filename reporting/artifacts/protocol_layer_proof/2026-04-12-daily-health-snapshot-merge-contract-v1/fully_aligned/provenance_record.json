@@ -1,6 +1,6 @@
 {
   "artifact_family": "provenance_record",
-  "provenance_record_id": "provenance_daily_health_snapshot_7491efcc02388188",
+  "provenance_record_id": "provenance_daily_health_snapshot_9c2f3d22d3d72717",
   "source_record_id": "merge:daily-health-snapshot-merge-contract-v1:2026-04-12",
   "derivation_method": "cross_source_merge",
   "supporting_refs": [
@@ -9,22 +9,27 @@
     "canonical://garmin/day/2026-04-12/training_session",
     "canonical://cronometer/day/2026-04-12/nutrition_daily",
     "canonical://wger/day/2026-04-12/training_session",
-    "canonical://wger/day/2026-04-12/gym_set_record"
+    "canonical://wger/day/2026-04-12/gym_set_record",
+    "canonical://subjective/day/2026-04-12/subjective_daily_input",
+    "canonical://subjective/day/2026-04-12/typed_manual_readiness"
   ],
   "parser_version": "daily-health-snapshot-merge-contract-v1",
   "conflict_status": "none",
   "supporting_artifact_ids": [
     "garmin-day-2026-04-12",
     "nutrition-day-2026-04-12",
+    "subjective-day-2026-04-12",
     "wger-day-2026-04-12"
   ],
   "supporting_provenance_ids": [
     "provenance:cronometer:day:2026-04-12",
     "provenance:garmin:day:2026-04-12",
+    "provenance:subjective:day:2026-04-12",
     "provenance:wger:day:2026-04-12"
   ],
   "lane_states": {
     "garmin": "ready",
+    "subjective": "ready",
     "cronometer": "ready",
     "wger": "ready"
   },

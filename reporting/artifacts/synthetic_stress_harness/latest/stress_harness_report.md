@@ -12,5 +12,5 @@ Passed 5 of 5 scenarios.
 | missing-context-rejection | recommendation_create | PASS | `{"artifact_path": null, "error_code": "context_artifact_not_found", "exit_code": 1, "latest_artifact_path": null, "ok": false, "preexisting_artifacts_preserved": true}` |
 | voice-note-scope-mismatch-rejection | voice_note_submit | PASS | `{"accepted_ok": true, "bootstrap_ok": true, "bundle_and_context_preserved": true, "error_code": "bundle_fragment_scope_mismatch", "exit_code": 1, "ok": false}` |
 
-Scenario definitions: `artifacts/synthetic_stress_harness/scenarios.json`
-Detailed outputs: `artifacts/synthetic_stress_harness/latest/scenario_outputs`
+Scenario definitions: `reporting/artifacts/synthetic_stress_harness/scenarios.json`
+Detailed outputs: `reporting/artifacts/synthetic_stress_harness/latest/scenario_outputs`

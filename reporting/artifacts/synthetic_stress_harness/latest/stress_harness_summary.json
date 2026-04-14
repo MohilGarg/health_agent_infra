@@ -1,9 +1,9 @@
 {
   "artifacts": {
-    "report_path": "artifacts/synthetic_stress_harness/latest/stress_harness_report.md",
-    "scenario_definition_path": "artifacts/synthetic_stress_harness/scenarios.json",
-    "scenario_outputs_dir": "artifacts/synthetic_stress_harness/latest/scenario_outputs",
-    "summary_path": "artifacts/synthetic_stress_harness/latest/stress_harness_summary.json"
+    "report_path": "reporting/artifacts/synthetic_stress_harness/latest/stress_harness_report.md",
+    "scenario_definition_path": "reporting/artifacts/synthetic_stress_harness/scenarios.json",
+    "scenario_outputs_dir": "reporting/artifacts/synthetic_stress_harness/latest/scenario_outputs",
+    "summary_path": "reporting/artifacts/synthetic_stress_harness/latest/stress_harness_summary.json"
   },
   "command": "python3 scripts/run_synthetic_recommendation_stress_harness.py",
   "failed_count": 0,

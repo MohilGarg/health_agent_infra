@@ -1,5 +1,5 @@
 {
-  "artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/recommendation_resolution_window_before_memory.json",
+  "artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/recommendation_resolution_window_before_memory.json",
   "error": null,
   "ok": true,
   "retrieval": {
@@ -22,6 +22,7 @@
               "evidence_20260407_01"
             ],
             "rationale": "Bounded proof recommendation for 2026-04-07.",
+            "recommendation_class": "insufficient_evidence_ask_follow_up",
             "recommendation_id": "rec_window_20260407_walk_01",
             "summary": "Choose walking and mobility over intensity."
           },
@@ -34,10 +35,10 @@
       "accepted_recommendations": [
         {
           "date": "2026-04-07",
-          "recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/agent_recommendation_2026-04-07.json"
+          "recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/agent_recommendation_2026-04-07.json"
         }
       ],
-      "memory_locator": "artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/recommendation_resolution_window_before_memory.json"
+      "memory_locator": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/recommendation_resolution_window_before_memory.json"
     },
     "important_gaps": [
       {

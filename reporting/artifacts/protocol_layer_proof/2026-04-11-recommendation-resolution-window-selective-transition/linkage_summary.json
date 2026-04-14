@@ -16,8 +16,8 @@
     "2026-04-04",
     "2026-04-10"
   ],
-  "target_judgment_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition/recommendation_judgment_2026-04-07.json",
-  "target_recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition/agent_recommendation_2026-04-07.json",
+  "target_judgment_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition/recommendation_judgment_2026-04-07.json",
+  "target_recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition/agent_recommendation_2026-04-07.json",
   "target_recommendation_date": "2026-04-07",
   "target_recommendation_id": "rec_window_20260407_walk_01",
   "window_end_date": "2026-04-10",

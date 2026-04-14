@@ -1,7 +1,7 @@
 {
   "artifact_family": "daily_health_snapshot",
   "date": "2026-04-12",
-  "daily_health_snapshot_id": "daily_health_snapshot_8e30d1a8c62c9eb3",
+  "daily_health_snapshot_id": "daily_health_snapshot_f7cbbff6ff2efc69",
   "conflict_status": "none",
   "data_backed_fields": [
     "sleep_duration_hours",
@@ -22,11 +22,16 @@
     "gym_sessions_count",
     "gym_total_sets",
     "gym_total_reps",
-    "gym_total_load_kg"
+    "gym_total_load_kg",
+    "subjective_energy_1_5",
+    "subjective_soreness_1_5",
+    "subjective_stress_1_5",
+    "overall_day_note"
   ],
   "generic_fields": [],
   "source_flags": {
     "garmin": true,
+    "subjective": true,
     "cronometer": true,
     "wger": true
   },
@@ -49,10 +54,10 @@
   "gym_total_sets": 18,
   "gym_total_reps": 126,
   "gym_total_load_kg": 8420,
-  "subjective_energy_1_5": null,
-  "subjective_soreness_1_5": null,
-  "subjective_stress_1_5": null,
-  "overall_day_note": null,
-  "provenance_record_id": "provenance_daily_health_snapshot_7491efcc02388188",
+  "subjective_energy_1_5": 4,
+  "subjective_soreness_1_5": 2,
+  "subjective_stress_1_5": 2,
+  "overall_day_note": "easy_run | light travel fatigue",
+  "provenance_record_id": "provenance_daily_health_snapshot_9c2f3d22d3d72717",
   "outcome_type": "snapshot_emitted_complete_for_declared_lanes"
 }

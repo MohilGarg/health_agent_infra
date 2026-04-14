@@ -3,7 +3,7 @@
   "error": {
     "code": "recommendation_artifact_id_mismatch",
     "details": {
-      "recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition/agent_recommendation_2026-04-07.json"
+      "recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window-selective-transition/agent_recommendation_2026-04-07.json"
     },
     "message": "Referenced recommendation artifact failed validation.",
     "retryable": false

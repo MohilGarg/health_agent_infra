@@ -11,6 +11,12 @@ from typing import Any
 
 ARTIFACT_TYPE = "agent_recommendation"
 CONTEXT_ARTIFACT_TYPE = "agent_readable_daily_context"
+APPROVED_RECOMMENDATION_CLASSES = [
+    "proceed_as_planned",
+    "reduce_intensity",
+    "prioritize_recovery",
+    "insufficient_evidence_ask_follow_up",
+]
 REQUIRED_PAYLOAD_FIELDS = {
     "user_id",
     "date",
@@ -18,6 +24,7 @@ REQUIRED_PAYLOAD_FIELDS = {
     "context_artifact_id",
     "resolution_window_artifact_path",
     "recommendation_id",
+    "recommendation_class",
     "summary",
     "rationale",
     "evidence_refs",
@@ -223,11 +230,22 @@ def _payload_semantic_issues(payload: dict[str, Any]) -> list[dict[str, str]]:
         "context_artifact_id",
         "resolution_window_artifact_path",
         "recommendation_id",
+        "recommendation_class",
         "summary",
         "rationale",
     ):
         if not isinstance(payload[field], str) or not payload[field].strip():
             issues.append(_issue(code="invalid_string_field", message="Field must be a non-empty string.", path=field))
+
+    recommendation_class = payload["recommendation_class"]
+    if isinstance(recommendation_class, str) and recommendation_class.strip() and recommendation_class not in APPROVED_RECOMMENDATION_CLASSES:
+        issues.append(
+            _issue(
+                code="invalid_recommendation_class",
+                message="recommendation_class must be exactly one of the approved recommendation classes.",
+                path="recommendation_class",
+            )
+        )
 
     evidence_refs = payload["evidence_refs"]
     if not isinstance(evidence_refs, list) or not evidence_refs:
@@ -514,6 +532,7 @@ def _build_recommendation(*, payload: dict[str, Any], context_path: Path, resolu
         "context_artifact_id": payload["context_artifact_id"],
         "resolution_window_artifact_path": str(resolution_window_path),
         "recommendation_id": payload["recommendation_id"],
+        "recommendation_class": payload["recommendation_class"],
         "summary": payload["summary"],
         "rationale": payload["rationale"],
         "evidence_refs": list(payload["evidence_refs"]),

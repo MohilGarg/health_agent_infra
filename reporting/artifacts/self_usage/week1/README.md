@@ -1,6 +1,6 @@
 # Week 1 proof-bundle contract
 
-Each day lives at `artifacts/self_usage/week1/YYYY-MM-DD/` and must contain:
+Each day lives at `reporting/artifacts/self_usage/week1/YYYY-MM-DD/` and must contain:
 - `shared_input_bundle_YYYY-MM-DD.json` copied from `data/health/`
 - `agent_readable_daily_context_YYYY-MM-DD.json` copied from `data/health/`
 - `agent_recommendation_YYYY-MM-DD.json` copied from `data/health/`

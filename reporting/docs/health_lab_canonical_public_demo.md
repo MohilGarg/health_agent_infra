@@ -30,6 +30,21 @@ Truth surfaces stay distinct:
 - `reporting/artifacts/public_demo/captured/` is the checked-in frozen public demo bundle for inspection
 - `reporting/artifacts/flagship_loop_proof/2026-04-09/` is the narrower audited flagship proof bundle
 
+## What this demo proves, and what it does not
+
+This demo proves the current public-safe CLI-first path only.
+
+The approved target flagship doctrine for later slices is:
+
+`Garmin passive pull -> typed manual readiness intake -> deterministic normalization/bundle/context -> bounded recommendation -> bounded writeback`
+
+This wrapper does not prove that the target flagship path is already implemented end-to-end.
+
+For truthful review:
+- treat this wrapper as proof of the current CLI-first demo lineage
+- treat Cronometer as a bridge/reference nutrition surface outside this demo's flagship claim
+- treat external gym connectors such as `wger` or `Hevy` as non-flagship or exploratory surfaces outside this demo's flagship claim
+
 ## Pathing truth
 
 Older repo wording sometimes implied a universal top-level `data/...` layout. For this canonical public demo, the public proof surfaces are under `reporting/artifacts/`, while the current implementation CLI still uses some `data/...` examples elsewhere in the repo. Use the path actually tied to the specific command or proof object you are reviewing.

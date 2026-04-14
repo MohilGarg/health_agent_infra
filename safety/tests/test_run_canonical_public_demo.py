@@ -4,8 +4,8 @@ import unittest
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SCRIPT_PATH = REPO_ROOT / "scripts" / "run_canonical_public_demo.py"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SCRIPT_PATH = REPO_ROOT / "reporting" / "scripts" / "run_canonical_public_demo.py"
 EXPECTED_CANONICAL_MODULES = {
     "health_model.agent_contract_cli",
     "health_model.agent_bundle_cli",

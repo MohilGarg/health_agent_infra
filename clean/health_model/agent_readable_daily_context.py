@@ -111,6 +111,13 @@ def _subjective_signals(summary: SubjectiveStateSemanticSummary) -> list[dict[st
         _signal_entry("subjective_state", "mood", summary.mood),
         _signal_entry("subjective_state", "perceived_recovery", summary.perceived_recovery),
         _signal_entry("subjective_state", "soreness_or_illness", summary.soreness_or_illness),
+        _signal_entry("subjective_state", "soreness_today_1_to_5", summary.soreness_today_1_to_5),
+        _signal_entry("subjective_state", "training_intent_today", summary.training_intent_today),
+        _signal_entry(
+            "subjective_state",
+            "unusual_constraints_or_stressors",
+            summary.unusual_constraints_or_stressors,
+        ),
         _signal_entry("subjective_state", "free_text_human_summary", summary.free_text_human_summary),
         _signal_entry("subjective_state", "unresolved_ambiguity_markers", summary.unresolved_ambiguity_markers),
     ]

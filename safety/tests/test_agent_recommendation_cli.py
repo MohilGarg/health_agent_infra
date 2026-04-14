@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -8,54 +9,80 @@ import unittest
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-CONTEXT_FIXTURE = REPO_ROOT / "tests" / "fixtures" / "agent_readable_daily_context" / "generated_fixture_day_context.json"
-WINDOW_FIXTURE = REPO_ROOT / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-resolution-window" / "success_envelope.json"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+CONTEXT_FIXTURE = REPO_ROOT / "safety" / "tests" / "fixtures" / "agent_readable_daily_context" / "generated_fixture_day_context.json"
+WINDOW_FIXTURE = REPO_ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-resolution-window" / "success_envelope.json"
+APPROVED_RECOMMENDATION_CLASSES = [
+    "proceed_as_planned",
+    "reduce_intensity",
+    "prioritize_recovery",
+    "insufficient_evidence_ask_follow_up",
+]
+
+
+def _subprocess_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join(
+        [
+            str(REPO_ROOT / "clean"),
+            str(REPO_ROOT / "safety"),
+            env.get("PYTHONPATH", ""),
+        ]
+    ).rstrip(os.pathsep)
+    return env
 
 
 class AgentRecommendationCliIntegrationTest(unittest.TestCase):
-    def test_create_writes_dated_and_latest_recommendation_for_valid_scoped_context_and_resolution_window(self) -> None:
-        context = json.loads(CONTEXT_FIXTURE.read_text())
+    def test_create_accepts_proceed_as_planned_recommendation_class(self) -> None:
+        self._assert_create_succeeds_for_class("proceed_as_planned")
 
+    def test_create_accepts_reduce_intensity_recommendation_class(self) -> None:
+        self._assert_create_succeeds_for_class("reduce_intensity")
+
+    def test_create_accepts_prioritize_recovery_recommendation_class(self) -> None:
+        self._assert_create_succeeds_for_class("prioritize_recovery")
+
+    def test_create_accepts_insufficient_evidence_ask_follow_up_recommendation_class(self) -> None:
+        self._assert_create_succeeds_for_class("insufficient_evidence_ask_follow_up")
+
+    def test_create_rejects_missing_recommendation_class_with_fail_closed_envelope(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_root = Path(temp_dir)
             health_dir = temp_root / "data" / "health"
-            context_path = temp_root / "agent_readable_daily_context_2026-04-11.json"
+            context_path = temp_root / "context.json"
             window_path = temp_root / "resolution_window_success.json"
-            context_path.write_text(
-                json.dumps(
-                    {
-                        **context,
-                        "user_id": "user_dom",
-                        "date": "2026-04-11",
-                        "context_id": "agent_context_user_dom_2026-04-11",
-                    },
-                    indent=2,
-                    sort_keys=True,
-                )
-                + "\n"
-            )
+            context = json.loads(CONTEXT_FIXTURE.read_text())
+            context_path.write_text(json.dumps({**context, "user_id": "user_dom", "date": "2026-04-11", "context_id": "agent_context_user_dom_2026-04-11"}, indent=2, sort_keys=True) + "\n")
             window_path.write_text(WINDOW_FIXTURE.read_text())
             payload = self._valid_payload(context_path=context_path, window_path=window_path)
+            del payload["recommendation_class"]
 
-            result = self._run_cli(["create", "--output-dir", str(health_dir), "--payload-json", json.dumps(payload)])
+            result = self._run_cli(["create", "--output-dir", str(health_dir), "--payload-json", json.dumps(payload)], expected_returncode=1)
 
-            self.assertTrue(result["ok"], msg=result)
-            self.assertIsNone(result["error"])
-            self.assertTrue(result["validation"]["is_valid"])
-            self.assertEqual(result["recommendation"]["artifact_type"], "agent_recommendation")
-            self.assertEqual(result["recommendation"]["context_artifact_path"], str(context_path))
-            self.assertEqual(result["recommendation"]["context_artifact_id"], payload["context_artifact_id"])
-            self.assertEqual(result["recommendation"]["resolution_window_artifact_path"], str(window_path))
-            self.assertEqual(result["recommendation"]["evidence_refs"], payload["evidence_refs"])
-            self.assertEqual(result["recommendation"]["policy_basis"], payload["policy_basis"])
+            self.assertFalse(result["ok"])
+            self.assertEqual(result["error"]["code"], "missing_required_field")
+            self.assertTrue(any(issue["path"] == "recommendation_class" for issue in result["validation"]["semantic_issues"]))
 
-            dated_path = Path(result["artifact_path"])
-            latest_path = Path(result["latest_artifact_path"])
-            self.assertTrue(dated_path.exists())
-            self.assertTrue(latest_path.exists())
-            self.assertEqual(dated_path.read_bytes(), latest_path.read_bytes())
-            self.assertEqual(json.loads(dated_path.read_text()), result["recommendation"])
+    def test_create_rejects_invalid_recommendation_class_with_fail_closed_envelope(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            health_dir = temp_root / "data" / "health"
+            context_path = temp_root / "context.json"
+            window_path = temp_root / "resolution_window_success.json"
+            context = json.loads(CONTEXT_FIXTURE.read_text())
+            context_path.write_text(json.dumps({**context, "user_id": "user_dom", "date": "2026-04-11", "context_id": "agent_context_user_dom_2026-04-11"}, indent=2, sort_keys=True) + "\n")
+            window_path.write_text(WINDOW_FIXTURE.read_text())
+            payload = self._valid_payload(context_path=context_path, window_path=window_path)
+            payload["recommendation_class"] = "go_harder"
+
+            result = self._run_cli(["create", "--output-dir", str(health_dir), "--payload-json", json.dumps(payload)], expected_returncode=1)
+
+            self.assertFalse(result["ok"])
+            self.assertIsNone(result["artifact_path"])
+            self.assertIsNone(result["latest_artifact_path"])
+            self.assertIsNone(result["recommendation"])
+            self.assertEqual(result["error"]["code"], "invalid_recommendation_class")
+            self.assertTrue(any(issue["code"] == "invalid_recommendation_class" for issue in result["validation"]["semantic_issues"]))
 
     def test_create_rejects_bad_user_scope_with_fail_closed_envelope(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -134,6 +161,7 @@ class AgentRecommendationCliIntegrationTest(unittest.TestCase):
                         "context_artifact_id": "agent_context_user_dom_2026-04-11",
                         "resolution_window_artifact_path": str(window_path),
                         "recommendation_id": "rec_existing_01",
+                        "recommendation_class": "prioritize_recovery",
                         "summary": "Existing recommendation.",
                         "rationale": "Existing rationale.",
                         "evidence_refs": ["subjective_voice_20260409"],
@@ -168,6 +196,52 @@ class AgentRecommendationCliIntegrationTest(unittest.TestCase):
             self.assertEqual(dated_path.read_bytes(), original_bytes)
             self.assertEqual(latest_path.read_bytes(), original_bytes)
 
+    def _assert_create_succeeds_for_class(self, recommendation_class: str) -> None:
+        self.assertIn(recommendation_class, APPROVED_RECOMMENDATION_CLASSES)
+        context = json.loads(CONTEXT_FIXTURE.read_text())
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            health_dir = temp_root / "data" / "health"
+            context_path = temp_root / "agent_readable_daily_context_2026-04-11.json"
+            window_path = temp_root / "resolution_window_success.json"
+            context_path.write_text(
+                json.dumps(
+                    {
+                        **context,
+                        "user_id": "user_dom",
+                        "date": "2026-04-11",
+                        "context_id": "agent_context_user_dom_2026-04-11",
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+            window_path.write_text(WINDOW_FIXTURE.read_text())
+            payload = self._valid_payload(context_path=context_path, window_path=window_path)
+            payload["recommendation_class"] = recommendation_class
+
+            result = self._run_cli(["create", "--output-dir", str(health_dir), "--payload-json", json.dumps(payload)])
+
+            self.assertTrue(result["ok"], msg=result)
+            self.assertIsNone(result["error"])
+            self.assertTrue(result["validation"]["is_valid"])
+            self.assertEqual(result["recommendation"]["artifact_type"], "agent_recommendation")
+            self.assertEqual(result["recommendation"]["context_artifact_path"], str(context_path))
+            self.assertEqual(result["recommendation"]["context_artifact_id"], payload["context_artifact_id"])
+            self.assertEqual(result["recommendation"]["resolution_window_artifact_path"], str(window_path))
+            self.assertEqual(result["recommendation"]["recommendation_class"], recommendation_class)
+            self.assertEqual(result["recommendation"]["evidence_refs"], payload["evidence_refs"])
+            self.assertEqual(result["recommendation"]["policy_basis"], payload["policy_basis"])
+
+            dated_path = Path(result["artifact_path"])
+            latest_path = Path(result["latest_artifact_path"])
+            self.assertTrue(dated_path.exists())
+            self.assertTrue(latest_path.exists())
+            self.assertEqual(dated_path.read_bytes(), latest_path.read_bytes())
+            self.assertEqual(json.loads(dated_path.read_text()), result["recommendation"])
+
     def _valid_payload(self, *, context_path: Path, window_path: Path) -> dict[str, object]:
         return {
             "user_id": "user_dom",
@@ -176,6 +250,7 @@ class AgentRecommendationCliIntegrationTest(unittest.TestCase):
             "context_artifact_id": "agent_context_user_dom_2026-04-11",
             "resolution_window_artifact_path": str(window_path),
             "recommendation_id": "rec_20260411_recovery_01",
+            "recommendation_class": "prioritize_recovery",
             "summary": "Keep today light and prioritize recovery basics.",
             "rationale": "Same-day low-energy context plus the recent window show repeated useful lower-load guidance.",
             "evidence_refs": ["subjective_voice_20260409", "manual_gym_session_20260409"],
@@ -197,6 +272,7 @@ class AgentRecommendationCliIntegrationTest(unittest.TestCase):
         completed = subprocess.run(
             [sys.executable, "-m", "health_model.agent_recommendation_cli", *args],
             cwd=REPO_ROOT,
+            env=_subprocess_env(),
             capture_output=True,
             text=True,
             check=False,

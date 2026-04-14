@@ -1,6 +1,6 @@
 {
-  "blocked_case_no_fake_complete_snapshot": true,
-  "date_misaligned_case_stays_explicit": true,
+  "blocked_case_requires_typed_manual_readiness_lane": true,
+  "optional_bridge_and_connector_lanes_do_not_block_flagship_claim": true,
   "fully_aligned_case_emits_truthful_snapshot_with_provenance": true,
   "rerun_preserves_snapshot_and_provenance_ids": true
 }

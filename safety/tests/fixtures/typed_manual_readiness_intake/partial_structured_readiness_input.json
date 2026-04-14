@@ -1,0 +1,21 @@
+{
+  "artifact_id": "artifact_typed_readiness_partial_20260409",
+  "user_id": "user_dom",
+  "manual_readiness": {
+    "source_name": "manual_structured_readiness",
+    "collected_at": "2026-04-09T07:45:00+01:00",
+    "ingested_at": "2026-04-09T07:45:30+01:00",
+    "raw_location": "healthlab://manual/readiness/2026-04-09/partial-checkin",
+    "raw_format": "json",
+    "parser_version": "typed-manual-readiness-v1"
+  },
+  "subjective_entry": {
+    "entry_id": "subjective_typed_readiness_partial_20260409",
+    "date": "2026-04-09",
+    "extraction_status": "partial",
+    "confidence_score": 0.74,
+    "energy_self_rating": 2,
+    "soreness_today_1_to_5": 4,
+    "unusual_constraints_or_stressors": "legs still heavy"
+  }
+}

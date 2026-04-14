@@ -1,24 +1,37 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import unittest
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-RETRIEVAL_FIXTURE_DIR = REPO_ROOT / "tests" / "fixtures" / "retrieval_contract"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+RETRIEVAL_FIXTURE_DIR = REPO_ROOT / "safety" / "tests" / "fixtures" / "retrieval_contract"
+
+
+def _subprocess_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join(
+        [
+            str(REPO_ROOT / "clean"),
+            str(REPO_ROOT / "safety"),
+            env.get("PYTHONPATH", ""),
+        ]
+    ).rstrip(os.pathsep)
+    return env
 
 
 class AgentRetrievalCliIntegrationTest(unittest.TestCase):
-    def test_day_trio_brief_returns_degraded_success_envelope_with_explicit_training_missingness(self) -> None:
-        request_fixture = json.loads((RETRIEVAL_FIXTURE_DIR / "day_trio_brief_success_request.json").read_text())
-        expected = json.loads((RETRIEVAL_FIXTURE_DIR / "day_trio_brief_success_response.json").read_text())
+    def test_day_snapshot_returns_flagship_success_envelope_with_optional_bridge_missingness_explicit(self) -> None:
+        request_fixture = json.loads((RETRIEVAL_FIXTURE_DIR / "day_snapshot_success_request.json").read_text())
+        expected = json.loads((RETRIEVAL_FIXTURE_DIR / "day_snapshot_success_response.json").read_text())
 
         result = self._run_cli(
             [
-                "day-trio-brief",
+                "day-snapshot",
                 "--artifact-path",
                 request_fixture["artifact_path"],
                 "--user-id",
@@ -39,12 +52,12 @@ class AgentRetrievalCliIntegrationTest(unittest.TestCase):
         self.assertTrue(result["ok"], msg=result)
         self.assertEqual(result, expected)
 
-    def test_day_trio_brief_is_deterministic_on_rerun(self) -> None:
-        request_fixture = json.loads((RETRIEVAL_FIXTURE_DIR / "day_trio_brief_success_request.json").read_text())
+    def test_day_snapshot_is_deterministic_on_rerun(self) -> None:
+        request_fixture = json.loads((RETRIEVAL_FIXTURE_DIR / "day_snapshot_success_request.json").read_text())
 
         first = self._run_cli(
             [
-                "day-trio-brief",
+                "day-snapshot",
                 "--artifact-path",
                 request_fixture["artifact_path"],
                 "--user-id",
@@ -63,7 +76,7 @@ class AgentRetrievalCliIntegrationTest(unittest.TestCase):
         )
         second = self._run_cli(
             [
-                "day-trio-brief",
+                "day-snapshot",
                 "--artifact-path",
                 request_fixture["artifact_path"],
                 "--user-id",
@@ -83,13 +96,13 @@ class AgentRetrievalCliIntegrationTest(unittest.TestCase):
 
         self.assertEqual(first, second)
 
-    def test_day_trio_brief_fails_closed_on_wrong_date(self) -> None:
-        request_fixture = json.loads((RETRIEVAL_FIXTURE_DIR / "day_trio_brief_success_request.json").read_text())
-        expected = json.loads((RETRIEVAL_FIXTURE_DIR / "day_trio_brief_wrong_scope_response.json").read_text())
+    def test_day_snapshot_fails_closed_on_wrong_date(self) -> None:
+        request_fixture = json.loads((RETRIEVAL_FIXTURE_DIR / "day_snapshot_success_request.json").read_text())
+        expected = json.loads((RETRIEVAL_FIXTURE_DIR / "day_snapshot_wrong_scope_response.json").read_text())
 
         result = self._run_cli(
             [
-                "day-trio-brief",
+                "day-snapshot",
                 "--artifact-path",
                 request_fixture["artifact_path"],
                 "--user-id",
@@ -97,7 +110,7 @@ class AgentRetrievalCliIntegrationTest(unittest.TestCase):
                 "--date",
                 "2026-04-09",
                 "--request-id",
-                "req_day_trio_brief_wrong_scope_2026_04_12",
+                "req_day_snapshot_wrong_scope_2026_04_14",
                 "--requested-at",
                 request_fixture["requested_at"],
             ],
@@ -270,7 +283,7 @@ class AgentRetrievalCliIntegrationTest(unittest.TestCase):
             [
                 "recommendation",
                 "--artifact-path",
-                str((REPO_ROOT / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-retrieval" / "missing_agent_recommendation_2026-04-10.json").resolve()),
+                str((REPO_ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-retrieval" / "missing_agent_recommendation_2026-04-10.json").resolve()),
                 "--user-id",
                 "user_dom",
                 "--date",
@@ -368,7 +381,7 @@ class AgentRetrievalCliIntegrationTest(unittest.TestCase):
             [
                 "recommendation-judgment",
                 "--artifact-path",
-                str((REPO_ROOT / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-judgment-retrieval" / "missing_recommendation_judgment_2026-04-10.json").resolve()),
+                str((REPO_ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-judgment-retrieval" / "missing_recommendation_judgment_2026-04-10.json").resolve()),
                 "--user-id",
                 "user_dom",
                 "--date",
@@ -472,9 +485,9 @@ class AgentRetrievalCliIntegrationTest(unittest.TestCase):
             [
                 "recommendation-feedback",
                 "--recommendation-artifact-path",
-                str((REPO_ROOT / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-feedback" / "missing_agent_recommendation_2026-04-10.json").resolve()),
+                str((REPO_ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-feedback" / "missing_agent_recommendation_2026-04-10.json").resolve()),
                 "--judgment-artifact-path",
-                str((REPO_ROOT / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-feedback" / "recommendation_judgment_2026-04-10.json").resolve()),
+                str((REPO_ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-feedback" / "recommendation_judgment_2026-04-10.json").resolve()),
                 "--user-id",
                 "user_dom",
                 "--date",
@@ -497,9 +510,9 @@ class AgentRetrievalCliIntegrationTest(unittest.TestCase):
             [
                 "recommendation-feedback",
                 "--recommendation-artifact-path",
-                str((REPO_ROOT / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-feedback" / "agent_recommendation_2026-04-10.json").resolve()),
+                str((REPO_ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-feedback" / "agent_recommendation_2026-04-10.json").resolve()),
                 "--judgment-artifact-path",
-                str((REPO_ROOT / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-feedback" / "missing_recommendation_judgment_2026-04-10.json").resolve()),
+                str((REPO_ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-feedback" / "missing_recommendation_judgment_2026-04-10.json").resolve()),
                 "--user-id",
                 "user_dom",
                 "--date",
@@ -522,9 +535,9 @@ class AgentRetrievalCliIntegrationTest(unittest.TestCase):
             [
                 "recommendation-feedback",
                 "--recommendation-artifact-path",
-                str((REPO_ROOT / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-feedback" / "agent_recommendation_2026-04-10.json").resolve()),
+                str((REPO_ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-feedback" / "agent_recommendation_2026-04-10.json").resolve()),
                 "--judgment-artifact-path",
-                str((REPO_ROOT / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-feedback" / "recommendation_judgment_mismatched_id_2026-04-10.json").resolve()),
+                str((REPO_ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-feedback" / "recommendation_judgment_mismatched_id_2026-04-10.json").resolve()),
                 "--user-id",
                 "user_dom",
                 "--date",
@@ -547,9 +560,9 @@ class AgentRetrievalCliIntegrationTest(unittest.TestCase):
             [
                 "recommendation-feedback",
                 "--recommendation-artifact-path",
-                str((REPO_ROOT / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-feedback" / "agent_recommendation_2026-04-10.json").resolve()),
+                str((REPO_ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-feedback" / "agent_recommendation_2026-04-10.json").resolve()),
                 "--judgment-artifact-path",
-                str((REPO_ROOT / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-feedback" / "recommendation_judgment_mismatched_path_2026-04-10.json").resolve()),
+                str((REPO_ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-feedback" / "recommendation_judgment_mismatched_path_2026-04-10.json").resolve()),
                 "--user-id",
                 "user_dom",
                 "--date",
@@ -659,7 +672,7 @@ class AgentRetrievalCliIntegrationTest(unittest.TestCase):
                 "--end-date",
                 "2026-04-10",
                 "--memory-locator",
-                str((REPO_ROOT / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-feedback-window" / "missing_memory_locator.json").resolve()),
+                str((REPO_ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-feedback-window" / "missing_memory_locator.json").resolve()),
                 "--request-id",
                 "req_recommendation_feedback_window_unresolved_locator_2026_04_11",
                 "--requested-at",
@@ -684,7 +697,7 @@ class AgentRetrievalCliIntegrationTest(unittest.TestCase):
                 "--end-date",
                 "2026-04-10",
                 "--memory-locator",
-                str((REPO_ROOT / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-feedback-window" / "recommendation_feedback_window_memory_malformed_linkage.json").resolve()),
+                str((REPO_ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-feedback-window" / "recommendation_feedback_window_memory_malformed_linkage.json").resolve()),
                 "--request-id",
                 "req_recommendation_feedback_window_malformed_linkage_2026_04_11",
                 "--requested-at",
@@ -816,7 +829,7 @@ class AgentRetrievalCliIntegrationTest(unittest.TestCase):
                 "--end-date",
                 "2026-04-10",
                 "--memory-locator",
-                str((REPO_ROOT / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-resolution-window" / "missing_memory_locator.json").resolve()),
+                str((REPO_ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-resolution-window" / "missing_memory_locator.json").resolve()),
                 "--request-id",
                 "req_recommendation_resolution_window_unresolved_locator_2026_04_11",
                 "--requested-at",
@@ -841,7 +854,7 @@ class AgentRetrievalCliIntegrationTest(unittest.TestCase):
                 "--end-date",
                 "2026-04-10",
                 "--memory-locator",
-                str((REPO_ROOT / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-resolution-window" / "recommendation_resolution_window_memory_malformed_linkage.json").resolve()),
+                str((REPO_ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-resolution-window" / "recommendation_resolution_window_memory_malformed_linkage.json").resolve()),
                 "--request-id",
                 "req_recommendation_resolution_window_malformed_linkage_2026_04_11",
                 "--requested-at",
@@ -866,7 +879,7 @@ class AgentRetrievalCliIntegrationTest(unittest.TestCase):
                 "--end-date",
                 "2026-04-10",
                 "--memory-locator",
-                str((REPO_ROOT / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-resolution-window" / "recommendation_resolution_window_memory_malformed_entry.json").resolve()),
+                str((REPO_ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-11-recommendation-resolution-window" / "recommendation_resolution_window_memory_malformed_entry.json").resolve()),
                 "--request-id",
                 "req_recommendation_resolution_window_malformed_entry_2026_04_11",
                 "--requested-at",
@@ -989,6 +1002,7 @@ class AgentRetrievalCliIntegrationTest(unittest.TestCase):
         completed = subprocess.run(
             [sys.executable, "-m", "health_model.agent_retrieval_cli", *args],
             cwd=REPO_ROOT,
+            env=_subprocess_env(),
             capture_output=True,
             text=True,
             check=False,
@@ -1002,6 +1016,7 @@ class AgentRetrievalCliIntegrationTest(unittest.TestCase):
         completed = subprocess.run(
             [sys.executable, "-m", "health_model.agent_context_cli", *args],
             cwd=REPO_ROOT,
+            env=_subprocess_env(),
             capture_output=True,
             text=True,
             check=False,

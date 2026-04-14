@@ -37,9 +37,12 @@
     "blocked"
   ],
   "raw_source_bypass": "forbidden",
-  "date_alignment_rule": "owning lane must have same target date or field stays unset; required-lane completeness claims fail closed",
+  "date_alignment_rule": "owning lane must have same target date or field stays unset; declared flagship completeness claims fail closed only on the Garmin plus typed-manual-readiness boundary",
   "declared_complete_required_lanes": [
     "garmin",
+    "subjective"
+  ],
+  "optional_bridge_or_connector_lanes": [
     "cronometer",
     "wger"
   ]

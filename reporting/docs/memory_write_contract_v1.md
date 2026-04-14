@@ -27,6 +27,7 @@ Machine-readable discovery is published by `python3 -m health_model.agent_contra
 - Required fields: `user_id`, `date`, `recommendation_artifact_path`, `recommendation_artifact_id`, `judgment_id`, `judgment_label`, `action_taken`, `why`, `written_at`, `request_id`, `requested_at`.
 - Optional fields: `caveat`, `time_cost_note`, `friction_points`, `gym_note`.
 - Accepted `judgment_label` values: `useful`, `obvious`, `wrong`, `ignored`.
+- Recommendation taxonomy note: the referenced `agent_recommendation` artifact may already carry the approved `recommendation_class` field, and writeback consumes that classed artifact as-is without inventing any class-specific judgment labels.
 - Semantics:
   - validate `request_id` as a non-empty string and `requested_at` as an ISO 8601 datetime with timezone information
   - validate `written_at` as an ISO 8601 datetime with timezone information
@@ -40,6 +41,7 @@ Machine-readable discovery is published by `python3 -m health_model.agent_contra
 - Current implementation status: proof-complete in v1.
 - Required fields: `user_id`, `start_date`, `end_date`, `recommendation_artifact_path`, `recommendation_artifact_id`, `judgment_artifact_path`, `judgment_artifact_id`, `resolution_window_memory_path`, `written_at`, `request_id`, `requested_at`.
 - Optional fields: `feedback_window_memory_path`.
+- Recommendation taxonomy note: `recommendation_class` remains inspectable on the linked recommendation artifacts and through downstream retrieval, but the transition still only attaches `judgment_artifact_path` and does not add class-specific locator or status semantics.
 - Semantics:
   - validate `request_id` as a non-empty string and `requested_at` as an ISO 8601 datetime with timezone information
   - validate `written_at` as an ISO 8601 datetime with timezone information
@@ -103,9 +105,11 @@ For `writeback.recommendation_resolution_transition`, the `writeback` object con
 
 ## Proof expectation for v1
 
-The frozen proof bundles for these slices live under:
-- `artifacts/protocol_layer_proof/2026-04-11-writeback-judgment/`
-- `artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition-writeback/`
+The frozen proof bundles for these slices live under the canonical checked-in proof root:
+- `reporting/artifacts/protocol_layer_proof/2026-04-11-writeback-judgment/`
+- `reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition-writeback/`
+
+Those proofs should show that already-classed recommendation artifacts pass unchanged through `writeback.recommendation_judgment` and `writeback.recommendation_resolution_transition`, including at least one explicit `insufficient_evidence_ask_follow_up` case, while the accepted writeback labels remain exactly `useful`, `obvious`, `wrong`, and `ignored`.
 
 The transition bundle includes:
 - input locator before transition

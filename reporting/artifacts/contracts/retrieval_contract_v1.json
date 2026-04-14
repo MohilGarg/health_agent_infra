@@ -197,22 +197,22 @@
       "latest_recommendation_resolution_window_memory_artifact": "{output_dir}/recommendation_resolution_window_memory_latest.json"
     },
     "proof_artifacts": {
-      "contract_describe_writeback_transition_parity_proof_bundle": "artifacts/protocol_layer_proof/2026-04-12-contract-describe-writeback-transition-parity/",
-      "day_context_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11/",
-      "day_nutrition_brief_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11-day-nutrition-brief/",
+      "contract_describe_writeback_transition_parity_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-12-contract-describe-writeback-transition-parity/",
+      "day_context_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11/",
+      "day_nutrition_brief_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11-day-nutrition-brief/",
       "human_contract": "docs/retrieval_contract_v1.md",
-      "machine_contract": "artifacts/contracts/retrieval_contract_v1.json",
+      "machine_contract": "reporting/artifacts/contracts/retrieval_contract_v1.json",
       "memory_write_human_contract": "docs/memory_write_contract_v1.md",
-      "memory_write_machine_contract": "artifacts/contracts/memory_write_contract_v1.json",
-      "recommendation_creation_with_resolution_window_grounding_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11-recommendation-creation-with-resolution-window-grounding/",
-      "recommendation_feedback_retrieval_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/",
-      "recommendation_feedback_window_retrieval_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/",
-      "recommendation_judgment_retrieval_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11-recommendation-judgment-retrieval/",
-      "recommendation_resolution_transition_writeback_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition-writeback/",
-      "recommendation_resolution_window_retrieval_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window/",
-      "recommendation_retrieval_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11-recommendation-retrieval/",
-      "sleep_review_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11-sleep-review/",
-      "weekly_pattern_review_proof_bundle": "artifacts/protocol_layer_proof/2026-04-11-weekly-pattern-review/"
+      "memory_write_machine_contract": "reporting/artifacts/contracts/memory_write_contract_v1.json",
+      "recommendation_creation_with_resolution_window_grounding_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-creation-with-resolution-window-grounding/",
+      "recommendation_feedback_retrieval_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback/",
+      "recommendation_feedback_window_retrieval_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-feedback-window/",
+      "recommendation_judgment_retrieval_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-judgment-retrieval/",
+      "recommendation_resolution_transition_writeback_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition-writeback/",
+      "recommendation_resolution_window_retrieval_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-window/",
+      "recommendation_retrieval_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-retrieval/",
+      "sleep_review_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11-sleep-review/",
+      "weekly_pattern_review_proof_bundle": "reporting/artifacts/protocol_layer_proof/2026-04-11-weekly-pattern-review/"
     },
     "response_envelopes": {
       "bootstrap.init": {

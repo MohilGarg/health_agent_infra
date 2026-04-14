@@ -1,7 +1,7 @@
 {
-  "artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/recommendation_judgment_2026-04-07.json",
+  "artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/recommendation_judgment_2026-04-07.json",
   "error": null,
-  "latest_artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/recommendation_judgment_latest.json",
+  "latest_artifact_path": "/Users/myapplemini01/Projects/health_agent_infra/reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/recommendation_judgment_latest.json",
   "ok": true,
   "validation": {
     "is_valid": true,
@@ -23,7 +23,7 @@
     "judgment_id": "judgment_transition_20260407_01",
     "judgment_label": "useful",
     "recommendation_artifact_id": "rec_window_20260407_walk_01",
-    "recommendation_artifact_path": "artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/agent_recommendation_2026-04-07.json",
+    "recommendation_artifact_path": "reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/agent_recommendation_2026-04-07.json",
     "recommendation_evidence_refs": [
       "evidence_20260407_01"
     ],

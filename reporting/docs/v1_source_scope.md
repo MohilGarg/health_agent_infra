@@ -16,23 +16,41 @@ No additional canonical bucket is created by this spec.
 
 ## Purpose of this slice
 
-This slice is docs/spec only.
+This slice is still a docs/spec freeze, but it now reconciles doctrine against a tree that already contains bounded source-specific implementation and proof surfaces.
 
 It freezes:
 - which source families are in v1
 - which lane each source enters through
 - which canonical artifact families each source is expected to populate
-- which source families are deferred or placeholder-only
+- which source families are deferred, bridge/reference, or exploratory
 - the platform-contract level expectation for resistance training
-- the preferred v1 connector trio: Garmin + wger + Cronometer
+- the narrow flagship convergence target for this interval
 
-This slice does not add source-specific implementation.
+This slice does not require new source-specific implementation. It classifies the live source-specific surfaces on the tree truthfully instead of pretending they do not exist.
+
+## Frozen flagship doctrine for this interval
+
+The current public proof path is still the CLI-first lineage:
+
+`contract describe -> bundle init -> voice-note submit -> context get -> recommendation create`
+
+The approved target flagship doctrine for later slices is narrower:
+
+`Garmin passive pull -> typed manual readiness intake -> deterministic normalization/bundle/context -> bounded recommendation -> bounded writeback`
+
+This source-scope doc therefore distinguishes:
+- flagship-target source families
+- current-proof-but-broader manual surfaces
+- bridge/reference source families
+- exploratory non-flagship connector surfaces
+
+The typed manual readiness intake half of the target flagship path is already present with live repo proof, even though the full end-to-end flagship loop remains a later claim boundary.
 
 ## Lane boundary summary
 
 - `pull` owns source acquisition, import, raw receipts, and source-specific extraction for passive or machine-readable inputs.
 - `clean` owns deterministic normalization into canonical artifact families, validation, and conflict expression.
-- `merge_human_inputs` owns human-authored and semi-manual inputs such as voice notes, manual gym logs, manual subjective inputs, and manual context notes.
+- `merge_human_inputs` owns human-authored and semi-manual inputs such as typed manual readiness, voice notes, manual gym logs, manual subjective inputs, and manual context notes.
 
 These boundaries are non-overlapping.
 
@@ -56,18 +74,19 @@ The downstream normalized artifact families for v1 are:
 
 ## v1 source decision table
 
-| Source family | v1 status | Entry lane | Why in scope now | Expected canonical artifact families |
-| --- | --- | --- | --- | --- |
-| Garmin | in_v1 | `pull` | already grounded in repo docs, data, and current adapter reality, and now part of the frozen v1 trio | `source_record`, `provenance_record`, `sleep_daily`, `readiness_daily`, `training_session`, `daily_health_snapshot` |
-| wger | in_v1 | `pull` | preferred open, controllable gym-domain source system for resistance training in v1 | `source_record`, `provenance_record`, `training_session`, `gym_set_record`, `exercise_catalog`, `exercise_alias`, `program_block`, `daily_health_snapshot` |
-| Cronometer | in_v1 | `pull` | preferred nutrition and machine-readable supplements source system in v1 via bounded export-first connector surfaces | `source_record`, `provenance_record`, `nutrition_daily`, `supplement_intake`, `daily_health_snapshot` |
-| Strava | in_v1 | `pull` | required for cross-source training overlap contract, especially with Garmin, but not in the frozen first trio | `source_record`, `provenance_record`, `training_session`, `daily_health_snapshot` |
-| supplements | in_v1 | `merge_human_inputs` first, future `pull` allowed later | still valid manual fallback and backfill path even though Cronometer is the preferred machine-readable source system | `source_record`, `provenance_record`, `supplement_intake`, `daily_health_snapshot` |
-| bloodwork | in_v1 | `merge_human_inputs` first, future `pull` allowed later | important health-domain input, currently best treated as manual-first | `source_record`, `provenance_record`, `lab_result`, `daily_health_snapshot` |
-| Oura | in_v1 | `pull` | high-value passive source family, must be covered by the platform contract before implementation | `source_record`, `provenance_record`, `sleep_daily`, `readiness_daily`, `training_session`, `daily_health_snapshot` |
-| resistance training | in_v1 | `pull` via preferred `wger` source, manual fallback remains allowed | v1 gym domain should center on a controllable external source system while preserving source independence and fallback manual entry | `source_record`, `provenance_record`, `training_session`, `gym_set_record`, `exercise_catalog`, `exercise_alias`, `program_block`, `daily_health_snapshot` |
-| manual subjective recovery inputs | in_v1 | `merge_human_inputs` | already a real lane responsibility and needed for daily context | `source_record`, `provenance_record`, `subjective_daily_input`, `daily_health_snapshot` |
-| voice-note / manual human inputs | in_v1 | `merge_human_inputs` | already a canonical lane with voice-note intake and manual logging | `source_record`, `provenance_record`, `subjective_daily_input`, `supplement_intake`, `lab_result`, `gym_set_record`, `training_session`, `nutrition_daily`, `daily_health_snapshot` |
+| Source family | v1 status | Entry lane | Doctrine role | Why in scope now | Expected canonical artifact families |
+| --- | --- | --- | --- | --- | --- |
+| Garmin | in_v1 | `pull` | flagship_target | already grounded in repo docs, data, and current adapter reality, and it is the passive-data anchor for the frozen target flagship path | `source_record`, `provenance_record`, `sleep_daily`, `readiness_daily`, `training_session`, `daily_health_snapshot` |
+| typed manual readiness / subjective recovery inputs | in_v1 | `merge_human_inputs` | flagship_target | typed manual readiness intake is the human-input anchor for the frozen target flagship path, it is already implemented and proved on the live tree, and it should stay explicit/manual rather than implied through third-party gym tooling | `source_record`, `provenance_record`, `subjective_daily_input`, `readiness_daily`, `daily_health_snapshot` |
+| voice-note / broader manual human inputs | in_v1 | `merge_human_inputs` | current_proof_broader_manual_surface | the current public proof already uses voice-note intake, but that broader manual family is wider than the narrower typed-readiness flagship target | `source_record`, `provenance_record`, `subjective_daily_input`, `supplement_intake`, `lab_result`, `gym_set_record`, `training_session`, `nutrition_daily`, `daily_health_snapshot` |
+| Cronometer | in_v1 | `pull` | bridge_reference | useful bounded nutrition and supplements bridge/reference source via export-first connector surfaces, but not required for flagship completion | `source_record`, `provenance_record`, `nutrition_daily`, `supplement_intake`, `daily_health_snapshot` |
+| supplements | in_v1 | `merge_human_inputs` first, future `pull` allowed later | bridge_reference | valid manual fallback and backfill path whether or not Cronometer is present | `source_record`, `provenance_record`, `supplement_intake`, `daily_health_snapshot` |
+| bloodwork | in_v1 | `merge_human_inputs` first, future `pull` allowed later | bridge_reference | important health-domain input, currently best treated as manual-first rather than a flagship dependency | `source_record`, `provenance_record`, `lab_result`, `daily_health_snapshot` |
+| resistance training | in_v1 | `merge_human_inputs` first, future `pull` adapters allowed later | manual_first_non_flagship_connectors | manual structured logs inside Health Lab are the source-of-truth path for this freeze, while external gym connectors remain optional later convergence surfaces | `source_record`, `provenance_record`, `training_session`, `gym_set_record`, `exercise_catalog`, `exercise_alias`, `program_block`, `daily_health_snapshot` |
+| wger | in_v1 | `pull` | exploratory_non_flagship_connector | useful bounded gym connector work with a live mock-backed proof bundle, but not the flagship source of truth and not required for flagship completion | `source_record`, `provenance_record`, `training_session`, `gym_set_record`, `exercise_catalog`, `exercise_alias`, `program_block`, `daily_health_snapshot` |
+| Hevy | in_v1 | `pull` | exploratory_non_flagship_connector | bounded fixture-backed viability work already exists on the tree, but it remains narrower and more exploratory than the `wger` prototype and is not required for flagship completion | `source_record`, `provenance_record`, `training_session`, `gym_set_record`, `daily_health_snapshot` |
+| Strava | in_v1 | `pull` | bridge_reference | still relevant for overlap contracts, but not part of the frozen flagship convergence target | `source_record`, `provenance_record`, `training_session`, `daily_health_snapshot` |
+| Oura | in_v1 | `pull` | bridge_reference | high-value passive source family that can remain in the platform contract without becoming a flagship gate for this interval | `source_record`, `provenance_record`, `sleep_daily`, `readiness_daily`, `training_session`, `daily_health_snapshot` |
 
 ## Deferred but not required for this slice
 
@@ -76,7 +95,8 @@ The following are intentionally deferred as separate source-specific or family-s
 - a full `reporting/docs/resistance_training_model_v1.md`
 - richer exercise identity catalog design
 - detailed auth/storage handling per third-party service
-- source-specific proof bundles beyond the contract-level proof expectations
+- additional source-specific proof bundles beyond the bounded ones already on the tree
+- making Cronometer, `wger`, `Hevy`, or any other external connector a flagship-completion gate
 
 ## Placeholder-only status in this slice
 
@@ -89,16 +109,16 @@ A future source may be added later, but not without updating the source registry
 Resistance training is in v1 now.
 
 The contract-level freeze is:
-- the preferred v1 source-system entry lane is `pull` through `wger`
-- manual logs remain a valid fallback and coexistence path, not the primary v1 assumption
-- the canonical normalized outputs are Health Lab owned objects, not wger-native objects
-- the gym-domain core now centers on `training_session`, `exercise_catalog`, `exercise_alias`, `gym_set_record`, and `program_block`
+- manual structured logs inside `merge_human_inputs` are the current source-of-truth path for this doctrine interval
+- external gym connectors such as `wger` or `Hevy` are live bounded prototype or viability surfaces already on the tree, but they remain non-flagship exploratory connectors rather than the source of truth
+- the canonical normalized outputs are Health Lab owned objects, not connector-native objects
+- the gym-domain core centers on `training_session`, `exercise_catalog`, `exercise_alias`, `gym_set_record`, and `program_block`
 - derived metrics such as volume, estimated 1RM, weekly hard sets, density, and adherence remain Health Lab downstream concerns
-- future imported lifting adapters must converge into the same canonical gym-domain objects
+- future imported lifting adapters must converge into the same canonical gym-domain objects rather than redefining the flagship source of truth
 
 ## Supplements coexistence expectation
 
-Cronometer and manual supplements are both in scope for v1.
+Cronometer and manual supplements are both in scope for v1, but Cronometer is bridge/reference rather than flagship-critical.
 
 The platform contract therefore freezes that:
 - Cronometer is the preferred machine-readable source for `supplement_intake`
@@ -119,7 +139,9 @@ The platform contract therefore freezes that:
 ## Out of scope confirmation
 
 This document does not:
-- implement any adapter
+- implement any new adapter
+- widen existing connector implementation beyond the bounded surfaces already present
 - restructure the repo beyond documenting the preferred source path shape
 - add new canonical buckets
 - require a full resistance-training deep spec in the same slice
+- require `wger`, `Hevy`, or Cronometer for flagship completion

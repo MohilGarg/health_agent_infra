@@ -45,7 +45,11 @@ def _garmin_ready(date: str) -> dict:
         },
         "canonical_provenance": {
             "provenance_record_id": f"provenance:garmin:day:{date}",
-            "supporting_refs": [f"canonical://garmin/day/{date}/sleep_daily", f"canonical://garmin/day/{date}/readiness_daily", f"canonical://garmin/day/{date}/training_session"],
+            "supporting_refs": [
+                f"canonical://garmin/day/{date}/sleep_daily",
+                f"canonical://garmin/day/{date}/readiness_daily",
+                f"canonical://garmin/day/{date}/training_session",
+            ],
         },
     }
 
@@ -73,10 +77,51 @@ def _cronometer_ready(date: str) -> dict:
     }
 
 
+def _subjective_ready(date: str) -> dict:
+    return {
+        "state": "ready",
+        "reason": None,
+        "used_raw_source_bypass": False,
+        "canonical_artifact": {
+            "artifact_family": "subjective_daily_input",
+            "artifact_id": f"subjective-day-{date}",
+            "date": date,
+            "subjective_energy_1_5": 4,
+            "subjective_soreness_1_5": 2,
+            "subjective_stress_1_5": 2,
+            "overall_day_note": "easy_run | light travel fatigue",
+        },
+        "canonical_provenance": {
+            "provenance_record_id": f"provenance:subjective:day:{date}",
+            "supporting_refs": [
+                f"canonical://subjective/day/{date}/subjective_daily_input",
+                f"canonical://subjective/day/{date}/typed_manual_readiness",
+            ],
+        },
+    }
+
+
+def _subjective_blocked(date: str) -> dict:
+    return {
+        "state": "blocked",
+        "reason": "typed_manual_readiness_not_available",
+        "used_raw_source_bypass": False,
+        "canonical_artifact": {
+            "artifact_family": "subjective_daily_input",
+            "artifact_id": f"subjective-day-{date}",
+            "date": date,
+        },
+        "canonical_provenance": {
+            "provenance_record_id": f"provenance:subjective:day:{date}",
+            "supporting_refs": ["contract://typed-manual-readiness/not-available"],
+        },
+    }
+
+
 def _wger_blocked(date: str) -> dict:
     return {
         "state": "blocked",
-        "reason": "real_runtime_proof_not_passed",
+        "reason": "non_flagship_connector_not_required_for_day_proof",
         "used_raw_source_bypass": False,
         "canonical_artifact": {
             "artifact_family": "training_session",
@@ -85,7 +130,7 @@ def _wger_blocked(date: str) -> dict:
         },
         "canonical_provenance": {
             "provenance_record_id": f"provenance:wger:day:{date}",
-            "supporting_refs": ["contract://wger/runtime-proof-blocked"],
+            "supporting_refs": ["contract://wger/non-flagship-connector"],
         },
     }
 
@@ -106,32 +151,37 @@ def _wger_ready(date: str) -> dict:
         },
         "canonical_provenance": {
             "provenance_record_id": f"provenance:wger:day:{date}",
-            "supporting_refs": [f"canonical://wger/day/{date}/training_session", f"canonical://wger/day/{date}/gym_set_record"],
+            "supporting_refs": [
+                f"canonical://wger/day/{date}/training_session",
+                f"canonical://wger/day/{date}/gym_set_record",
+            ],
         },
     }
 
 
 def build_cases() -> dict[str, dict]:
     blocked_date = "2026-04-10"
-    misaligned_target_date = "2026-04-11"
+    optional_gap_date = "2026-04-11"
     aligned_date = "2026-04-12"
     return {
-        "blocked_lane": {
+        "blocked_flagship_lane": {
             "target_date": blocked_date,
             "declared_claim": "complete_for_declared_lanes",
             "lanes": {
                 "garmin": _garmin_ready(blocked_date),
+                "subjective": _subjective_blocked(blocked_date),
                 "cronometer": _cronometer_ready(blocked_date),
                 "wger": _wger_blocked(blocked_date),
             },
         },
-        "date_misaligned": {
-            "target_date": misaligned_target_date,
-            "declared_claim": "partial_for_available_lanes",
+        "optional_lanes_degraded": {
+            "target_date": optional_gap_date,
+            "declared_claim": "complete_for_declared_lanes",
             "lanes": {
-                "garmin": _garmin_ready(misaligned_target_date),
+                "garmin": _garmin_ready(optional_gap_date),
+                "subjective": _subjective_ready(optional_gap_date),
                 "cronometer": _cronometer_ready("2026-04-10"),
-                "wger": _wger_ready(misaligned_target_date),
+                "wger": _wger_blocked(optional_gap_date),
             },
         },
         "fully_aligned": {
@@ -139,6 +189,7 @@ def build_cases() -> dict[str, dict]:
             "declared_claim": "complete_for_declared_lanes",
             "lanes": {
                 "garmin": _garmin_ready(aligned_date),
+                "subjective": _subjective_ready(aligned_date),
                 "cronometer": _cronometer_ready(aligned_date),
                 "wger": _wger_ready(aligned_date),
             },
@@ -159,8 +210,9 @@ def main() -> None:
         "field_ownership": FIELD_OWNERSHIP,
         "allowed_lane_states": ["ready", "missing", "stale", "blocked"],
         "raw_source_bypass": "forbidden",
-        "date_alignment_rule": "owning lane must have same target date or field stays unset; required-lane completeness claims fail closed",
-        "declared_complete_required_lanes": ["garmin", "cronometer", "wger"],
+        "date_alignment_rule": "owning lane must have same target date or field stays unset; declared flagship completeness claims fail closed only on the Garmin plus typed-manual-readiness boundary",
+        "declared_complete_required_lanes": ["garmin", "subjective"],
+        "optional_bridge_or_connector_lanes": ["cronometer", "wger"],
     }
     _write_json(PROOF_DIR / "merge_policy.json", merge_policy)
 
@@ -199,13 +251,18 @@ def main() -> None:
             "stable": result.outcome == replay.outcome and result.snapshot == replay.snapshot and result.provenance_record == replay.provenance_record,
         }
 
-    blocked_snapshot = json.loads((PROOF_DIR / "blocked_lane" / "merge_outcome.json").read_text())
-    misaligned_snapshot = json.loads((PROOF_DIR / "date_misaligned" / "daily_health_snapshot.json").read_text())
+    blocked_snapshot = json.loads((PROOF_DIR / "blocked_flagship_lane" / "merge_outcome.json").read_text())
+    optional_gap_snapshot = json.loads((PROOF_DIR / "optional_lanes_degraded" / "daily_health_snapshot.json").read_text())
     aligned_snapshot = json.loads((PROOF_DIR / "fully_aligned" / "daily_health_snapshot.json").read_text())
     aligned_provenance = json.loads((PROOF_DIR / "fully_aligned" / "provenance_record.json").read_text())
 
-    smoke_checks["blocked_case_no_fake_complete_snapshot"] = blocked_snapshot["outcome_type"] == "snapshot_blocked"
-    smoke_checks["date_misaligned_case_stays_explicit"] = misaligned_snapshot["outcome_type"] == "snapshot_emitted_partial_truthful" and misaligned_snapshot["calories_kcal"] is None
+    smoke_checks["blocked_case_requires_typed_manual_readiness_lane"] = blocked_snapshot["outcome_type"] == "snapshot_blocked" and blocked_snapshot["blocked_lanes"] == ["subjective"]
+    smoke_checks["optional_bridge_and_connector_lanes_do_not_block_flagship_claim"] = (
+        optional_gap_snapshot["outcome_type"] == "snapshot_emitted_complete_for_declared_lanes"
+        and optional_gap_snapshot["calories_kcal"] is None
+        and optional_gap_snapshot["gym_sessions_count"] is None
+        and optional_gap_snapshot["subjective_energy_1_5"] == 4
+    )
     smoke_checks["fully_aligned_case_emits_truthful_snapshot_with_provenance"] = aligned_snapshot["outcome_type"] == "snapshot_emitted_complete_for_declared_lanes" and aligned_snapshot["provenance_record_id"] == aligned_provenance["provenance_record_id"]
     smoke_checks["rerun_preserves_snapshot_and_provenance_ids"] = all(entry["stable"] for entry in replay_summary.values())
     _write_json(PROOF_DIR / "replay_stability_evidence.json", replay_summary)
@@ -217,10 +274,10 @@ def main() -> None:
         "replay_command": "PYTHONPATH=clean python3 reporting/scripts/run_daily_health_snapshot_merge_contract_proof.py",
         "artifacts": {
             "merge_policy": (PROOF_DIR / "merge_policy.json").as_posix(),
-            "blocked_case_outcome": (PROOF_DIR / "blocked_lane" / "merge_outcome.json").as_posix(),
-            "blocked_case_lane_state_manifest": (PROOF_DIR / "blocked_lane" / "lane_state_manifest.json").as_posix(),
-            "misaligned_case_snapshot": (PROOF_DIR / "date_misaligned" / "daily_health_snapshot.json").as_posix(),
-            "misaligned_case_lane_state_manifest": (PROOF_DIR / "date_misaligned" / "lane_state_manifest.json").as_posix(),
+            "blocked_case_outcome": (PROOF_DIR / "blocked_flagship_lane" / "merge_outcome.json").as_posix(),
+            "blocked_case_lane_state_manifest": (PROOF_DIR / "blocked_flagship_lane" / "lane_state_manifest.json").as_posix(),
+            "optional_lane_gap_snapshot": (PROOF_DIR / "optional_lanes_degraded" / "daily_health_snapshot.json").as_posix(),
+            "optional_lane_gap_manifest": (PROOF_DIR / "optional_lanes_degraded" / "lane_state_manifest.json").as_posix(),
             "aligned_case_snapshot": (PROOF_DIR / "fully_aligned" / "daily_health_snapshot.json").as_posix(),
             "aligned_case_provenance_record": (PROOF_DIR / "fully_aligned" / "provenance_record.json").as_posix(),
             "aligned_case_lane_state_manifest": (PROOF_DIR / "fully_aligned" / "lane_state_manifest.json").as_posix(),
