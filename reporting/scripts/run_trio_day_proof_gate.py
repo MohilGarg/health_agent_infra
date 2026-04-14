@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+"""Legacy audit-only trio-gate proof surface.
+
+Current doctrine-aligned flagship proof runs through
+`reporting/scripts/run_daily_health_snapshot_merge_contract_proof.py`
+and its merge-contract proof bundle, not this retained audit residue.
+"""
+
 import csv
 import json
 import shutil
@@ -7,6 +14,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 PROOF_ROOT = ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-12-trio-day-proof-gated-by-wger-runtime"
+ACTIVE_FLAGSHIP_PROOF_RUNNER = ROOT / "reporting" / "scripts" / "run_daily_health_snapshot_merge_contract_proof.py"
+ACTIVE_FLAGSHIP_PROOF_DIR = ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-12-daily-health-snapshot-merge-contract-v1"
 GARMIN_SOURCE = ROOT / "pull" / "garmin" / "fixtures" / "baseline_export"
 CRONOMETER_SOURCE = ROOT / "pull" / "cronometer" / "fixtures" / "daily_nutrition_followup.csv"
 WGER_PROOF_DIR = ROOT / "reporting" / "artifacts" / "protocol_layer_proof" / "2026-04-12-wger-api-proof"
@@ -90,11 +99,14 @@ def _build_aligned_manual_readiness_bundle(target_date: str) -> tuple[dict, dict
 def main() -> None:
     PROOF_ROOT.mkdir(parents=True, exist_ok=True)
     runtime_check = {
+        "surface_status": "legacy_audit_only",
         "docker_path": shutil.which("docker"),
         "can_boot_real_disposable_wger_runtime": shutil.which("docker") is not None,
         "required_for_flagship_snapshot_gate": False,
+        "active_flagship_proof_entrypoint": ACTIVE_FLAGSHIP_PROOF_RUNNER.as_posix(),
+        "active_flagship_proof_bundle": ACTIVE_FLAGSHIP_PROOF_DIR.as_posix(),
         "wger_existing_proof_manifest": (WGER_PROOF_DIR / "proof_manifest.json").as_posix(),
-        "note": "wger runtime viability remains connector-specific proof, not a flagship daily snapshot gate.",
+        "note": "This runner is retained for audit continuity only. wger runtime viability remains connector-specific proof, not a flagship daily snapshot gate.",
     }
     _write_json(PROOF_ROOT / "runtime_gate_check.json", runtime_check)
 
@@ -111,8 +123,11 @@ def main() -> None:
     legacy_trio_overlap = sorted(set(garmin_dates) & set(cronometer_dates) & set(wger_dates))
 
     summary = {
+        "surface_status": "legacy_audit_only",
         "proof_conclusion": "flagship day snapshot truth is gated by Garmin plus typed manual readiness, not by wger runtime",
         "legacy_proof_root_note": "This proof root keeps the older trio-gate path for audit continuity, but its blocking condition no longer defines the flagship truth boundary.",
+        "active_flagship_proof_entrypoint": ACTIVE_FLAGSHIP_PROOF_RUNNER.as_posix(),
+        "active_flagship_proof_bundle": ACTIVE_FLAGSHIP_PROOF_DIR.as_posix(),
         "required_flagship_lanes": ["garmin", "typed_manual_readiness"],
         "optional_bridge_or_connector_lanes": ["cronometer", "wger"],
         "garmin": {
@@ -151,7 +166,7 @@ def main() -> None:
         "wger_dates": wger_dates,
         "flagship_window_overlap": flagship_overlap,
         "legacy_trio_window_overlap": legacy_trio_overlap,
-        "recommendation": "Keep connector-specific Cronometer and wger work separate from the flagship day-proof lane; next flagship work should build the merged day snapshot path over Garmin plus typed manual readiness.",
+        "recommendation": "Keep connector-specific Cronometer and wger work separate from the flagship day-proof lane; use reporting/scripts/run_daily_health_snapshot_merge_contract_proof.py for the active flagship merge-contract proof path over Garmin plus typed manual readiness.",
     }
     _write_json(PROOF_ROOT / "blocker_evidence.json", blocker)
 

@@ -22,5 +22,5 @@
     "2026-04-02"
   ],
   "legacy_trio_window_overlap": [],
-  "recommendation": "Keep connector-specific Cronometer and wger work separate from the flagship day-proof lane; next flagship work should build the merged day snapshot path over Garmin plus typed manual readiness."
+  "recommendation": "Keep connector-specific Cronometer and wger work separate from the flagship day-proof lane; use reporting/scripts/run_daily_health_snapshot_merge_contract_proof.py for the active flagship merge-contract proof path over Garmin plus typed manual readiness."
 }

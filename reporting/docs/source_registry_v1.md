@@ -37,6 +37,8 @@ The approved target flagship doctrine for later slices remains:
 
 The typed manual readiness intake half of that target is now a live proof-bearing human-input surface on the tree, but this registry still does **not** claim that the full target flagship loop is already complete.
 
+For the current doctrine-aligned day-proof boundary, the active runnable proof surface is `reporting/scripts/run_daily_health_snapshot_merge_contract_proof.py` with bundle `reporting/artifacts/protocol_layer_proof/2026-04-12-daily-health-snapshot-merge-contract-v1/`. The older `2026-04-12-trio-day-proof-gated-by-wger-runtime/` root is retained for audit continuity only.
+
 This registry therefore names both current-proof broader manual surfaces and the live typed-manual-readiness flagship-adjacent surface without claiming that every later flagship dependency is already fully implemented.
 
 ## Registry
