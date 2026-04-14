@@ -5,7 +5,13 @@ import tempfile
 from pathlib import Path
 import unittest
 
-from health_model.daily_snapshot import build_gym_sessions, generate_snapshot
+from health_model.daily_snapshot import (
+    build_gym_sessions,
+    build_manual_resistance_training_bundle,
+    build_manual_resistance_training_objects,
+    generate_snapshot,
+    write_manual_resistance_training_proof_artifacts,
+)
 from health_model.manual_logging import (
     build_exercise_set_manual_log_entry,
     build_hydration_input_event,
@@ -209,6 +215,101 @@ class ManualLoggingTest(unittest.TestCase):
         replay_sessions, replay_sets = build_gym_sessions(sessions_payload, "2026-04-08", source_artifact="manual_gym_sessions")
         self.assertEqual([row.training_session_id for row in sessions], [row.training_session_id for row in replay_sessions])
         self.assertEqual([row.gym_exercise_set_id for row in sets], [row.gym_exercise_set_id for row in replay_sets])
+
+    def test_manual_resistance_training_objects_emit_contract_named_rows(self) -> None:
+        sessions_payload = [
+            {
+                "session_key": "example-upper-2026-04-08",
+                "date": "2026-04-08",
+                "sets": [
+                    {"set_key": "bench-1", "exercise_name": "Bench press", "exercise_group": "chest", "set_number": 1, "reps": 8, "weight_kg": 60},
+                    {"set_key": "bench-2", "exercise_name": "Bench press", "exercise_group": "chest", "set_number": 2, "reps": 8, "weight_kg": 60},
+                    {"set_key": "pulldown-1", "exercise_name": "Lat pulldown", "exercise_group": "back", "set_number": 1, "reps": 10, "weight_kg": 45},
+                ],
+            }
+        ]
+
+        sessions, exercise_catalog, exercise_alias, gym_set_records = build_manual_resistance_training_objects(
+            sessions_payload,
+            "2026-04-08",
+            source_artifact="manual_gym_sessions",
+        )
+
+        self.assertEqual([row.training_session_id for row in sessions], ["resistance_training:manual_gym_sessions:session:example-upper-2026-04-08"])
+        self.assertEqual(
+            [row.exercise_catalog_id for row in exercise_catalog],
+            [
+                "exercise_catalog:resistance_training:manual_gym_sessions:exercise:bench-press",
+                "exercise_catalog:resistance_training:manual_gym_sessions:exercise:lat-pulldown",
+            ],
+        )
+        self.assertEqual([row.alias_name for row in exercise_alias], ["Bench press", "Lat pulldown"])
+        self.assertEqual(
+            [row.exercise_alias_id for row in exercise_alias],
+            [
+                "exercise_alias:resistance_training:manual_gym_sessions:exercise:bench-press:alias:bench-press",
+                "exercise_alias:resistance_training:manual_gym_sessions:exercise:lat-pulldown:alias:lat-pulldown",
+            ],
+        )
+        self.assertEqual(
+            [row.gym_set_record_id for row in gym_set_records],
+            [
+                "gym_set_record:resistance_training:manual_gym_sessions:set:example-upper-2026-04-08:bench-1",
+                "gym_set_record:resistance_training:manual_gym_sessions:set:example-upper-2026-04-08:bench-2",
+                "gym_set_record:resistance_training:manual_gym_sessions:set:example-upper-2026-04-08:pulldown-1",
+            ],
+        )
+        self.assertTrue(all(row.training_session_id == sessions[0].training_session_id for row in gym_set_records))
+        self.assertEqual(gym_set_records[0].source_record_id, "resistance_training:manual_gym_sessions:set:example-upper-2026-04-08:bench-1")
+        self.assertEqual(gym_set_records[0].exercise_catalog_id, exercise_catalog[0].exercise_catalog_id)
+        self.assertEqual(gym_set_records[0].exercise_alias_id, exercise_alias[0].exercise_alias_id)
+
+    def test_manual_resistance_training_bundle_proves_replay_stability_and_defers_program_block(self) -> None:
+        export_dir = FIXTURES_DIR / "garmin_minimal_export"
+        gym_log_path = Path("merge_human_inputs/examples/manual_gym_sessions.example.json")
+        bundle = build_manual_resistance_training_bundle(export_dir, gym_log_path, "2026-04-08")
+
+        self.assertEqual([row["training_session_id"] for row in bundle["training_sessions"]], ["resistance_training:manual_gym_sessions.example:session:upper-2026-04-08"])
+        self.assertEqual(
+            [row["exercise_catalog_id"] for row in bundle["exercise_catalog"]],
+            [
+                "exercise_catalog:resistance_training:manual_gym_sessions.example:exercise:bench-press",
+                "exercise_catalog:resistance_training:manual_gym_sessions.example:exercise:lat-pulldown",
+            ],
+        )
+        self.assertEqual(
+            [row["exercise_alias_id"] for row in bundle["exercise_alias"]],
+            [
+                "exercise_alias:resistance_training:manual_gym_sessions.example:exercise:bench-press:alias:bench-press",
+                "exercise_alias:resistance_training:manual_gym_sessions.example:exercise:lat-pulldown:alias:lat-pulldown",
+            ],
+        )
+        self.assertEqual(
+            [row["gym_set_record_id"] for row in bundle["gym_set_record"]],
+            [
+                "gym_set_record:resistance_training:manual_gym_sessions.example:set:upper-2026-04-08:bench-press-1",
+                "gym_set_record:resistance_training:manual_gym_sessions.example:set:upper-2026-04-08:lat-pulldown-1",
+            ],
+        )
+        self.assertEqual(bundle["daily_health_snapshot"]["gym_sessions_count"], 1)
+        self.assertEqual(bundle["daily_health_snapshot"]["gym_total_sets"], 2)
+        self.assertEqual(bundle["daily_health_snapshot"]["gym_total_reps"], 18)
+        self.assertEqual(bundle["daily_health_snapshot"]["gym_total_load_kg"], 930.0)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            proof = write_manual_resistance_training_proof_artifacts(export_dir, gym_log_path, Path(tmpdir), "2026-04-08")
+            manifest = json.loads(Path(proof["proof_manifest"]).read_text())
+            stable = json.loads((Path(tmpdir) / "stable_id_evidence.json").read_text())
+
+        self.assertIn("exercise_catalog", manifest["checked_in_artifacts"])
+        self.assertIn("exercise_alias", manifest["checked_in_artifacts"])
+        self.assertIn("gym_set_record", manifest["checked_in_artifacts"])
+        self.assertIn("program_block remains explicitly deferred", " ".join(manifest["limits"]))
+        self.assertTrue(stable["replays_match"]["training_session_ids"])
+        self.assertTrue(stable["replays_match"]["exercise_catalog_ids"])
+        self.assertTrue(stable["replays_match"]["exercise_alias_ids"])
+        self.assertTrue(stable["replays_match"]["gym_set_record_ids"])
+        self.assertTrue(stable["replays_match"]["daily_rollups"]["gym_total_load_kg"])
 
     def test_generate_snapshot_rolls_manual_gym_metrics_consistently(self) -> None:
         export_dir = FIXTURES_DIR / "garmin_minimal_export"

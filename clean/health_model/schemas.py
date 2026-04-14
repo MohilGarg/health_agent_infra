@@ -133,6 +133,60 @@ class GymExerciseSet:
 
 
 @dataclass
+class ExerciseCatalog:
+    artifact_family: str = "exercise_catalog"
+    exercise_catalog_id: str | None = None
+    canonical_exercise_name: str = ""
+    movement_pattern: str | None = None
+    source_name: str | None = None
+    source_record_id: str | None = None
+    provenance_record_id: str | None = None
+    conflict_status: str = "none"
+    equipment: list[str] | None = None
+    primary_muscle_groups: list[str] | None = None
+    secondary_muscle_groups: list[str] | None = None
+    unilateral_bool: bool | None = None
+    loaded_pattern: str | None = None
+
+
+@dataclass
+class ExerciseAlias:
+    artifact_family: str = "exercise_alias"
+    exercise_alias_id: str | None = None
+    exercise_catalog_id: str | None = None
+    alias_name: str = ""
+    source_name: str | None = None
+    source_record_id: str | None = None
+    provenance_record_id: str | None = None
+    conflict_status: str = "none"
+    source_native_exercise_id: str | None = None
+    normalization_rule: str | None = None
+    notes: str | None = None
+
+
+@dataclass
+class GymSetRecord:
+    artifact_family: str = "gym_set_record"
+    gym_set_record_id: str | None = None
+    training_session_id: str | None = None
+    date: str = ""
+    exercise_catalog_id: str | None = None
+    source_name: str | None = None
+    source_record_id: str | None = None
+    provenance_record_id: str | None = None
+    conflict_status: str = "none"
+    exercise_alias_id: str | None = None
+    set_number: int | None = None
+    reps: int | None = None
+    weight_kg: float | None = None
+    rir: float | None = None
+    rpe: float | None = None
+    completed_bool: bool | None = None
+    set_type: str | None = None
+    note: str | None = None
+
+
+@dataclass
 class NutritionDaily:
     artifact_family: str = "nutrition_daily"
     date: str = ""

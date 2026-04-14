@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sqlite3
 from dataclasses import asdict
 from pathlib import Path
@@ -18,7 +19,10 @@ if __package__ in {None, ""}:
 
 from health_model.schemas import (
     DailyHealthSnapshot,
+    ExerciseAlias,
+    ExerciseCatalog,
     GymExerciseSet,
+    GymSetRecord,
     NutritionDaily,
     ProvenanceRecord,
     ReadinessDaily,
@@ -557,6 +561,138 @@ def _manual_set_provenance_id(source_artifact: str, session_key: str, set_key: s
     return f"provenance:{MANUAL_GYM_SOURCE_NAME}:{source_artifact}:gym_exercise_set:{session_key}:{set_key}"
 
 
+def _manual_normalize_label(value: str) -> str:
+    return re.sub(r"\s+", " ", str(value).strip())
+
+
+def _manual_slug(value: str) -> str:
+    normalized = _manual_normalize_label(value).lower()
+    slug = re.sub(r"[^a-z0-9]+", "-", normalized).strip("-")
+    return slug or "unknown"
+
+
+def _manual_canonical_exercise_name(value: str) -> str:
+    normalized = _manual_normalize_label(value)
+    return normalized.title() if normalized else "Unknown"
+
+
+def _manual_exercise_catalog_source_record_id(source_artifact: str, exercise_key: str) -> str:
+    return f"{MANUAL_GYM_SOURCE_NAME}:{source_artifact}:exercise:{exercise_key}"
+
+
+def _manual_exercise_catalog_id(source_artifact: str, exercise_key: str) -> str:
+    return f"exercise_catalog:{MANUAL_GYM_SOURCE_NAME}:{source_artifact}:exercise:{exercise_key}"
+
+
+def _manual_exercise_catalog_provenance_id(source_artifact: str, exercise_key: str) -> str:
+    return f"provenance:{MANUAL_GYM_SOURCE_NAME}:{source_artifact}:exercise_catalog:{exercise_key}"
+
+
+def _manual_exercise_alias_id(source_artifact: str, exercise_key: str, alias_slug: str) -> str:
+    return f"exercise_alias:{MANUAL_GYM_SOURCE_NAME}:{source_artifact}:exercise:{exercise_key}:alias:{alias_slug}"
+
+
+def _manual_gym_set_record_id(source_artifact: str, session_key: str, set_key: str) -> str:
+    return f"gym_set_record:{MANUAL_GYM_SOURCE_NAME}:{source_artifact}:set:{session_key}:{set_key}"
+
+
+def _manual_gym_set_record_provenance_id(source_artifact: str, session_key: str, set_key: str) -> str:
+    return f"provenance:{MANUAL_GYM_SOURCE_NAME}:{source_artifact}:gym_set_record:{session_key}:{set_key}"
+
+
+def build_manual_resistance_training_objects(
+    session_payloads: list[dict],
+    date: str,
+    *,
+    source_artifact: str = "manual_gym_sessions_fixture",
+) -> tuple[list[TrainingSession], list[ExerciseCatalog], list[ExerciseAlias], list[GymSetRecord]]:
+    sessions, _ = build_gym_sessions(session_payloads, date, source_artifact=source_artifact)
+    exercise_state: dict[str, dict[str, object]] = {}
+    gym_set_records: list[GymSetRecord] = []
+
+    for session_index, session in enumerate(session_payloads, start=1):
+        session_key = _manual_session_key(session, date, session_index)
+        training_session_id = _manual_training_session_id(source_artifact, session_key)
+        raw_sets = session.get("sets", [])
+        for set_index, raw_set in enumerate(raw_sets, start=1):
+            set_key = _manual_set_key(raw_set, set_index)
+            raw_exercise_name = _manual_normalize_label(str(raw_set.get("exercise_name") or "unknown"))
+            exercise_key = _manual_slug(raw_exercise_name)
+            alias_slug = _manual_slug(raw_exercise_name)
+            exercise_entry = exercise_state.setdefault(
+                exercise_key,
+                {
+                    "canonical_name": _manual_canonical_exercise_name(raw_exercise_name),
+                    "source_record_id": _manual_exercise_catalog_source_record_id(source_artifact, exercise_key),
+                    "provenance_record_id": _manual_exercise_catalog_provenance_id(source_artifact, exercise_key),
+                    "primary_muscle_groups": [],
+                    "aliases": {},
+                },
+            )
+            exercise_group = _manual_normalize_label(str(raw_set.get("exercise_group") or ""))
+            if exercise_group:
+                primary = exercise_entry["primary_muscle_groups"]
+                if exercise_group.title() not in primary:
+                    primary.append(exercise_group.title())
+            exercise_entry["aliases"].setdefault(alias_slug, raw_exercise_name)
+            gym_set_records.append(
+                GymSetRecord(
+                    gym_set_record_id=_manual_gym_set_record_id(source_artifact, session_key, set_key),
+                    training_session_id=training_session_id,
+                    date=date,
+                    exercise_catalog_id=_manual_exercise_catalog_id(source_artifact, exercise_key),
+                    source_name=MANUAL_GYM_SOURCE_NAME,
+                    source_record_id=_manual_set_id(source_artifact, session_key, set_key),
+                    provenance_record_id=_manual_gym_set_record_provenance_id(source_artifact, session_key, set_key),
+                    conflict_status="none",
+                    exercise_alias_id=_manual_exercise_alias_id(source_artifact, exercise_key, alias_slug),
+                    set_number=safe_int(raw_set.get("set_number") or set_index),
+                    reps=safe_int(raw_set.get("reps")),
+                    weight_kg=safe_float(raw_set.get("weight_kg")),
+                    rir=safe_float(raw_set.get("rir")),
+                    rpe=safe_float(raw_set.get("rpe")),
+                    completed_bool=raw_set.get("completed_bool"),
+                    set_type=raw_set.get("set_type"),
+                    note=raw_set.get("note") or raw_set.get("notes"),
+                )
+            )
+
+    exercise_catalog = [
+        ExerciseCatalog(
+            exercise_catalog_id=_manual_exercise_catalog_id(source_artifact, exercise_key),
+            canonical_exercise_name=str(payload["canonical_name"]),
+            movement_pattern=None,
+            source_name=MANUAL_GYM_SOURCE_NAME,
+            source_record_id=str(payload["source_record_id"]),
+            provenance_record_id=str(payload["provenance_record_id"]),
+            conflict_status="none",
+            equipment=None,
+            primary_muscle_groups=list(payload["primary_muscle_groups"]) or None,
+            secondary_muscle_groups=None,
+            unilateral_bool=None,
+            loaded_pattern=None,
+        )
+        for exercise_key, payload in sorted(exercise_state.items())
+    ]
+    exercise_alias = [
+        ExerciseAlias(
+            exercise_alias_id=_manual_exercise_alias_id(source_artifact, exercise_key, alias_slug),
+            exercise_catalog_id=_manual_exercise_catalog_id(source_artifact, exercise_key),
+            alias_name=str(alias_name),
+            source_name=MANUAL_GYM_SOURCE_NAME,
+            source_record_id=str(payload["source_record_id"]),
+            provenance_record_id=str(payload["provenance_record_id"]),
+            conflict_status="none",
+            source_native_exercise_id=None,
+            normalization_rule="manual_structured_name_passthrough",
+            notes="manual_structured_gym_source_of_truth",
+        )
+        for exercise_key, payload in sorted(exercise_state.items())
+        for alias_slug, alias_name in sorted(dict(payload["aliases"]).items())
+    ]
+    return sessions, exercise_catalog, exercise_alias, gym_set_records
+
+
 def build_gym_sessions(session_payloads: list[dict], date: str, *, source_artifact: str = "manual_gym_sessions_fixture") -> tuple[list[TrainingSession], list[GymExerciseSet]]:
     sessions: list[TrainingSession] = []
     sets: list[GymExerciseSet] = []
@@ -995,6 +1131,169 @@ def write_garmin_proof_artifacts(export_dir: Path, proof_dir: Path, target_date:
     manifest_path = proof_dir / "proof_manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2))
     return {"proof_manifest": manifest_path.as_posix(), "sample_outputs": list(manifest["sample_outputs"].values())}
+
+
+def build_manual_resistance_training_bundle(
+    export_dir: Path,
+    gym_log_path: Path,
+    target_date: str,
+) -> dict[str, object]:
+    gym_by_date, _ = load_manual_gym(gym_log_path)
+    source_artifact = gym_log_path.stem
+    session_payloads = gym_by_date.get(target_date, [])
+    training_sessions, exercise_catalog, exercise_alias, gym_set_records = build_manual_resistance_training_objects(
+        session_payloads,
+        target_date,
+        source_artifact=source_artifact,
+    )
+    snapshot = generate_snapshot(
+        export_dir=export_dir,
+        gym_log_path=gym_log_path,
+        db_path=None,
+        target_date=target_date,
+        user_id=1,
+    )
+    return {
+        "manual_gym_session_input": json.loads(gym_log_path.read_text()),
+        "training_sessions": [asdict(row) for row in training_sessions],
+        "exercise_catalog": [asdict(row) for row in exercise_catalog],
+        "exercise_alias": [asdict(row) for row in exercise_alias],
+        "gym_set_record": [asdict(row) for row in gym_set_records],
+        "daily_health_snapshot": snapshot.to_dict(),
+    }
+
+
+def write_manual_resistance_training_proof_artifacts(
+    export_dir: Path,
+    gym_log_path: Path,
+    proof_dir: Path,
+    target_date: str,
+) -> dict[str, str | list[str]]:
+    proof_dir.mkdir(parents=True, exist_ok=True)
+    bundle = build_manual_resistance_training_bundle(export_dir, gym_log_path, target_date)
+
+    manual_input_path = proof_dir / "manual_gym_session_input.json"
+    training_sessions_path = proof_dir / "training_sessions.json"
+    exercise_catalog_path = proof_dir / "exercise_catalog.json"
+    exercise_alias_path = proof_dir / "exercise_alias.json"
+    gym_set_record_path = proof_dir / "gym_set_record.json"
+    snapshot_path = proof_dir / "daily_health_snapshot.json"
+
+    manual_input_path.write_text(json.dumps(bundle["manual_gym_session_input"], indent=2))
+    training_sessions_path.write_text(json.dumps(bundle["training_sessions"], indent=2))
+    exercise_catalog_path.write_text(json.dumps({"rows": bundle["exercise_catalog"]}, indent=2))
+    exercise_alias_path.write_text(json.dumps({"rows": bundle["exercise_alias"]}, indent=2))
+    gym_set_record_path.write_text(json.dumps({"rows": bundle["gym_set_record"]}, indent=2))
+    snapshot_path.write_text(json.dumps(bundle["daily_health_snapshot"], indent=2))
+
+    replay_bundle = build_manual_resistance_training_bundle(export_dir, gym_log_path, target_date)
+    stable_id_evidence = {
+        "claim_level": "prototype",
+        "replays_match": {
+            "training_session_ids": [row["training_session_id"] for row in bundle["training_sessions"]] == [row["training_session_id"] for row in replay_bundle["training_sessions"]],
+            "exercise_catalog_ids": [row["exercise_catalog_id"] for row in bundle["exercise_catalog"]] == [row["exercise_catalog_id"] for row in replay_bundle["exercise_catalog"]],
+            "exercise_alias_ids": [row["exercise_alias_id"] for row in bundle["exercise_alias"]] == [row["exercise_alias_id"] for row in replay_bundle["exercise_alias"]],
+            "gym_set_record_ids": [row["gym_set_record_id"] for row in bundle["gym_set_record"]] == [row["gym_set_record_id"] for row in replay_bundle["gym_set_record"]],
+            "daily_health_snapshot_id": bundle["daily_health_snapshot"]["daily_health_snapshot_id"] == replay_bundle["daily_health_snapshot"]["daily_health_snapshot_id"],
+            "daily_rollups": {
+                "gym_sessions_count": bundle["daily_health_snapshot"]["gym_sessions_count"] == replay_bundle["daily_health_snapshot"]["gym_sessions_count"],
+                "gym_total_sets": bundle["daily_health_snapshot"]["gym_total_sets"] == replay_bundle["daily_health_snapshot"]["gym_total_sets"],
+                "gym_total_reps": bundle["daily_health_snapshot"]["gym_total_reps"] == replay_bundle["daily_health_snapshot"]["gym_total_reps"],
+                "gym_total_load_kg": bundle["daily_health_snapshot"]["gym_total_load_kg"] == replay_bundle["daily_health_snapshot"]["gym_total_load_kg"],
+            },
+        },
+        "first": {
+            "training_session_ids": [row["training_session_id"] for row in bundle["training_sessions"]],
+            "exercise_catalog_ids": [row["exercise_catalog_id"] for row in bundle["exercise_catalog"]],
+            "exercise_alias_ids": [row["exercise_alias_id"] for row in bundle["exercise_alias"]],
+            "gym_set_record_ids": [row["gym_set_record_id"] for row in bundle["gym_set_record"]],
+            "daily_health_snapshot_id": bundle["daily_health_snapshot"]["daily_health_snapshot_id"],
+            "gym_rollups": {
+                "gym_sessions_count": bundle["daily_health_snapshot"]["gym_sessions_count"],
+                "gym_total_sets": bundle["daily_health_snapshot"]["gym_total_sets"],
+                "gym_total_reps": bundle["daily_health_snapshot"]["gym_total_reps"],
+                "gym_total_load_kg": bundle["daily_health_snapshot"]["gym_total_load_kg"],
+            },
+            "source_flags": bundle["daily_health_snapshot"]["source_flags"],
+        },
+        "second": {
+            "training_session_ids": [row["training_session_id"] for row in replay_bundle["training_sessions"]],
+            "exercise_catalog_ids": [row["exercise_catalog_id"] for row in replay_bundle["exercise_catalog"]],
+            "exercise_alias_ids": [row["exercise_alias_id"] for row in replay_bundle["exercise_alias"]],
+            "gym_set_record_ids": [row["gym_set_record_id"] for row in replay_bundle["gym_set_record"]],
+            "daily_health_snapshot_id": replay_bundle["daily_health_snapshot"]["daily_health_snapshot_id"],
+            "gym_rollups": {
+                "gym_sessions_count": replay_bundle["daily_health_snapshot"]["gym_sessions_count"],
+                "gym_total_sets": replay_bundle["daily_health_snapshot"]["gym_total_sets"],
+                "gym_total_reps": replay_bundle["daily_health_snapshot"]["gym_total_reps"],
+                "gym_total_load_kg": replay_bundle["daily_health_snapshot"]["gym_total_load_kg"],
+            },
+            "source_flags": replay_bundle["daily_health_snapshot"]["source_flags"],
+        },
+    }
+    stable_id_path = proof_dir / "stable_id_evidence.json"
+    stable_id_path.write_text(json.dumps(stable_id_evidence, indent=2))
+
+    manifest = {
+        "proof_bundle_version": "phase-4-manual-gym-prototype-v2",
+        "claim_level": "prototype",
+        "claim": "manual-first Phase 4 resistance-training object layer emits training_session, exercise_catalog, exercise_alias, and gym_set_record while explicitly deferring program_block",
+        "doctrine": {
+            "manual_structured_gym_logs": "source_of_truth",
+            "wger": "exploratory_non_flagship_only",
+        },
+        "target_date": target_date,
+        "inputs": {
+            "manual_gym_session_input": gym_log_path.as_posix(),
+            "garmin_fixture_for_daily_snapshot_rollup": export_dir.as_posix(),
+        },
+        "live_surfaces": [
+            "merge_human_inputs/manual_logs/manual_logging.py",
+            "merge_human_inputs/examples/manual_gym_sessions.example.json",
+            "clean/health_model/daily_snapshot.py",
+            "clean/health_model/schemas.py",
+            "safety/tests/test_manual_logging.py",
+        ],
+        "checked_in_artifacts": {
+            "manual_gym_session_input": manual_input_path.as_posix(),
+            "training_sessions": training_sessions_path.as_posix(),
+            "exercise_catalog": exercise_catalog_path.as_posix(),
+            "exercise_alias": exercise_alias_path.as_posix(),
+            "gym_set_record": gym_set_record_path.as_posix(),
+            "daily_health_snapshot": snapshot_path.as_posix(),
+            "stable_id_evidence": stable_id_path.as_posix(),
+        },
+        "proof_summary": {
+            "training_sessions_count": len(bundle["training_sessions"]),
+            "exercise_catalog_count": len(bundle["exercise_catalog"]),
+            "exercise_alias_count": len(bundle["exercise_alias"]),
+            "gym_set_record_count": len(bundle["gym_set_record"]),
+            "daily_snapshot_gym_sessions_count": bundle["daily_health_snapshot"]["gym_sessions_count"],
+            "daily_snapshot_gym_total_sets": bundle["daily_health_snapshot"]["gym_total_sets"],
+            "daily_snapshot_gym_total_reps": bundle["daily_health_snapshot"]["gym_total_reps"],
+            "daily_snapshot_gym_total_load_kg": bundle["daily_health_snapshot"]["gym_total_load_kg"],
+        },
+        "smoke_check": "PYTHONPATH=clean:safety python3 -m unittest safety.tests.test_manual_logging",
+        "limits": [
+            "This is a manual-first prototype slice, not proof_complete for the full resistance-training source family.",
+            "program_block remains explicitly deferred until real manual program metadata exists and is proved.",
+            "No connector promotion is implied; wger stays exploratory and non-flagship.",
+        ],
+    }
+    manifest_path = proof_dir / "proof_manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2))
+    return {
+        "proof_manifest": manifest_path.as_posix(),
+        "sample_outputs": [
+            manual_input_path.as_posix(),
+            training_sessions_path.as_posix(),
+            exercise_catalog_path.as_posix(),
+            exercise_alias_path.as_posix(),
+            gym_set_record_path.as_posix(),
+            snapshot_path.as_posix(),
+            stable_id_path.as_posix(),
+        ],
+    }
 
 
 def main() -> None:

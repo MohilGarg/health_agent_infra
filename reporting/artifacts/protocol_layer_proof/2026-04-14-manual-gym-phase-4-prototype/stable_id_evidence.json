@@ -2,7 +2,9 @@
   "claim_level": "prototype",
   "replays_match": {
     "training_session_ids": true,
-    "gym_exercise_set_ids": true,
+    "exercise_catalog_ids": true,
+    "exercise_alias_ids": true,
+    "gym_set_record_ids": true,
     "daily_health_snapshot_id": true,
     "daily_rollups": {
       "gym_sessions_count": true,
@@ -15,9 +17,17 @@
     "training_session_ids": [
       "resistance_training:manual_gym_sessions.example:session:upper-2026-04-08"
     ],
-    "gym_exercise_set_ids": [
-      "resistance_training:manual_gym_sessions.example:set:upper-2026-04-08:bench-press-1",
-      "resistance_training:manual_gym_sessions.example:set:upper-2026-04-08:lat-pulldown-1"
+    "exercise_catalog_ids": [
+      "exercise_catalog:resistance_training:manual_gym_sessions.example:exercise:bench-press",
+      "exercise_catalog:resistance_training:manual_gym_sessions.example:exercise:lat-pulldown"
+    ],
+    "exercise_alias_ids": [
+      "exercise_alias:resistance_training:manual_gym_sessions.example:exercise:bench-press:alias:bench-press",
+      "exercise_alias:resistance_training:manual_gym_sessions.example:exercise:lat-pulldown:alias:lat-pulldown"
+    ],
+    "gym_set_record_ids": [
+      "gym_set_record:resistance_training:manual_gym_sessions.example:set:upper-2026-04-08:bench-press-1",
+      "gym_set_record:resistance_training:manual_gym_sessions.example:set:upper-2026-04-08:lat-pulldown-1"
     ],
     "daily_health_snapshot_id": "daily_health_snapshot_1315b147e00bc9c1",
     "gym_rollups": {
@@ -38,9 +48,17 @@
     "training_session_ids": [
       "resistance_training:manual_gym_sessions.example:session:upper-2026-04-08"
     ],
-    "gym_exercise_set_ids": [
-      "resistance_training:manual_gym_sessions.example:set:upper-2026-04-08:bench-press-1",
-      "resistance_training:manual_gym_sessions.example:set:upper-2026-04-08:lat-pulldown-1"
+    "exercise_catalog_ids": [
+      "exercise_catalog:resistance_training:manual_gym_sessions.example:exercise:bench-press",
+      "exercise_catalog:resistance_training:manual_gym_sessions.example:exercise:lat-pulldown"
+    ],
+    "exercise_alias_ids": [
+      "exercise_alias:resistance_training:manual_gym_sessions.example:exercise:bench-press:alias:bench-press",
+      "exercise_alias:resistance_training:manual_gym_sessions.example:exercise:lat-pulldown:alias:lat-pulldown"
+    ],
+    "gym_set_record_ids": [
+      "gym_set_record:resistance_training:manual_gym_sessions.example:set:upper-2026-04-08:bench-press-1",
+      "gym_set_record:resistance_training:manual_gym_sessions.example:set:upper-2026-04-08:lat-pulldown-1"
     ],
     "daily_health_snapshot_id": "daily_health_snapshot_1315b147e00bc9c1",
     "gym_rollups": {
