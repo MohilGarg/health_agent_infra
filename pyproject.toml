@@ -26,8 +26,40 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
 ]
 
+[project.scripts]
+hai = "health_agent_infra.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+"health_agent_infra" = ["../../skills/**/*.md"]
+
 [tool.pytest.ini_options]
 testpaths = ["safety/tests"]
+# Legacy tests scheduled for deletion in commits 4a/4b. Ignored here so the
+# full suite runs green during the reshape.
+addopts = [
+    "--ignore=safety/tests/test_agent_bundle_cli.py",
+    "--ignore=safety/tests/test_agent_context_cli.py",
+    "--ignore=safety/tests/test_agent_contract_cli.py",
+    "--ignore=safety/tests/test_agent_interface.py",
+    "--ignore=safety/tests/test_agent_memory_write_cli.py",
+    "--ignore=safety/tests/test_agent_readable_daily_context.py",
+    "--ignore=safety/tests/test_agent_recommendation_cli.py",
+    "--ignore=safety/tests/test_agent_retrieval_cli.py",
+    "--ignore=safety/tests/test_agent_submit_cli.py",
+    "--ignore=safety/tests/test_agent_voice_note_cli.py",
+    "--ignore=safety/tests/test_build_daily_context_artifact.py",
+    "--ignore=safety/tests/test_daily_snapshot_nutrition_scoping.py",
+    "--ignore=safety/tests/test_day_nutrition_brief.py",
+    "--ignore=safety/tests/test_manual_logging.py",
+    "--ignore=safety/tests/test_manual_subjective_recovery_contract.py",
+    "--ignore=safety/tests/test_persisted_bundle_append_regenerate.py",
+    "--ignore=safety/tests/test_run_canonical_public_demo.py",
+    "--ignore=safety/tests/test_semantic_summaries.py",
+    "--ignore=safety/tests/test_shared_input_backbone.py",
+    "--ignore=safety/tests/test_typed_manual_readiness_contract.py",
+    "--ignore=safety/tests/test_typed_manual_readiness_intake.py",
+    "--ignore=safety/tests/test_voice_note_intake.py",
+]

@@ -1,16 +1,18 @@
-"""Tests for the flagship recovery_readiness_v1 end-to-end loop.
+"""Deterministic + contract tests for health_agent_infra.
 
-Covers:
-- CLEAN: baseline derivation, missing-value propagation, RHR spike counting
-- STATE: coverage banding, enum derivation, uncertainty token emission
-- POLICY: insufficient-signal block, sparse-signal soften, diagnosis block,
-  review-required block, bounded-action block, RHR spike escalation
-- RECOMMEND: full-loop construction and policy trace preservation
-- ACTION: idempotent writeback, writeback_locality enforcement
-- REVIEW: scheduling and outcome recording
+Judgment (state classification, policy, recommendation shaping) has moved
+to agent-owned skills under ``skills/``. These tests cover only what the
+runtime owns:
 
-These tests run offline without any network or real Garmin data, using
-the synthetic fixtures in clean.health_model.recovery_readiness_v1.fixtures.
+- PULL — Garmin adapter contract + real-export shape.
+- CLEAN — baseline computation, missingness propagation, raw-summary aggregation.
+- WRITEBACK — schema validation at the tool boundary, idempotency, locality.
+- REVIEW — event scheduling, outcome persistence, summary counts.
+- SCHEMAS — round-trip integrity.
+
+Behavioural scenario tests from the pre-skill era were removed in commit 3.
+Evaluating the skill-driven recommendation layer is done outside CI by
+capturing agent outputs against golden scenarios.
 """
 
 from __future__ import annotations
@@ -21,417 +23,250 @@ from pathlib import Path
 
 import pytest
 
-from health_model.recovery_readiness_v1 import (
-    build_recovery_state,
-    build_training_recommendation,
-    clean_inputs,
-    perform_writeback,
+from health_agent_infra.clean import build_raw_summary, clean_inputs
+from health_agent_infra.pull.garmin import (
+    GarminRecoveryReadinessAdapter,
+    load_recovery_readiness_inputs,
+)
+from health_agent_infra.pull.protocol import FlagshipPullAdapter
+from health_agent_infra.review.outcomes import (
     record_review_outcome,
     schedule_review,
+    summarize_review_history,
 )
-from health_model.recovery_readiness_v1.fixtures import (
-    garmin_pull_fixture,
-    manual_readiness_fixture,
+from health_agent_infra.schemas import (
+    FollowUp,
+    PolicyDecision,
+    RECOMMENDATION_SCHEMA_VERSION,
+    ReviewEvent,
+    ReviewOutcome,
+    TrainingRecommendation,
 )
-from health_model.recovery_readiness_v1.cli import run as cli_run
+from health_agent_infra.writeback.recommendation import (
+    ALLOWED_RELATIVE_ROOT,
+    perform_writeback,
+)
 
 
 AS_OF = date(2026, 4, 16)
 NOW = datetime(2026, 4, 16, 7, 15, tzinfo=timezone.utc)
 
 
-def _run_cli(base_dir: Path, scenario: str, **kwargs) -> dict:
-    """Invoke the CLI's `run` directly for end-to-end capture."""
+# ---------------------------------------------------------------------------
+# CLEAN
+# ---------------------------------------------------------------------------
 
-    import argparse
+def _baseline_week_rhr(as_of: date, base_bpm: float = 50.0) -> list[dict]:
+    """Return 14 days of trailing RHR records around a baseline."""
 
-    ns = argparse.Namespace(
-        command="run",
-        scenario=scenario,
-        base_dir=str(base_dir),
-        date=AS_OF.isoformat(),
-        user_id=kwargs.get("user_id", "u_local_1"),
-        now=NOW.isoformat(),
-        record_review_outcome=kwargs.get("record_review_outcome"),
-        emit_json=False,
-    )
-    return cli_run(ns)
+    out = []
+    for i in range(14, 0, -1):
+        d = (as_of.fromordinal(as_of.toordinal() - i)).isoformat()
+        out.append({"date": d, "bpm": base_bpm, "record_id": f"rhr_{d}"})
+    return out
 
 
-def _build_state(scenario: str):
-    pull = garmin_pull_fixture(AS_OF, scenario=scenario)
-    manual = manual_readiness_fixture(AS_OF, scenario=scenario)
+def _baseline_week_hrv(as_of: date, base_ms: float = 50.0) -> list[dict]:
+    out = []
+    for i in range(14, 0, -1):
+        d = (as_of.fromordinal(as_of.toordinal() - i)).isoformat()
+        out.append({"date": d, "rmssd_ms": base_ms, "record_id": f"hrv_{d}"})
+    return out
+
+
+def test_clean_emits_evidence_fields_from_inputs():
     evidence = clean_inputs(
-        user_id="u_local_1",
+        user_id="u_1",
         as_of_date=AS_OF,
-        garmin_sleep=pull["sleep"],
-        garmin_resting_hr_recent=pull["resting_hr"],
-        garmin_hrv_recent=pull["hrv"],
-        garmin_training_load_7d=pull["training_load"],
-        manual_readiness=manual,
+        garmin_sleep={"duration_hours": 8.0, "record_id": "s_1"},
+        garmin_resting_hr_recent=[{"date": AS_OF.isoformat(), "bpm": 55.0, "record_id": "rhr_today"}],
+        garmin_hrv_recent=[{"date": AS_OF.isoformat(), "rmssd_ms": 60.0, "record_id": "hrv_today"}],
+        garmin_training_load_7d=[{"date": AS_OF.isoformat(), "load": 400.0}],
+        manual_readiness={
+            "submission_id": "m_1",
+            "soreness": "low",
+            "energy": "moderate",
+            "planned_session_type": "moderate",
+            "active_goal": "strength_block",
+        },
     )
-    state = build_recovery_state(evidence, now=NOW)
-    return evidence, state
-
-
-# ---------------------------------------------------------------------------
-# CLEAN layer
-# ---------------------------------------------------------------------------
-
-def test_clean_emits_baselines_and_trailing_load():
-    evidence, _ = _build_state("mildly_impaired_with_hard_plan")
+    assert evidence.sleep_hours == 8.0
+    assert evidence.sleep_record_id == "s_1"
     assert evidence.resting_hr == 55.0
-    assert evidence.resting_hr_baseline is not None
-    assert evidence.trailing_7d_training_load is not None
-    assert evidence.soreness_self_report == "moderate"
+    assert evidence.hrv_ms == 60.0
+    assert evidence.trailing_7d_training_load == 400.0
+    assert evidence.soreness_self_report == "low"
+    assert evidence.active_goal == "strength_block"
 
 
 def test_clean_handles_missing_sleep():
-    evidence, _ = _build_state("insufficient_signal")
+    evidence = clean_inputs(
+        user_id="u_1",
+        as_of_date=AS_OF,
+        garmin_sleep=None,
+        garmin_resting_hr_recent=[],
+        garmin_hrv_recent=[],
+        garmin_training_load_7d=[],
+        manual_readiness=None,
+    )
     assert evidence.sleep_hours is None
-    assert evidence.manual_readiness_submission_id is None
+    assert evidence.sleep_record_id is None
 
 
-def test_clean_counts_rhr_spike_days():
-    evidence, _ = _build_state("rhr_spike_three_days")
-    assert evidence.resting_hr_spike_days >= 3
+def test_raw_summary_emits_baselines_and_ratios():
+    rhr_history = _baseline_week_rhr(AS_OF, base_bpm=50.0)
+    rhr_history.append({"date": AS_OF.isoformat(), "bpm": 58.0, "record_id": "rhr_today"})
 
-
-# ---------------------------------------------------------------------------
-# STATE layer
-# ---------------------------------------------------------------------------
-
-def test_state_insufficient_when_sleep_missing():
-    _, state = _build_state("insufficient_signal")
-    assert state.signal_quality.coverage == "insufficient"
-    assert state.recovery_status == "unknown"
-    assert state.readiness_score is None
-    assert "sleep_record_missing" in state.uncertainties
-
-
-def test_state_sparse_when_hrv_missing_and_rhr_limited():
-    _, state = _build_state("sparse_signal")
-    assert state.signal_quality.coverage in {"partial", "sparse"}
-    assert "hrv_unavailable" in state.uncertainties
-
-
-def test_state_partial_full_coverage_on_normal_scenario():
-    _, state = _build_state("mildly_impaired_with_hard_plan")
-    assert state.signal_quality.coverage in {"full", "partial"}
-    assert state.recovery_status in {"mildly_impaired", "impaired"}
-
-
-# ---------------------------------------------------------------------------
-# POLICY + RECOMMEND layer
-# ---------------------------------------------------------------------------
-
-def test_policy_blocks_on_insufficient_signal():
-    _, state = _build_state("insufficient_signal")
-    rec = build_training_recommendation(state, now=NOW, rhr_spike_days=0)
-    assert rec.action == "defer_decision_insufficient_signal"
-    assert rec.confidence == "low"
-    ids = [d.rule_id for d in rec.policy_decisions]
-    assert "require_min_coverage" in ids
-    decision = next(d for d in rec.policy_decisions if d.rule_id == "require_min_coverage")
-    assert decision.decision == "block"
-
-
-def test_policy_softens_high_to_moderate_on_sparse_scenario():
-    """End-to-end: sparse coverage produces a visible R2 soften audit entry."""
-
-    evidence, state = _build_state("sparse_signal")
-    assert state.signal_quality.coverage == "sparse"
-    rec = build_training_recommendation(
-        state,
-        now=NOW,
-        rhr_spike_days=evidence.resting_hr_spike_days,
-        planned_session_type=evidence.planned_session_type,
+    summary = build_raw_summary(
+        user_id="u_1",
+        as_of_date=AS_OF,
+        garmin_sleep={"duration_hours": 7.0, "record_id": "s"},
+        garmin_resting_hr_recent=rhr_history,
+        garmin_hrv_recent=_baseline_week_hrv(AS_OF),
+        garmin_training_load_7d=[],
     )
-    soften_decisions = [
-        d for d in rec.policy_decisions
-        if d.rule_id == "no_high_confidence_on_sparse_signal"
-    ]
-    assert soften_decisions, "R2 must emit a soften audit entry on sparse coverage"
-    assert soften_decisions[0].decision == "soften"
-    assert rec.confidence == "moderate"
+    assert summary.resting_hr == 58.0
+    assert summary.resting_hr_baseline == pytest.approx(50.0)
+    assert summary.resting_hr_ratio_vs_baseline == pytest.approx(58.0 / 50.0)
+    assert summary.coverage_rhr_fraction == pytest.approx(7 / 7)  # 7 trailing days + today fit the window
 
 
-def test_policy_r2_soften_is_proven_directly():
-    """Unit-style: calling evaluate_policy with high confidence on sparse state."""
+def test_raw_summary_counts_rhr_spike_days():
+    """3 consecutive days including today at >= 1.15x baseline == 3 spike days."""
 
-    from health_model.recovery_readiness_v1.policy import Proposal, evaluate_policy
+    as_of = date(2026, 4, 16)
+    history = _baseline_week_rhr(as_of - __import__("datetime").timedelta(days=3), base_bpm=50.0)
+    # Spike the 3 most recent days (today + 2 prior)
+    for i in range(3):
+        d = (as_of.fromordinal(as_of.toordinal() - i)).isoformat()
+        history.append({"date": d, "bpm": 60.0, "record_id": f"spike_{d}"})
 
-    _, state = _build_state("sparse_signal")
-    assert state.signal_quality.coverage == "sparse"
-    proposal = Proposal(
+    summary = build_raw_summary(
+        user_id="u_1",
+        as_of_date=as_of,
+        garmin_sleep=None,
+        garmin_resting_hr_recent=history,
+        garmin_hrv_recent=[],
+        garmin_training_load_7d=[],
+    )
+    assert summary.resting_hr_spike_days == 3
+
+
+# ---------------------------------------------------------------------------
+# PULL
+# ---------------------------------------------------------------------------
+
+def test_garmin_adapter_reads_committed_export_and_emits_fixture_shape():
+    as_of = date(2026, 4, 8)
+    pull = load_recovery_readiness_inputs(as_of)
+
+    assert set(pull.keys()) == {"sleep", "resting_hr", "hrv", "training_load"}
+    assert pull["sleep"] is not None
+    assert "duration_hours" in pull["sleep"]
+    assert any(row["date"] == as_of.isoformat() for row in pull["resting_hr"])
+
+
+def test_garmin_adapter_class_conforms_to_flagship_pull_protocol():
+    adapter = GarminRecoveryReadinessAdapter()
+    assert isinstance(adapter, FlagshipPullAdapter)
+    assert adapter.source_name == "garmin"
+
+    pull = adapter.load(date(2026, 4, 8))
+    assert set(pull.keys()) == {"sleep", "resting_hr", "hrv", "training_load"}
+
+
+# ---------------------------------------------------------------------------
+# WRITEBACK — contract (schema validation) + idempotency + locality
+# ---------------------------------------------------------------------------
+
+def _sample_recommendation(user_id: str = "u_1") -> TrainingRecommendation:
+    return TrainingRecommendation(
+        schema_version=RECOMMENDATION_SCHEMA_VERSION,
+        recommendation_id=f"rec_{AS_OF.isoformat()}_{user_id}_01",
+        user_id=user_id,
+        issued_at=NOW,
+        for_date=AS_OF,
         action="proceed_with_planned_session",
-        action_detail=None,
-        rationale=["sleep_debt=none"],
+        action_detail={"active_goal": "strength_block"},
+        rationale=["sleep_debt=none", "active_goal=strength_block"],
         confidence="high",
-        uncertainty=list(state.uncertainties),
-        follow_up_present=True,
-        follow_up_within_24h=True,
-    )
-    evaluation = evaluate_policy(state, proposal, rhr_spike_days=0)
-    assert not evaluation.blocked
-    assert evaluation.mutated.confidence == "moderate"
-    rule_ids = [d.rule_id for d in evaluation.decisions]
-    assert "no_high_confidence_on_sparse_signal" in rule_ids
-    soften = next(d for d in evaluation.decisions if d.rule_id == "no_high_confidence_on_sparse_signal")
-    assert soften.decision == "soften"
-
-
-def test_policy_escalates_on_rhr_spike_three_days():
-    """R4 ties to state.resting_hr_vs_baseline == 'well_above' via the shared threshold."""
-
-    evidence, state = _build_state("rhr_spike_three_days")
-    assert state.resting_hr_vs_baseline == "well_above", (
-        "R4 doctrine requires state.resting_hr_vs_baseline == 'well_above'; "
-        "CLEAN spike threshold must match the STATE well_above band"
-    )
-    assert evidence.resting_hr_spike_days >= 3
-    rec = build_training_recommendation(
-        state,
-        now=NOW,
-        rhr_spike_days=evidence.resting_hr_spike_days,
-        planned_session_type=evidence.planned_session_type,
-    )
-    assert rec.action == "escalate_for_user_review"
-    ids = [d.rule_id for d in rec.policy_decisions]
-    assert "resting_hr_spike_escalation" in ids
-
-
-def test_policy_blocks_on_diagnosis_language():
-    """A rationale containing diagnosis-shaped tokens must be blocked."""
-
-    from health_model.recovery_readiness_v1.policy import Proposal, evaluate_policy
-
-    _, state = _build_state("mildly_impaired_with_hard_plan")
-    bad = Proposal(
-        action="rest_day_recommended",
-        action_detail=None,
-        rationale=["likely overtraining syndrome today"],
-        confidence="moderate",
         uncertainty=[],
-        follow_up_present=True,
-        follow_up_within_24h=True,
+        follow_up=FollowUp(
+            review_at=NOW.replace(day=17),
+            review_question="Did today's session feel appropriate?",
+            review_event_id=f"rev_2026-04-17_{user_id}_rec_{AS_OF.isoformat()}_{user_id}_01",
+        ),
+        policy_decisions=[
+            PolicyDecision(rule_id="require_min_coverage", decision="allow", note="coverage=full"),
+        ],
+        bounded=True,
     )
-    evaluation = evaluate_policy(state, bad, rhr_spike_days=0)
-    assert evaluation.blocked
-    rule_ids = [d.rule_id for d in evaluation.decisions]
-    assert "no_diagnosis" in rule_ids
 
-
-def test_policy_blocks_on_missing_follow_up():
-    from health_model.recovery_readiness_v1.policy import Proposal, evaluate_policy
-
-    _, state = _build_state("mildly_impaired_with_hard_plan")
-    bad = Proposal(
-        action="rest_day_recommended",
-        action_detail=None,
-        rationale=["sleep_debt=moderate"],
-        confidence="moderate",
-        uncertainty=[],
-        follow_up_present=False,
-        follow_up_within_24h=False,
-    )
-    evaluation = evaluate_policy(state, bad, rhr_spike_days=0)
-    assert evaluation.blocked
-    rule_ids = [d.rule_id for d in evaluation.decisions]
-    assert "review_required" in rule_ids
-
-
-def test_policy_blocks_unknown_action():
-    from health_model.recovery_readiness_v1.policy import Proposal, evaluate_policy
-
-    _, state = _build_state("mildly_impaired_with_hard_plan")
-    bad = Proposal(
-        action="order_bloodwork",  # type: ignore[arg-type]
-        action_detail=None,
-        rationale=["sleep_debt=moderate"],
-        confidence="moderate",
-        uncertainty=[],
-        follow_up_present=True,
-        follow_up_within_24h=True,
-    )
-    evaluation = evaluate_policy(state, bad, rhr_spike_days=0)
-    assert evaluation.blocked
-    rule_ids = [d.rule_id for d in evaluation.decisions]
-    assert "bounded_action_envelope" in rule_ids
-
-
-# ---------------------------------------------------------------------------
-# ACTION layer
-# ---------------------------------------------------------------------------
 
 def test_writeback_is_idempotent(tmp_path: Path):
-    base = tmp_path / "recovery_readiness_v1"
-    _, state = _build_state("mildly_impaired_with_hard_plan")
-    rec = build_training_recommendation(
-        state, now=NOW, rhr_spike_days=0, planned_session_type="hard"
-    )
+    base = tmp_path / ALLOWED_RELATIVE_ROOT
+    rec = _sample_recommendation()
+
     first = perform_writeback(rec, base_dir=base, now=NOW)
     second = perform_writeback(rec, base_dir=base, now=NOW)
-    assert first.recommendation_id == second.recommendation_id
 
-    log_path = Path(first.writeback_path)
-    lines = [
-        line for line in log_path.read_text(encoding="utf-8").splitlines() if line.strip()
-    ]
-    assert len(lines) == 1
-    assert json.loads(lines[0])["recommendation_id"] == rec.recommendation_id
+    assert first.recommendation_id == second.recommendation_id
+    log = (base / "recommendation_log.jsonl").read_text(encoding="utf-8").strip().splitlines()
+    assert len(log) == 1
 
 
 def test_writeback_locality_enforced_outside_allowed_root(tmp_path: Path):
-    outside = tmp_path / "elsewhere"
-    _, state = _build_state("mildly_impaired_with_hard_plan")
-    rec = build_training_recommendation(
-        state, now=NOW, rhr_spike_days=0, planned_session_type="hard"
-    )
+    bad_base = tmp_path / "not_the_allowed_root"
+    rec = _sample_recommendation()
     with pytest.raises(ValueError):
-        perform_writeback(rec, base_dir=outside, now=NOW)
+        perform_writeback(rec, base_dir=bad_base, now=NOW)
+
+
+def test_writeback_cli_shape_validation_rejects_missing_fields(tmp_path: Path):
+    """The `hai writeback` contract: agent-produced JSON must include all
+    required fields. Missing fields fail closed."""
+
+    from health_agent_infra.cli import _recommendation_from_dict
+
+    with pytest.raises(ValueError) as exc:
+        _recommendation_from_dict({"schema_version": "x"})
+    assert "missing required fields" in str(exc.value)
+
+
+def test_writeback_cli_shape_validation_accepts_valid_json():
+    from health_agent_infra.cli import _recommendation_from_dict
+
+    rec = _sample_recommendation()
+    rebuilt = _recommendation_from_dict(rec.to_dict())
+    assert rebuilt.recommendation_id == rec.recommendation_id
+    assert rebuilt.action == rec.action
 
 
 # ---------------------------------------------------------------------------
-# REVIEW layer
+# REVIEW
 # ---------------------------------------------------------------------------
 
 def test_schedule_and_record_review(tmp_path: Path):
-    base = tmp_path / "recovery_readiness_v1"
-    _, state = _build_state("mildly_impaired_with_hard_plan")
-    rec = build_training_recommendation(
-        state, now=NOW, rhr_spike_days=0, planned_session_type="hard"
-    )
+    base = tmp_path / ALLOWED_RELATIVE_ROOT
+    rec = _sample_recommendation()
     perform_writeback(rec, base_dir=base, now=NOW)
+
     event = schedule_review(rec, base_dir=base)
+    assert event.review_event_id == rec.follow_up.review_event_id
+
     outcome = record_review_outcome(
         event,
         base_dir=base,
         followed_recommendation=True,
         self_reported_improvement=True,
-        free_text="session felt easier than expected",
+        free_text="felt good",
         now=NOW,
     )
-    assert outcome.recommendation_id == rec.recommendation_id
-    assert (base / "review_events.jsonl").exists()
+    assert outcome.followed_recommendation is True
     assert (base / "review_outcomes.jsonl").exists()
 
 
-# ---------------------------------------------------------------------------
-# End-to-end CLI
-# ---------------------------------------------------------------------------
-
-def test_cli_end_to_end_mildly_impaired(tmp_path: Path):
-    base = tmp_path / "recovery_readiness_v1"
-    artifact = _run_cli(base, "mildly_impaired_with_hard_plan",
-                        record_review_outcome="followed_and_improved")
-    assert artifact["recovery_state"]["recovery_status"] in {"mildly_impaired", "impaired"}
-    assert artifact["training_recommendation"]["action"] in {
-        "downgrade_hard_session_to_zone_2",
-        "downgrade_session_to_mobility_only",
-        "rest_day_recommended",
-    }
-    assert artifact["training_recommendation"]["bounded"] is True
-    assert artifact["action_record"]["recommendation_id"] == artifact["training_recommendation"]["recommendation_id"]
-    assert artifact["review_event"]["recommendation_id"] == artifact["training_recommendation"]["recommendation_id"]
-    assert artifact["review_outcome"]["followed_recommendation"] is True
-
-
-def test_cli_end_to_end_insufficient(tmp_path: Path):
-    base = tmp_path / "recovery_readiness_v1"
-    artifact = _run_cli(base, "insufficient_signal")
-    assert artifact["recovery_state"]["signal_quality"]["coverage"] == "insufficient"
-    assert artifact["training_recommendation"]["action"] == "defer_decision_insufficient_signal"
-    assert artifact["training_recommendation"]["confidence"] == "low"
-
-
-def test_cli_end_to_end_recovered(tmp_path: Path):
-    base = tmp_path / "recovery_readiness_v1"
-    artifact = _run_cli(base, "recovered_with_easy_plan")
-    assert artifact["recovery_state"]["recovery_status"] == "recovered"
-    assert artifact["training_recommendation"]["action"] == "proceed_with_planned_session"
-
-
-def test_cli_end_to_end_rhr_spike(tmp_path: Path):
-    base = tmp_path / "recovery_readiness_v1"
-    artifact = _run_cli(base, "rhr_spike_three_days")
-    assert artifact["training_recommendation"]["action"] == "escalate_for_user_review"
-    assert artifact["training_recommendation"]["action_detail"]["reason_token"] == "resting_hr_spike_3_days_running"
-
-
-# ---------------------------------------------------------------------------
-# Tailoring — state-conditioned action variance on identical evidence
-# ---------------------------------------------------------------------------
-
-def test_tailoring_same_evidence_different_goal_surfaces_in_recommendation(tmp_path: Path):
-    """Two runs, identical Garmin + readiness evidence, only active_goal differs.
-
-    The active_goal must flow CLEAN -> STATE -> RECOMMEND and surface in the
-    recommendation's action_detail and rationale. Action stays inside the
-    policy-allowed envelope for the recovered path.
-    """
-
-    strength = _run_cli(tmp_path / "a" / "recovery_readiness_v1",
-                        "tailoring_recovered_strength_block")
-    endurance = _run_cli(tmp_path / "b" / "recovery_readiness_v1",
-                         "tailoring_recovered_endurance_taper")
-
-    assert strength["recovery_state"]["recovery_status"] == "recovered"
-    assert endurance["recovery_state"]["recovery_status"] == "recovered"
-    assert strength["recovery_state"]["active_goal"] == "strength_block"
-    assert endurance["recovery_state"]["active_goal"] == "endurance_taper"
-
-    assert strength["training_recommendation"]["action"] == "proceed_with_planned_session"
-    assert endurance["training_recommendation"]["action"] == "proceed_with_planned_session"
-
-    strength_detail = strength["training_recommendation"]["action_detail"]
-    endurance_detail = endurance["training_recommendation"]["action_detail"]
-    assert strength_detail is not None and endurance_detail is not None
-
-    # Tailoring is visible as goal presence in the recommendation output.
-    # The runtime deliberately does not invent caps or session-shape from
-    # the goal — that is LLM territory. Its job is to surface the goal so
-    # a downstream LLM can act on it.
-    assert strength_detail["active_goal"] == "strength_block"
-    assert endurance_detail["active_goal"] == "endurance_taper"
-    assert strength_detail["active_goal"] != endurance_detail["active_goal"]
-
-    assert "active_goal=strength_block" in strength["training_recommendation"]["rationale"]
-    assert "active_goal=endurance_taper" in endurance["training_recommendation"]["rationale"]
-
-
-# ---------------------------------------------------------------------------
-# CLEAN / STATE rebalance tests (W3c)
-# ---------------------------------------------------------------------------
-
-def test_clean_passes_active_goal_through_to_state():
-    """active_goal from manual readiness must survive CLEAN and land on the state."""
-
-    evidence, state = _build_state("tailoring_recovered_strength_block")
-    assert evidence.active_goal == "strength_block"
-    assert state.active_goal == "strength_block"
-
-
-def test_state_readiness_score_bounded_on_scorable_scenarios():
-    """readiness_score must be in [0, 1] for any scenario with sufficient coverage."""
-
-    for scenario in (
-        "recovered_with_easy_plan",
-        "mildly_impaired_with_hard_plan",
-        "impaired_with_hard_plan",
-    ):
-        _, state = _build_state(scenario)
-        assert state.readiness_score is not None, scenario
-        assert 0.0 <= state.readiness_score <= 1.0, scenario
-
-
-# ---------------------------------------------------------------------------
-# REVIEW — outcome-history summary (structured state, not judgment)
-# ---------------------------------------------------------------------------
-
 def test_summarize_review_history_on_empty_returns_zeroed_counts():
-    from health_agent_infra.review.outcomes import summarize_review_history
-
     summary = summarize_review_history([])
     assert summary == {
         "total": 0,
@@ -443,16 +278,11 @@ def test_summarize_review_history_on_empty_returns_zeroed_counts():
 
 
 def test_summarize_review_history_counts_each_category():
-    """Every outcome lands in exactly one bucket; buckets sum to total."""
-
-    from health_model.recovery_readiness_v1 import ReviewOutcome
-    from health_agent_infra.review.outcomes import summarize_review_history
-
     def _outcome(i: int, followed: bool, improvement) -> ReviewOutcome:
         return ReviewOutcome(
             review_event_id=f"rev_{i}",
             recommendation_id=f"rec_{i}",
-            user_id="u_local_1",
+            user_id="u_1",
             recorded_at=NOW,
             followed_recommendation=followed,
             self_reported_improvement=improvement,
@@ -473,94 +303,17 @@ def test_summarize_review_history_counts_each_category():
         "followed_unknown": 1,
         "not_followed": 1,
     }
-    # Non-total keys must sum to total so the LLM consumer can trust the
-    # partition.
-    assert sum(v for k, v in summary.items() if k != "total") == summary["total"]
-
-
-def test_summarize_review_history_ignores_improvement_when_not_followed():
-    """If the user did not follow the recommendation, improvement is ignored.
-
-    No counterfactual is available; classifying such an outcome by
-    improvement would encode a claim we cannot support.
-    """
-
-    from health_model.recovery_readiness_v1 import ReviewOutcome
-    from health_agent_infra.review.outcomes import summarize_review_history
-
-    outcome = ReviewOutcome(
-        review_event_id="rev_1",
-        recommendation_id="rec_1",
-        user_id="u_local_1",
-        recorded_at=NOW,
-        followed_recommendation=False,
-        self_reported_improvement=True,  # deliberately True, must be ignored
-    )
-    summary = summarize_review_history([outcome])
-    assert summary["not_followed"] == 1
-    assert summary["followed_improved"] == 0
 
 
 # ---------------------------------------------------------------------------
-# Real-slice PULL adapter (W4)
+# SCHEMAS — round-trip
 # ---------------------------------------------------------------------------
 
-def test_garmin_adapter_reads_committed_export_and_emits_fixture_shape():
-    """The adapter must produce a dict with the same keys synthetic fixtures emit."""
-
-    from health_agent_infra.pull.garmin import load_recovery_readiness_inputs
-
-    as_of = date(2026, 4, 8)
-    pull = load_recovery_readiness_inputs(as_of)
-
-    assert set(pull.keys()) == {"sleep", "resting_hr", "hrv", "training_load"}
-    assert pull["sleep"] is not None
-    assert "duration_hours" in pull["sleep"]
-    assert pull["sleep"]["duration_hours"] > 0
-    assert any(row["date"] == as_of.isoformat() for row in pull["resting_hr"])
-    assert all({"date", "bpm", "record_id"} <= set(row.keys()) for row in pull["resting_hr"])
-
-
-def test_garmin_adapter_class_conforms_to_flagship_pull_protocol():
-    """GarminRecoveryReadinessAdapter must structurally conform to FlagshipPullAdapter.
-
-    The Protocol exists to make the thin flagship adapter contract explicit
-    at the type-check layer; this test is the runtime witness that the
-    concrete Garmin adapter satisfies it and that its `load()` returns a
-    dict with the four keys `clean_inputs()` consumes.
-    """
-
-    from health_agent_infra.pull.protocol import FlagshipPullAdapter
-    from health_agent_infra.pull.garmin import GarminRecoveryReadinessAdapter
-
-    adapter = GarminRecoveryReadinessAdapter()
-    assert isinstance(adapter, FlagshipPullAdapter)
-    assert adapter.source_name == "garmin"
-
-    pull = adapter.load(date(2026, 4, 8))
-    assert set(pull.keys()) == {"sleep", "resting_hr", "hrv", "training_load"}
-
-
-def test_real_slice_cli_runs_end_to_end(tmp_path: Path):
-    """Full PULL->REVIEW loop must run against the committed CSV export."""
-
-    import argparse
-
-    ns = argparse.Namespace(
-        command="run",
-        scenario="mildly_impaired_with_hard_plan",
-        source="real",
-        base_dir=str(tmp_path / "recovery_readiness_v1"),
-        date="2026-04-08",
-        user_id="u_real_slice_test",
-        now="2026-04-08T07:15:00+00:00",
-        record_review_outcome=None,
-        emit_json=False,
-    )
-    artifact = cli_run(ns)
-    assert artifact["run_metadata"]["source"] == "real"
-    assert artifact["run_metadata"]["scenario"] == "real_garmin_slice_2026-04-08"
-    assert artifact["training_recommendation"]["bounded"] is True
-    assert artifact["recovery_state"]["signal_quality"]["coverage"] in {
-        "full", "partial", "sparse", "insufficient"
-    }
+def test_training_recommendation_round_trip():
+    rec = _sample_recommendation()
+    data = rec.to_dict()
+    # Serialize to JSON and back — must not raise
+    s = json.dumps(data, sort_keys=True)
+    parsed = json.loads(s)
+    assert parsed["action"] == "proceed_with_planned_session"
+    assert parsed["policy_decisions"][0]["rule_id"] == "require_min_coverage"

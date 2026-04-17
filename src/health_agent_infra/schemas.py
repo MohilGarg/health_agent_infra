@@ -1,22 +1,22 @@
-"""Typed schemas for recovery_readiness_v1.
+"""Typed schemas for health_agent_infra.
 
-Authoritative docs:
-- reporting/docs/state_object_schema.md
-- reporting/docs/recommendation_object_schema.md
+The runtime emits clean structured state (``CleanedEvidence``, ``RawSummary``),
+validates agent-produced recommendations against ``TrainingRecommendation``,
+and persists review events/outcomes. All classification, policy, and
+recommendation-shaping judgment lives in skills — see ``skills/``.
+
+``PolicyDecision`` and ``ActionKind`` are retained because the agent names
+them in its output: ``PolicyDecision`` records which rule fired and with
+what outcome; ``ActionKind`` is the enum the agent must pick from.
+``Confidence`` is also retained as the agent's confidence field.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import date, datetime
 from typing import Literal, Optional
 
-RecoveryStatus = Literal["recovered", "mildly_impaired", "impaired", "unknown"]
-SleepDebt = Literal["none", "mild", "moderate", "elevated", "unknown"]
-SorenessSignal = Literal["low", "moderate", "high", "unknown"]
-BaselineBand = Literal["below", "at", "above", "well_above", "unknown"]
-TrainingLoadBand = Literal["low", "moderate", "high", "spike", "unknown"]
-CoverageBand = Literal["full", "partial", "sparse", "insufficient"]
 Confidence = Literal["low", "moderate", "high"]
 PolicyOutcome = Literal["allow", "soften", "block", "escalate"]
 
@@ -29,13 +29,14 @@ ActionKind = Literal[
     "escalate_for_user_review",
 ]
 
-STATE_SCHEMA_VERSION = "recovery_state.v1"
 RECOMMENDATION_SCHEMA_VERSION = "training_recommendation.v1"
+EVIDENCE_SCHEMA_VERSION = "cleaned_evidence.v1"
+RAW_SUMMARY_SCHEMA_VERSION = "raw_summary.v1"
 
 
 @dataclass
 class CleanedEvidence:
-    """Output of CLEAN layer. Inputs to STATE layer."""
+    """Output of CLEAN layer — typed record of a day's inputs."""
 
     as_of_date: date
     user_id: str
@@ -43,59 +44,58 @@ class CleanedEvidence:
     sleep_record_id: Optional[str]
     resting_hr: Optional[float]
     resting_hr_record_id: Optional[str]
-    resting_hr_baseline: Optional[float]
     hrv_ms: Optional[float]
     hrv_record_id: Optional[str]
-    hrv_baseline: Optional[float]
     trailing_7d_training_load: Optional[float]
-    training_load_baseline: Optional[float]
-    soreness_self_report: Optional[SorenessSignal]
+    soreness_self_report: Optional[str]
     energy_self_report: Optional[str]
     planned_session_type: Optional[str]
     manual_readiness_submission_id: Optional[str]
     active_goal: Optional[str]
     optional_context_note_ids: list[str] = field(default_factory=list)
-    resting_hr_spike_days: int = 0
-
-
-@dataclass
-class SignalQuality:
-    coverage: CoverageBand
-    required_inputs_present: bool
-    notes: list[str] = field(default_factory=list)
-
-
-@dataclass
-class InputsUsed:
-    garmin_sleep_record_id: Optional[str]
-    garmin_resting_hr_record_id: Optional[str]
-    garmin_hrv_record_id: Optional[str]
-    training_load_window: str
-    manual_readiness_submission_id: Optional[str]
-    optional_context_note_ids: list[str] = field(default_factory=list)
-
-
-@dataclass
-class RecoveryState:
-    schema_version: str
-    user_id: str
-    computed_at: datetime
-    as_of_date: date
-    recovery_status: RecoveryStatus
-    readiness_score: Optional[float]
-    sleep_debt: SleepDebt
-    soreness_signal: SorenessSignal
-    resting_hr_vs_baseline: BaselineBand
-    hrv_vs_baseline: BaselineBand
-    training_load_trailing_7d: TrainingLoadBand
-    active_goal: Optional[str]
-    signal_quality: SignalQuality
-    uncertainties: list[str]
-    inputs_used: InputsUsed
 
     def to_dict(self) -> dict:
         data = asdict(self)
-        data["computed_at"] = self.computed_at.isoformat()
+        data["as_of_date"] = self.as_of_date.isoformat()
+        return data
+
+
+@dataclass
+class RawSummary:
+    """Output of CLEAN layer — raw deltas / ratios / counts / coverage fractions.
+
+    Deterministic. No bands, no classifications, no scores. The agent reads
+    these numbers and applies judgment via the recovery-readiness skill.
+    """
+
+    schema_version: str
+    as_of_date: date
+    user_id: str
+
+    sleep_hours: Optional[float]
+    sleep_baseline_hours: Optional[float]
+    sleep_debt_hours: Optional[float]
+
+    resting_hr: Optional[float]
+    resting_hr_baseline: Optional[float]
+    resting_hr_ratio_vs_baseline: Optional[float]
+    resting_hr_spike_days: int
+
+    hrv_ms: Optional[float]
+    hrv_baseline: Optional[float]
+    hrv_ratio_vs_baseline: Optional[float]
+
+    trailing_7d_training_load: Optional[float]
+    training_load_baseline: Optional[float]
+    training_load_ratio_vs_baseline: Optional[float]
+
+    coverage_sleep_fraction: float
+    coverage_rhr_fraction: float
+    coverage_hrv_fraction: float
+    coverage_training_load_fraction: float
+
+    def to_dict(self) -> dict:
+        data = asdict(self)
         data["as_of_date"] = self.as_of_date.isoformat()
         return data
 
@@ -105,22 +105,6 @@ class PolicyDecision:
     rule_id: str
     decision: PolicyOutcome
     note: str
-
-
-@dataclass
-class StateRef:
-    schema_version: str
-    computed_at: datetime
-    as_of_date: date
-    hash: Optional[str] = None
-
-    def to_dict(self) -> dict:
-        return {
-            "schema_version": self.schema_version,
-            "computed_at": self.computed_at.isoformat(),
-            "as_of_date": self.as_of_date.isoformat(),
-            "hash": self.hash,
-        }
 
 
 @dataclass
@@ -139,12 +123,19 @@ class FollowUp:
 
 @dataclass
 class TrainingRecommendation:
+    """Agent-produced bounded recommendation.
+
+    The agent composes this object from ``CleanedEvidence`` + ``RawSummary``
+    by following the recovery-readiness skill. ``hai writeback`` validates
+    the shape before persisting — validation is the runtime's contract check
+    on the agent's output.
+    """
+
     schema_version: str
     recommendation_id: str
     user_id: str
     issued_at: datetime
     for_date: date
-    state_ref: StateRef
     action: ActionKind
     action_detail: Optional[dict]
     rationale: list[str]
@@ -161,7 +152,6 @@ class TrainingRecommendation:
             "user_id": self.user_id,
             "issued_at": self.issued_at.isoformat(),
             "for_date": self.for_date.isoformat(),
-            "state_ref": self.state_ref.to_dict(),
             "action": self.action,
             "action_detail": self.action_detail,
             "rationale": list(self.rationale),
