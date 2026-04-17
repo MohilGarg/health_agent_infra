@@ -1,0 +1,68 @@
+{
+  "schema_version": "training_recommendation.v1",
+  "recommendation_id": "rec_2026-04-08_u_local_1_01",
+  "user_id": "u_local_1",
+  "issued_at": "2026-04-17T15:23:02+00:00",
+  "for_date": "2026-04-08",
+  "action": "proceed_with_planned_session",
+  "action_detail": {
+    "active_goal": "spring_10k_base_build"
+  },
+  "rationale": [
+    "sleep_debt=none (9.05h)",
+    "soreness_signal=moderate",
+    "resting_hr_vs_baseline=at (ratio 0.97)",
+    "hrv_vs_baseline=above (ratio 1.08)",
+    "training_load_window_incomplete",
+    "body_battery_end_of_day=43 (informational)",
+    "agent_vendor_readiness_disagreement: local_status=recovered vs vendor_training_readiness_level=LOW",
+    "active_goal=spring_10k_base_build"
+  ],
+  "confidence": "moderate",
+  "uncertainty": [
+    "acute_load_unavailable_at_source",
+    "acwr_ratio_unavailable_at_source",
+    "agent_vendor_readiness_disagreement",
+    "chronic_load_unavailable_at_source",
+    "training_load_window_incomplete",
+    "training_readiness_weighting_disagreement"
+  ],
+  "follow_up": {
+    "review_at": "2026-04-18T07:00:00+00:00",
+    "review_question": "Did today's session feel appropriate for your recovery?",
+    "review_event_id": "rev_2026-04-18_u_local_1_rec_2026-04-08_u_local_1_01"
+  },
+  "policy_decisions": [
+    {
+      "rule_id": "require_min_coverage",
+      "decision": "allow",
+      "note": "coverage=sparse; required inputs present but training_load window incomplete"
+    },
+    {
+      "rule_id": "no_diagnosis",
+      "decision": "allow",
+      "note": "no banned tokens in rationale"
+    },
+    {
+      "rule_id": "bounded_action_envelope",
+      "decision": "allow",
+      "note": "action in v1 enum"
+    },
+    {
+      "rule_id": "review_required",
+      "decision": "allow",
+      "note": "review_at within 24h of issued_at"
+    },
+    {
+      "rule_id": "no_high_confidence_on_sparse_signal",
+      "decision": "allow",
+      "note": "confidence=moderate, no soften needed"
+    },
+    {
+      "rule_id": "resting_hr_spike_escalation",
+      "decision": "allow",
+      "note": "resting_hr_spike_days=0, no escalation"
+    }
+  ],
+  "bounded": true
+}

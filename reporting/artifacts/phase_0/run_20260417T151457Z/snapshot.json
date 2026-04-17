@@ -1,0 +1,77 @@
+{
+  "as_of_date": "2026-04-08",
+  "goals_active": [],
+  "gym": {
+    "history": [],
+    "missingness": "absent",
+    "today": null
+  },
+  "history_range": [
+    "2026-03-26",
+    "2026-04-07"
+  ],
+  "lookback_days": 14,
+  "notes": {
+    "recent": []
+  },
+  "nutrition": {
+    "history": [],
+    "missingness": "absent",
+    "today": null
+  },
+  "recommendations": {
+    "recent": []
+  },
+  "recovery": {
+    "history": [],
+    "missingness": "unavailable_at_source:acute_load,acwr_ratio,chronic_load",
+    "today": {
+      "acute_load": null,
+      "acwr_ratio": null,
+      "all_day_stress": 27,
+      "as_of_date": "2026-04-08",
+      "body_battery_end_of_day": 43,
+      "chronic_load": null,
+      "corrected_at": null,
+      "derived_from": "[\"live_20260417T152111563701:0\"]",
+      "hrv_ms": 80.0,
+      "ingest_actor": "garmin_csv_adapter",
+      "manual_stress_score": null,
+      "projected_at": "2026-04-17T15:21:11.568268+00:00",
+      "resting_hr": 50.0,
+      "sleep_hours": 9.05,
+      "source": "garmin",
+      "training_readiness_component_mean_pct": 70.0,
+      "user_id": "u_local_1"
+    }
+  },
+  "reviews": {
+    "recent": []
+  },
+  "running": {
+    "history": [],
+    "missingness": "present",
+    "today": {
+      "as_of_date": "2026-04-08",
+      "corrected_at": null,
+      "derivation_path": "garmin_daily",
+      "derived_from": "[\"live_20260417T152111563701:0\"]",
+      "ingest_actor": "garmin_csv_adapter",
+      "moderate_intensity_min": 1,
+      "projected_at": "2026-04-17T15:21:11.568344+00:00",
+      "session_count": null,
+      "source": "garmin",
+      "total_distance_m": 11984.0,
+      "total_duration_s": null,
+      "user_id": "u_local_1",
+      "vigorous_intensity_min": 63
+    }
+  },
+  "schema_version": "state_snapshot.v1",
+  "stress": {
+    "missingness": "partial:manual_stress_score",
+    "today_garmin": 27,
+    "today_manual": null
+  },
+  "user_id": "u_local_1"
+}
