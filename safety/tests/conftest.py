@@ -1,9 +1,6 @@
-"""Pytest bootstrap — make repo sources importable without ``pip install -e .``.
+"""Pytest bootstrap — make the installable package importable from ``src/``.
 
-Adds the repo's source roots to ``sys.path``. Order matters: ``src/`` must
-come first so ``health_agent_infra`` resolves to the installable package,
-not the ``safety/health_agent_infra/`` compatibility wrappers (which shadow
-the name until commit 4a deletes them).
+This avoids requiring ``pip install -e .`` for the test suite.
 """
 
 from __future__ import annotations
@@ -11,7 +8,6 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parents[2]
-for _entry in (_ROOT, _ROOT / "safety", _ROOT / "clean", _ROOT / "src"):
-    if str(_entry) not in sys.path:
-        sys.path.insert(0, str(_entry))
+_SRC = Path(__file__).resolve().parents[2] / "src"
+if str(_SRC) not in sys.path:
+    sys.path.insert(0, str(_SRC))
