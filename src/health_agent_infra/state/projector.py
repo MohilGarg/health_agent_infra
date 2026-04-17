@@ -1372,7 +1372,7 @@ def reproject_from_jsonl(conn: sqlite3.Connection, base_dir, *, allow_empty: boo
             #      JSONL; days dropped from the JSONL stay NULL.
             conn.execute("DELETE FROM stress_manual_raw")
             stress_orphans = conn.execute(
-                "SELECT as_of_date, user_id, derived_from "
+                "SELECT as_of_date, user_id, derived_from, source, ingest_actor "
                 "FROM accepted_recovery_state_daily "
                 "WHERE manual_stress_score IS NOT NULL "
                 "   OR derived_from LIKE '%\"m_stress_%'"
@@ -1385,19 +1385,45 @@ def reproject_from_jsonl(conn: sqlite3.Connection, base_dir, *, allow_empty: boo
                         if isinstance(parsed, list):
                             surviving_ids = [
                                 str(x) for x in parsed
-                                if not str(x).startswith("m_stress_")
+                                if not _is_stress_submission_id(str(x))
                             ]
                     except (TypeError, json.JSONDecodeError):
                         pass
-                conn.execute(
-                    "UPDATE accepted_recovery_state_daily SET "
-                    "manual_stress_score = NULL, derived_from = ? "
-                    "WHERE as_of_date = ? AND user_id = ?",
-                    (
-                        json.dumps(sorted(set(surviving_ids)), sort_keys=True),
-                        row["as_of_date"], row["user_id"],
-                    ),
+                surviving_json = json.dumps(
+                    sorted(set(surviving_ids)), sort_keys=True,
                 )
+                # If the surviving contributors include a garmin-shaped ID,
+                # source/ingest_actor must reflect that — leaving them at
+                # 'user_manual'/'hai_cli_direct' (set by the now-evicted
+                # stress merge) would violate state_model_v1.md §4. If no
+                # garmin survives either (degenerate stress-only row that's
+                # now empty), leave source/ingest as-is — the row carries
+                # no current evidence and a future write will overwrite.
+                has_garmin_survivor = any(
+                    not _is_intake_submission_id(rid)
+                    for rid in surviving_ids
+                )
+                if has_garmin_survivor and (
+                    row["source"] != "garmin"
+                    or row["ingest_actor"] != "garmin_csv_adapter"
+                ):
+                    conn.execute(
+                        "UPDATE accepted_recovery_state_daily SET "
+                        "manual_stress_score = NULL, derived_from = ?, "
+                        "source = 'garmin', "
+                        "ingest_actor = 'garmin_csv_adapter' "
+                        "WHERE as_of_date = ? AND user_id = ?",
+                        (surviving_json,
+                         row["as_of_date"], row["user_id"]),
+                    )
+                else:
+                    conn.execute(
+                        "UPDATE accepted_recovery_state_daily SET "
+                        "manual_stress_score = NULL, derived_from = ? "
+                        "WHERE as_of_date = ? AND user_id = ?",
+                        (surviving_json,
+                         row["as_of_date"], row["user_id"]),
+                    )
         if has_notes_group:
             # Notes have no accepted layer (raw IS canonical).
             conn.execute("DELETE FROM context_note")

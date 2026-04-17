@@ -698,6 +698,82 @@ def test_reproject_clears_manual_stress_for_days_dropped_from_jsonl(tmp_path: Pa
     assert counts["accepted_recovery_manual_stress_merged"] == 1
 
 
+def test_reproject_hygiene_restores_garmin_provenance_when_stress_dropped(tmp_path: Path):
+    """After stress hygiene strips the manual contributor, source +
+    ingest_actor must reflect the surviving garmin contributor — not the
+    stale 'user_manual'/'hai_cli_direct' values left by the evicted
+    stress merge. State model §4 says provenance propagates from the
+    primary raw row(s); when stress is removed and only garmin remains,
+    that's the primary."""
+
+    from health_agent_infra.state import reproject_from_jsonl
+
+    base, db = _init_intake_dirs(tmp_path)
+
+    # Seed with garmin clean, then merge in a stress score. After the
+    # merge, source='user_manual' (stress was the most recent write).
+    conn = open_connection(db)
+    try:
+        project_accepted_recovery_state_daily(
+            conn, as_of_date=AS_OF, user_id=USER,
+            raw_row=_full_garmin_raw_row(),
+            source_row_ids=["garmin_keep:0"],
+        )
+    finally:
+        conn.close()
+    assert cli_main(_stress_args(base, db, score=4)) == 0
+
+    conn = open_connection(db)
+    try:
+        before = conn.execute(
+            "SELECT source, ingest_actor, manual_stress_score "
+            "FROM accepted_recovery_state_daily "
+            "WHERE user_id = ? AND as_of_date = ?",
+            (USER, AS_OF.isoformat()),
+        ).fetchone()
+    finally:
+        conn.close()
+    # Pre-state: stress merge dominates provenance.
+    assert before["source"] == "user_manual"
+    assert before["ingest_actor"] == "hai_cli_direct"
+    assert before["manual_stress_score"] == 4
+
+    # Replay a stress JSONL that doesn't mention this day. The stress
+    # contributor is removed; the garmin contributor survives.
+    (base / "stress_manual.jsonl").write_text(json.dumps({
+        "submission_id": "m_stress_2099-01-01_zzz",
+        "user_id": "u_other", "as_of_date": "2099-01-01",
+        "score": 1, "tags": None,
+        "source": "user_manual", "ingest_actor": "hai_cli_direct",
+        "submitted_at": "2099-01-01T00:00:00+00:00",
+        "supersedes_submission_id": None,
+    }) + "\n")
+
+    conn = open_connection(db)
+    try:
+        reproject_from_jsonl(conn, base)
+        after = conn.execute(
+            "SELECT manual_stress_score, derived_from, source, ingest_actor "
+            "FROM accepted_recovery_state_daily "
+            "WHERE user_id = ? AND as_of_date = ?",
+            (USER, AS_OF.isoformat()),
+        ).fetchone()
+    finally:
+        conn.close()
+
+    assert after["manual_stress_score"] is None
+    derived = json.loads(after["derived_from"])
+    assert "garmin_keep:0" in derived
+    assert all(not d.startswith("m_stress_") for d in derived)
+    # The fix: source/ingest reset to reflect the surviving Garmin contributor.
+    assert after["source"] == "garmin", (
+        f"stale user_manual source survived stress hygiene; got {after['source']!r}"
+    )
+    assert after["ingest_actor"] == "garmin_csv_adapter", (
+        f"stale hai_cli_direct ingest_actor survived; got {after['ingest_actor']!r}"
+    )
+
+
 def test_reproject_preserves_garmin_contributors_on_stress_hygiene(tmp_path: Path):
     """The reproject hygiene step must only strip stress IDs from
     derived_from; Garmin contributor IDs must survive."""
