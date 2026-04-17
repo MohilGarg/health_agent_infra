@@ -31,6 +31,10 @@ from health_agent_infra.core.config import (
     scaffold_thresholds_toml,
     user_config_path,
 )
+from health_agent_infra.domains.recovery import (
+    classify_recovery_state,
+    evaluate_recovery_policy,
+)
 from health_agent_infra.pull.garmin import (
     GarminRecoveryReadinessAdapter,
     default_manual_readiness,
@@ -1294,6 +1298,91 @@ def cmd_state_migrate(args: argparse.Namespace) -> int:
 # hai setup-skills
 # ---------------------------------------------------------------------------
 
+_SUPPORTED_CLASSIFY_DOMAINS = {"recovery"}
+
+
+def _load_cleaned_bundle(path_str: str) -> tuple[dict, dict, Optional[str]]:
+    """Load a `hai clean` output JSON. Returns (evidence, raw_summary, error)."""
+
+    path = Path(path_str).expanduser()
+    if not path.exists():
+        return {}, {}, f"evidence-json not found at {path}"
+    try:
+        bundle = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return {}, {}, f"evidence-json is not valid JSON ({exc})"
+    if "cleaned_evidence" not in bundle or "raw_summary" not in bundle:
+        return {}, {}, (
+            "evidence-json missing cleaned_evidence or raw_summary; "
+            "did you pass the output of `hai clean`?"
+        )
+    return bundle["cleaned_evidence"], bundle["raw_summary"], None
+
+
+def cmd_classify(args: argparse.Namespace) -> int:
+    if args.domain not in _SUPPORTED_CLASSIFY_DOMAINS:
+        print(
+            f"unsupported domain: {args.domain!r}; only {sorted(_SUPPORTED_CLASSIFY_DOMAINS)} supported in v1",
+            file=sys.stderr,
+        )
+        return 2
+
+    evidence, raw_summary, error = _load_cleaned_bundle(args.evidence_json)
+    if error is not None:
+        print(error, file=sys.stderr)
+        return 2
+
+    try:
+        thresholds = load_thresholds(
+            path=Path(args.thresholds_path).expanduser() if args.thresholds_path else None
+        )
+    except ConfigError as exc:
+        print(f"config error: {exc}", file=sys.stderr)
+        return 2
+
+    classified = classify_recovery_state(evidence, raw_summary, thresholds=thresholds)
+    _emit_json({
+        "domain": args.domain,
+        "as_of_date": evidence.get("as_of_date"),
+        "user_id": evidence.get("user_id"),
+        "classified": classified,
+    })
+    return 0
+
+
+def cmd_policy(args: argparse.Namespace) -> int:
+    if args.domain not in _SUPPORTED_CLASSIFY_DOMAINS:
+        print(
+            f"unsupported domain: {args.domain!r}; only {sorted(_SUPPORTED_CLASSIFY_DOMAINS)} supported in v1",
+            file=sys.stderr,
+        )
+        return 2
+
+    evidence, raw_summary, error = _load_cleaned_bundle(args.evidence_json)
+    if error is not None:
+        print(error, file=sys.stderr)
+        return 2
+
+    try:
+        thresholds = load_thresholds(
+            path=Path(args.thresholds_path).expanduser() if args.thresholds_path else None
+        )
+    except ConfigError as exc:
+        print(f"config error: {exc}", file=sys.stderr)
+        return 2
+
+    classified = classify_recovery_state(evidence, raw_summary, thresholds=thresholds)
+    policy = evaluate_recovery_policy(classified, raw_summary, thresholds=thresholds)
+    _emit_json({
+        "domain": args.domain,
+        "as_of_date": evidence.get("as_of_date"),
+        "user_id": evidence.get("user_id"),
+        "classified": classified,
+        "policy": policy,
+    })
+    return 0
+
+
 def cmd_config_init(args: argparse.Namespace) -> int:
     dest = Path(args.path).expanduser() if args.path else user_config_path()
     if dest.exists() and not args.force:
@@ -1602,6 +1691,28 @@ def build_parser() -> argparse.ArgumentParser:
     p_setup.add_argument("--force", action="store_true",
                          help="Overwrite existing skill directories of the same name")
     p_setup.set_defaults(func=cmd_setup_skills)
+
+    p_classify = sub.add_parser(
+        "classify",
+        help="Run domain classifier against a cleaned-evidence bundle and print the result",
+    )
+    p_classify.add_argument("--domain", required=True, choices=sorted(_SUPPORTED_CLASSIFY_DOMAINS))
+    p_classify.add_argument("--evidence-json", required=True,
+                            help="Path to a JSON file produced by `hai clean`")
+    p_classify.add_argument("--thresholds-path", default=None,
+                            help="Override thresholds TOML path (default: platformdirs user_config_dir)")
+    p_classify.set_defaults(func=cmd_classify)
+
+    p_policy = sub.add_parser(
+        "policy",
+        help="Run classify + policy against a cleaned-evidence bundle and print both",
+    )
+    p_policy.add_argument("--domain", required=True, choices=sorted(_SUPPORTED_CLASSIFY_DOMAINS))
+    p_policy.add_argument("--evidence-json", required=True,
+                          help="Path to a JSON file produced by `hai clean`")
+    p_policy.add_argument("--thresholds-path", default=None,
+                          help="Override thresholds TOML path (default: platformdirs user_config_dir)")
+    p_policy.set_defaults(func=cmd_policy)
 
     p_config = sub.add_parser("config", help="Inspect or scaffold runtime thresholds")
     config_sub = p_config.add_subparsers(dest="config_command", required=True)
