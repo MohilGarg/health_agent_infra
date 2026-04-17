@@ -344,6 +344,161 @@ def test_intake_nutrition_db_absent_is_failsoft(tmp_path: Path, capsys):
 
 
 # ---------------------------------------------------------------------------
+# Chain-resolution correctness when DB is absent (7C.2 patch)
+# ---------------------------------------------------------------------------
+
+def test_intake_nutrition_db_absent_still_builds_correction_chain(tmp_path: Path):
+    """Two same-day intakes with NO DB present must still produce a
+    well-formed correction chain in the JSONL, and a later reproject must
+    honour it. The durable boundary (JSONL) owns chain correctness —
+    falling back to DB-only lookup would stamp `supersedes=None` on the
+    second write and permanently orphan the first."""
+
+    base = tmp_path / "intake"
+    base.mkdir()
+    missing_db = tmp_path / "no_db.db"
+
+    # Two writes, no DB: JSONL captures them, projection silently skips.
+    assert cli_main(_args(base, missing_db, calories=2200)) == 0
+    assert cli_main(_args(base, missing_db, calories=2400)) == 0
+
+    # The JSONL now has two lines — inspect directly:
+    lines = [
+        json.loads(l) for l in
+        (base / "nutrition_intake.jsonl").read_text().splitlines()
+        if l.strip()
+    ]
+    assert len(lines) == 2
+    first_id = lines[0]["submission_id"]
+    # CRITICAL: the second line must supersede the first, even though no
+    # DB was queried when resolving the prior tail.
+    assert lines[0]["supersedes_submission_id"] is None
+    assert lines[1]["supersedes_submission_id"] == first_id, (
+        "chain broken: second submission did not stamp supersedes despite "
+        "prior line in JSONL. DB-absent write path must resolve chain from "
+        "JSONL, not DB."
+    )
+
+    # Now initialise a DB and reproject. The chain survives because JSONL
+    # carries it — reproject replays stored supersedes values verbatim.
+    db = _init_db(tmp_path / "new_state_root")
+    # Point reproject at our JSONL base_dir.
+    rc = cli_main([
+        "state", "reproject",
+        "--base-dir", str(base), "--db-path", str(db),
+    ])
+    assert rc == 0
+
+    conn = open_connection(db)
+    try:
+        raws = conn.execute(
+            "SELECT submission_id, calories, supersedes_submission_id "
+            "FROM nutrition_intake_raw "
+            "WHERE user_id = ? AND as_of_date = ? ORDER BY ingested_at",
+            (USER, AS_OF.isoformat()),
+        ).fetchall()
+        accepted = conn.execute(
+            "SELECT calories, corrected_at FROM accepted_nutrition_state_daily "
+            "WHERE user_id = ? AND as_of_date = ?",
+            (USER, AS_OF.isoformat()),
+        ).fetchone()
+    finally:
+        conn.close()
+
+    assert len(raws) == 2
+    # Chain reflected in DB after reproject.
+    assert raws[0]["supersedes_submission_id"] is None
+    assert raws[1]["supersedes_submission_id"] == raws[0]["submission_id"]
+    # Accepted reflects the latest (non-superseded) submission.
+    assert accepted["calories"] == 2400
+
+
+def test_intake_nutrition_chain_resolver_prefers_jsonl_over_db(tmp_path: Path):
+    """Even when the DB is present, chain resolution uses JSONL. This
+    keeps the DB as a query-side projection and JSONL as the truth — a
+    DB accidentally wiped/ahead of JSONL never lets the chain desync."""
+
+    base, db = _init_intake_dirs(tmp_path)
+    # First write: normal — both JSONL and DB get a row.
+    assert cli_main(_args(base, db, calories=2100)) == 0
+
+    # Simulate a DB that somehow forgot the first row (test the resolver's
+    # independence, not the writing path):
+    conn = open_connection(db)
+    try:
+        conn.execute("DELETE FROM nutrition_intake_raw")
+        conn.execute("DELETE FROM accepted_nutrition_state_daily")
+        conn.commit()
+    finally:
+        conn.close()
+
+    # Second write: resolver reads JSONL and correctly finds the first
+    # submission to supersede, even though the DB is now empty.
+    assert cli_main(_args(base, db, calories=2300)) == 0
+
+    lines = [
+        json.loads(l) for l in
+        (base / "nutrition_intake.jsonl").read_text().splitlines()
+        if l.strip()
+    ]
+    assert len(lines) == 2
+    assert lines[0]["supersedes_submission_id"] is None
+    assert lines[1]["supersedes_submission_id"] == lines[0]["submission_id"], (
+        "chain resolver is reading the DB, not the JSONL — truth source drift"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Optional-field validation (7C.2 patch)
+# ---------------------------------------------------------------------------
+
+def test_intake_nutrition_rejects_negative_hydration(tmp_path: Path, capsys):
+    base, db = _init_intake_dirs(tmp_path)
+    rc = cli_main(_args(base, db) + ["--hydration-l", "-1"])
+    assert rc == 2
+    err = capsys.readouterr().err
+    assert "hydration-l" in err and "must be >= 0" in err
+    assert not (base / "nutrition_intake.jsonl").exists()
+    conn = open_connection(db)
+    try:
+        n = conn.execute(
+            "SELECT COUNT(*) FROM accepted_nutrition_state_daily"
+        ).fetchone()[0]
+    finally:
+        conn.close()
+    assert n == 0
+
+
+def test_intake_nutrition_rejects_negative_meals_count(tmp_path: Path, capsys):
+    base, db = _init_intake_dirs(tmp_path)
+    rc = cli_main(_args(base, db) + ["--meals-count", "-2"])
+    assert rc == 2
+    err = capsys.readouterr().err
+    assert "meals-count" in err and "must be >= 0" in err
+    assert not (base / "nutrition_intake.jsonl").exists()
+
+
+def test_intake_nutrition_zero_optional_fields_accepted(tmp_path: Path):
+    """Zero is a legitimate value (no hydration / no meals), distinct from
+    unset. Validation must only reject negatives, not zero."""
+
+    base, db = _init_intake_dirs(tmp_path)
+    rc = cli_main(_args(base, db) + ["--hydration-l", "0", "--meals-count", "0"])
+    assert rc == 0
+    conn = open_connection(db)
+    try:
+        row = conn.execute(
+            "SELECT hydration_l, meals_count FROM accepted_nutrition_state_daily "
+            "WHERE user_id = ? AND as_of_date = ?",
+            (USER, AS_OF.isoformat()),
+        ).fetchone()
+    finally:
+        conn.close()
+    assert row["hydration_l"] == 0.0
+    assert row["meals_count"] == 0
+
+
+# ---------------------------------------------------------------------------
 # Reproject
 # ---------------------------------------------------------------------------
 

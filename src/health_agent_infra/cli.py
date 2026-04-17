@@ -669,6 +669,7 @@ def cmd_intake_nutrition(args: argparse.Namespace) -> int:
         append_submission_jsonl,
     )
 
+    # Required macros: reject missing, reject negative.
     for name, value in (
         ("calories", args.calories),
         ("protein_g", args.protein_g),
@@ -685,16 +686,32 @@ def cmd_intake_nutrition(args: argparse.Namespace) -> int:
             print(f"intake nutrition: --{name.replace('_', '-')} must be >= 0",
                   file=sys.stderr)
             return 2
+    # Optional fields: if supplied, reject negatives too. Same boundary
+    # discipline as the required macros; silently accepting negatives here
+    # would land bad data in the accepted row.
+    for name, value in (
+        ("hydration_l", args.hydration_l),
+        ("meals_count", args.meals_count),
+    ):
+        if value is not None and value < 0:
+            print(f"intake nutrition: --{name.replace('_', '-')} must be >= 0",
+                  file=sys.stderr)
+            return 2
 
     as_of = _coerce_date(args.as_of)
     issued_at = datetime.now(timezone.utc)
     suffix = issued_at.strftime("%H%M%S%f")
     submission_id = f"m_nut_{as_of.isoformat()}_{suffix}"
 
-    # Auto-detect supersedes chain: if a raw row already exists for this
-    # (as_of_date, user_id), the new row supersedes the current tail.
+    base_dir = Path(args.base_dir).expanduser()
+
+    # Auto-detect supersedes chain from the JSONL (the durable boundary).
+    # Reading from the DB would be faster but would break correction chains
+    # when the DB is absent at write time — subsequent reproject would
+    # faithfully replay `supersedes = None` and leave orphaned raw rows.
+    # JSONL resolution preserves the chain regardless of DB state.
     supersedes_id = _resolve_prior_nutrition_submission(
-        args.db_path, as_of_date=as_of, user_id=args.user_id,
+        base_dir=base_dir, as_of_date=as_of, user_id=args.user_id,
     )
 
     submission = NutritionSubmission(
@@ -712,8 +729,8 @@ def cmd_intake_nutrition(args: argparse.Namespace) -> int:
         supersedes_submission_id=supersedes_id,
     )
 
-    # JSONL audit first (durable boundary).
-    base_dir = Path(args.base_dir).expanduser()
+    # JSONL audit first (durable boundary). base_dir was resolved above for
+    # correction-chain lookup; re-use it here.
     jsonl_path = append_submission_jsonl(submission, base_dir=base_dir)
 
     # DB projection is atomic + fail-soft.
@@ -730,31 +747,26 @@ def cmd_intake_nutrition(args: argparse.Namespace) -> int:
 
 
 def _resolve_prior_nutrition_submission(
-    db_path_arg, *, as_of_date: date, user_id: str,
+    *, base_dir: Path, as_of_date: date, user_id: str,
 ) -> Optional[str]:
-    """Return the latest non-superseded submission_id for the day, or None.
+    """Return the tail-of-chain submission_id for ``(as_of_date, user_id)``.
 
-    If the DB doesn't exist, returns None (no chain to continue). The
-    caller stamps this onto a new submission's ``supersedes_submission_id``
-    to preserve the append-only correction chain (state_model §3).
+    Reads **from the JSONL audit log** (the durable source of truth per
+    state_model_v1.md §3), not the DB. This matters because `hai intake
+    nutrition` can run without a DB (fail-soft write path): if we
+    resolved from the DB only and it were absent, the second write for
+    the same day would stamp ``supersedes_submission_id=None``, and a
+    later reproject would faithfully replay a broken chain. Reading from
+    JSONL closes that gap — chain correctness is independent of DB state.
     """
 
-    from health_agent_infra.state import (
-        latest_nutrition_submission_id,
-        open_connection,
-        resolve_db_path,
+    from health_agent_infra.intake.nutrition import (
+        latest_submission_id_from_jsonl,
     )
 
-    db_path = resolve_db_path(db_path_arg)
-    if not db_path.exists():
-        return None
-    conn = open_connection(db_path)
-    try:
-        return latest_nutrition_submission_id(
-            conn, as_of_date=as_of_date, user_id=user_id,
-        )
-    finally:
-        conn.close()
+    return latest_submission_id_from_jsonl(
+        base_dir, as_of_date=as_of_date, user_id=user_id,
+    )
 
 
 def _project_nutrition_submission_into_state(db_path_arg, submission) -> None:

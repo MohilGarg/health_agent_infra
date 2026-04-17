@@ -84,3 +84,56 @@ def append_submission_jsonl(
     with path.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(submission.to_jsonl_line(), sort_keys=True) + "\n")
     return path
+
+
+def latest_submission_id_from_jsonl(
+    base_dir: Path,
+    *,
+    as_of_date: date,
+    user_id: str,
+) -> Optional[str]:
+    """Return the tail-of-chain submission_id from the JSONL, or None.
+
+    The JSONL is the durable source of truth for correction chains
+    (state_model_v1.md §3). Resolving from JSONL — not the DB — means a
+    DB-absent write still computes a correct ``supersedes_submission_id``,
+    so the append-only chain is never broken by a missing queryable view.
+
+    Scan: collect every submission for ``(as_of_date, user_id)``; track
+    which ones are superseded (i.e., mentioned as another line's
+    ``supersedes_submission_id``); return the latest non-superseded one
+    (by file order — line order matches chronological insert order, since
+    appends are chronological).
+    """
+
+    path = base_dir / NUTRITION_INTAKE_JSONL
+    if not path.exists():
+        return None
+
+    candidate_ids: list[str] = []
+    superseded_ids: set[str] = set()
+    iso = as_of_date.isoformat()
+
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            data = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        # Track supersedes links across ALL lines (even for other days /
+        # users) — a malformed log that points a correction across keys
+        # is unusual but we respect it for consistency with the DB view.
+        prior = data.get("supersedes_submission_id")
+        if prior:
+            superseded_ids.add(prior)
+        # Candidate pool is scoped to the (day, user) we're resolving for.
+        if data.get("as_of_date") == iso and data.get("user_id") == user_id:
+            sub_id = data.get("submission_id")
+            if sub_id:
+                candidate_ids.append(sub_id)
+
+    for sub_id in reversed(candidate_ids):
+        if sub_id not in superseded_ids:
+            return sub_id
+    return None
