@@ -251,8 +251,8 @@ def test_accepted_recovery_insert_sets_projected_at_and_null_corrected_at(tmp_pa
         assert row["chronic_load"] == 380.0
         # acwr_ratio is computed: 400/380
         assert row["acwr_ratio"] == pytest.approx(400.0 / 380.0, rel=0.001)
-        # training_readiness_pct deferred to 7B
-        assert row["training_readiness_pct"] is None
+        # Phase 7B: training_readiness_pct = mean of (82,70,75,88,65) = 76.0
+        assert row["training_readiness_pct"] == pytest.approx(76.0, rel=0.01)
         assert row["body_battery_end_of_day"] == 65
         assert row["projected_at"] is not None
         assert row["corrected_at"] is None

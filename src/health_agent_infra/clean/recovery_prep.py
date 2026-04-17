@@ -142,11 +142,19 @@ def build_raw_summary(
     garmin_resting_hr_recent: list[dict],
     garmin_hrv_recent: list[dict],
     garmin_training_load_7d: list[dict],
+    raw_daily_row: Optional[dict] = None,
 ) -> RawSummary:
     """Compute a RawSummary of deltas/ratios/counts/coverage fractions.
 
     Pure aggregation. No bands, no classifications, no interpretation.
     The agent reads these numbers and decides what they mean.
+
+    ``raw_daily_row`` is the full Garmin CSV row for ``as_of_date`` (as
+    produced by the pull adapter's ``raw_daily_row`` key). When provided,
+    the Garmin-richness fields (all_day_stress, body_battery, intensity
+    minutes, distance, acwr ratio/status, training-readiness components)
+    are populated from it. When absent, those fields stay None — older
+    callers still work unchanged.
     """
 
     as_of = _coerce_date(as_of_date)
@@ -213,6 +221,8 @@ def build_raw_summary(
     cov_hrv = _coverage_fraction(as_of=as_of, dated_records=garmin_hrv_recent, window=7)
     cov_load = _coverage_fraction(as_of=as_of, dated_records=garmin_training_load_7d, window=7)
 
+    garmin_fields = _extract_garmin_richness(raw_daily_row)
+
     return RawSummary(
         schema_version=RAW_SUMMARY_SCHEMA_VERSION,
         as_of_date=as_of,
@@ -234,7 +244,93 @@ def build_raw_summary(
         coverage_rhr_fraction=cov_rhr,
         coverage_hrv_fraction=cov_hrv,
         coverage_training_load_fraction=cov_load,
+        **garmin_fields,
     )
+
+
+# Phase 7B — Garmin-native today-only signals pulled from the raw CSV row.
+_GARMIN_READINESS_COMPONENT_COLUMNS = (
+    "training_readiness_sleep_pct",
+    "training_readiness_hrv_pct",
+    "training_readiness_stress_pct",
+    "training_readiness_sleep_history_pct",
+    "training_readiness_load_pct",
+)
+
+
+def _extract_garmin_richness(raw_daily_row: Optional[dict]) -> dict:
+    """Pull today-only Garmin-native fields from the full CSV row.
+
+    Returns a dict keyed by ``RawSummary`` field names, suitable for
+    ``**kwargs``-expansion. When ``raw_daily_row`` is None (older callers
+    or pull failures), returns defaults — every field None. Numeric
+    coercions are defensive: CSV can arrive with stringified values or
+    pandas/numpy types.
+    """
+
+    if not raw_daily_row:
+        return {}
+
+    def _int(key: str) -> Optional[int]:
+        v = raw_daily_row.get(key)
+        if v is None:
+            return None
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return None
+
+    def _float(key: str) -> Optional[float]:
+        v = raw_daily_row.get(key)
+        if v is None:
+            return None
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return None
+
+    def _str(key: str) -> Optional[str]:
+        v = raw_daily_row.get(key)
+        if v is None:
+            return None
+        s = str(v).strip()
+        return s or None
+
+    # Garmin's native acute/chronic ratio — separate from training_load
+    # ratio computed from RawSummary's trailing-vs-21-day-baseline series.
+    acute = _float("acute_load")
+    chronic = _float("chronic_load")
+    garmin_acwr = None
+    if acute is not None and chronic is not None and chronic != 0:
+        garmin_acwr = round(acute / chronic, 3)
+
+    # Training readiness — mean of the 5 component pcts when all present;
+    # None if any component is missing. Garmin computes its own weighted
+    # overall internally, but that value isn't exported; the mean is a
+    # defensible proxy and is documented as such to the skill.
+    components = [_float(col) for col in _GARMIN_READINESS_COMPONENT_COLUMNS]
+    readiness_pct = (
+        round(sum(components) / len(components), 1)
+        if all(c is not None for c in components)
+        else None
+    )
+
+    return {
+        "all_day_stress": _int("all_day_stress"),
+        "body_battery_end_of_day": _int("body_battery"),
+        "total_distance_m": _float("distance_m"),
+        "moderate_intensity_min": _int("moderate_intensity_min"),
+        "vigorous_intensity_min": _int("vigorous_intensity_min"),
+        "garmin_acwr_ratio": garmin_acwr,
+        "acwr_status": _str("acwr_status"),
+        "training_readiness_level": _str("training_readiness_level"),
+        "training_readiness_pct": readiness_pct,
+        "training_readiness_sleep_pct": components[0],
+        "training_readiness_hrv_pct": components[1],
+        "training_readiness_stress_pct": components[2],
+        "training_readiness_sleep_history_pct": components[3],
+        "training_readiness_load_pct": components[4],
+    }
 
 
 def _coverage_fraction(*, as_of: date, dated_records: list[dict], window: int) -> float:

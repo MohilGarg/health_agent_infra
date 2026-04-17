@@ -46,6 +46,24 @@ Use this when you need a narrower slice than `snapshot` gives — e.g. to inspec
 
 Missing fields mean the source did not report that signal. Do not fabricate.
 
+## Richer Garmin signals (7B)
+
+`hai clean`'s `raw_summary` and `hai state snapshot`'s `recovery.today` both carry a set of Garmin-native today-only fields you should cross-check against your own banding:
+
+- **`training_readiness_pct`** (0–100, float). Mean of five Garmin component pcts (`training_readiness_sleep_pct`, `_hrv_pct`, `_stress_pct`, `_sleep_history_pct`, `_load_pct`). A pre-computed vendor score: useful as a reality check against your own recovery-status classification. **If your agent-computed `recovery_status` is `impaired` but `training_readiness_pct ≥ 75`, name the disagreement in `rationale[]` and lean towards the higher-coverage signal** (usually Garmin's, because it sees overnight sleep components you don't).
+  - `training_readiness_level` (categorical string — e.g. `"High"`, `"Moderate"`, `"Low"`). Garmin's banded label. Surface it alongside the pct in rationale.
+- **`all_day_stress`** (0–100, int). Garmin's own all-day stress score. Combine with the user's `manual_stress_score` (from the `stress` snapshot block) when the manual is present; fall back to this alone when it isn't.
+- **`body_battery_end_of_day`** (0–100, int). Garmin's energy reserve proxy at day-end.
+- **`garmin_acwr_ratio`** (float). Acute-chronic workload ratio computed from Garmin's `acute_load`/`chronic_load`. Distinct from the `training_load_ratio_vs_baseline` you compute from the 7-day-vs-28-day window — Garmin uses its own time windows. Use both: they should agree directionally on spike days.
+  - `acwr_status` (categorical string — `"Optimal"`, `"Undertrained"`, `"Overreaching"`, etc.). Garmin's band on that ratio.
+- **`moderate_intensity_min`, `vigorous_intensity_min`, `total_distance_m`** (ints / float). Intensity-minute and distance totals for the day. Useful context when a session's already started before you run.
+
+**How to use these in classification.** Your existing bands (sleep debt, RHR, HRV, load) stay authoritative — they're deterministic and transparent. The Garmin signals are a **sanity layer**: if your agent-computed `readiness_score` diverges sharply from `training_readiness_pct` (say, by > 20 percentage points), that's a signal to lower confidence from `high` to `moderate` and name the divergence in `uncertainty[]` as `agent_garmin_readiness_disagreement`.
+
+**What you do NOT do.** Do not override your agent bands with Garmin bands. Do not invent weighted blends. The skill's job is to interpret state; the runtime's job (enforced by `hai writeback`) is to bound what you emit. Surface vendor-pre-computed signals as cross-checks, not as replacements.
+
+Missing fields in this block mean Garmin didn't record that signal. Do not fabricate. Add a specific uncertainty token per missing field (e.g. `training_readiness_pct_unavailable`, `body_battery_unavailable`).
+
 ## Step 1 — Classify state
 
 Produce these intermediate classifications before you reach for a recommendation. They are not persisted; they inform your reasoning and should appear in your `rationale[]`.

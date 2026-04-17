@@ -105,6 +105,11 @@ _V1_REQUIRED_FIELDS: dict[str, frozenset[str]] = {
         "sleep_hours", "resting_hr", "hrv_ms", "all_day_stress",
         "acute_load", "chronic_load", "acwr_ratio",
         "body_battery_end_of_day",
+        # Phase 7B: training_readiness_pct is computed from five Garmin
+        # component pcts. When Garmin records them all, this field is
+        # populated; a missing value is honest partial (Garmin didn't
+        # compute readiness for that day — usually missing overnight sleep).
+        "training_readiness_pct",
         # manual_stress_score is user-reported and must flow through
         # stress_manual_raw → accepted recovery (7C). Until 7C ships, a
         # clean-only pipeline cannot populate it, so it is NOT part of the

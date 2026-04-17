@@ -66,6 +66,10 @@ class RawSummary:
 
     Deterministic. No bands, no classifications, no scores. The agent reads
     these numbers and applies judgment via the recovery-readiness skill.
+
+    Garmin-richness fields (7B) are today-only (no baseline/ratio yet);
+    they surface the vendor's own scores and aggregates so the skill can
+    cross-check its own bands against pre-computed vendor judgment.
     """
 
     schema_version: str
@@ -93,6 +97,31 @@ class RawSummary:
     coverage_rhr_fraction: float
     coverage_hrv_fraction: float
     coverage_training_load_fraction: float
+
+    # Phase 7B — Garmin-native signals (today only; no baseline in v1).
+    all_day_stress: Optional[int] = None
+    body_battery_end_of_day: Optional[int] = None
+
+    # Running-aggregate proxies (daily-grain; see accepted_running_state).
+    total_distance_m: Optional[float] = None
+    moderate_intensity_min: Optional[int] = None
+    vigorous_intensity_min: Optional[int] = None
+
+    # Garmin's native acute-chronic ratio + its banded status label.
+    garmin_acwr_ratio: Optional[float] = None
+    acwr_status: Optional[str] = None
+
+    # Garmin Training Readiness — overall + five component pcts. The
+    # overall pct is computed as the mean of the five components when
+    # all five are present; None otherwise. training_readiness_level
+    # preserves Garmin's categorical band (e.g. "High", "Moderate").
+    training_readiness_level: Optional[str] = None
+    training_readiness_pct: Optional[float] = None
+    training_readiness_sleep_pct: Optional[float] = None
+    training_readiness_hrv_pct: Optional[float] = None
+    training_readiness_stress_pct: Optional[float] = None
+    training_readiness_sleep_history_pct: Optional[float] = None
+    training_readiness_load_pct: Optional[float] = None
 
     def to_dict(self) -> dict:
         data = asdict(self)

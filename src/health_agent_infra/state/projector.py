@@ -343,6 +343,38 @@ def _acwr_ratio_from_raw(raw_row: dict) -> Optional[float]:
     return round(float(acute) / float(chronic), 3)
 
 
+_TRAINING_READINESS_COMPONENT_COLUMNS = (
+    "training_readiness_sleep_pct",
+    "training_readiness_hrv_pct",
+    "training_readiness_stress_pct",
+    "training_readiness_sleep_history_pct",
+    "training_readiness_load_pct",
+)
+
+
+def _training_readiness_pct_from_raw(raw_row: dict) -> Optional[float]:
+    """Mean of the five Garmin readiness component pcts; None if any missing.
+
+    Garmin computes its own weighted overall readiness, but that number isn't
+    exported in daily_summary_export.csv — only the five dimension pcts are.
+    The mean is a defensible proxy (7B). Agents that want stricter fidelity
+    should read the components directly from RawSummary instead.
+    """
+
+    vals: list[float] = []
+    for col in _TRAINING_READINESS_COMPONENT_COLUMNS:
+        v = raw_row.get(col)
+        if v is None:
+            return None
+        try:
+            vals.append(float(v))
+        except (TypeError, ValueError):
+            return None
+    if not vals:
+        return None
+    return round(sum(vals) / len(vals), 1)
+
+
 def project_accepted_recovery_state_daily(
     conn: sqlite3.Connection,
     *,
@@ -360,7 +392,7 @@ def project_accepted_recovery_state_daily(
     per the hybrid correction grammar (state_model_v1.md §3). Returns
     ``True`` if this was an insert, ``False`` on update.
 
-    **Scope (7A.3):** this projector only writes Garmin-sourced fields.
+    **Scope.** Writes Garmin-sourced fields only.
     ``manual_stress_score`` is intentionally **not** written here — it is a
     user-reported fact that must land in ``stress_manual_raw`` first (so the
     raw→accepted audit chain holds), then be merged into this row by a
@@ -368,7 +400,8 @@ def project_accepted_recovery_state_daily(
     stress`` command. Until then, ``manual_stress_score`` stays NULL on
     every accepted recovery row written by this function.
 
-    ``training_readiness_pct`` is similarly deferred to 7B.
+    ``training_readiness_pct`` is populated as the mean of the five Garmin
+    readiness component pcts (7B). None if any component is missing.
 
     ``commit_after``: set False when composing inside an outer transaction.
     """
@@ -385,6 +418,7 @@ def project_accepted_recovery_state_daily(
 
     sleep_hours = _sleep_hours_from_raw(raw_row)
     acwr = _acwr_ratio_from_raw(raw_row)
+    training_readiness_pct = _training_readiness_pct_from_raw(raw_row)
 
     values = (
         sleep_hours,
@@ -395,7 +429,7 @@ def project_accepted_recovery_state_daily(
         raw_row.get("acute_load"),
         raw_row.get("chronic_load"),
         acwr,
-        None,  # training_readiness_pct — deferred to 7B
+        training_readiness_pct,  # 7B: mean of 5 component pcts
         raw_row.get("body_battery"),
         derived_from_json,
         source,

@@ -143,6 +143,7 @@ def cmd_clean(args: argparse.Namespace) -> int:
         garmin_resting_hr_recent=pull.get("resting_hr", []),
         garmin_hrv_recent=pull.get("hrv", []),
         garmin_training_load_7d=pull.get("training_load", []),
+        raw_daily_row=pull.get("raw_daily_row"),
     )
 
     raw_row = pull.get("raw_daily_row")
