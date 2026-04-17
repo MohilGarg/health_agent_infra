@@ -65,4 +65,5 @@ Without that, deferred items stay deferred.
 
 - [canonical_doctrine.md](canonical_doctrine.md)
 - [flagship_loop_spec.md](flagship_loop_spec.md)
-- [minimal_policy_rules.md](minimal_policy_rules.md)
+- `skills/recovery-readiness/SKILL.md` (contains R1–R6 policy gates)
+- `src/health_agent_infra/validate.py` (code-enforced R2/R3/R4 at the writeback boundary)

@@ -1,7 +1,7 @@
 ---
 name: merge-human-inputs
-description: Take a raw human input — typed note, voice transcript, structured answer — and partition it into the master dataset slots the deterministic runtime expects. Use when the user volunteers information outside a structured form, or when typed intake is needed for the flagship loop.
-allowed-tools: Read, Write, Bash(hai intake *)
+description: Take a raw human input — typed note, voice transcript, structured answer — and partition it into the master dataset slots the deterministic runtime expects. Use when the user volunteers information outside a structured form, or when typed manual readiness is needed for the flagship loop.
+allowed-tools: Read, Write, Bash(hai pull *), Bash(hai intake *)
 disable-model-invocation: false
 ---
 
@@ -25,7 +25,7 @@ When the user is starting a day and hasn't yet done their readiness check, ask f
 3. **Planned session** — free text, but encourage one of: `easy`, `moderate`, `hard`, `intervals`, `race`, `rest`. If the user says "I'm going for a 10k tempo run", route to `hard`. If the user says "probably mobility", route to `moderate` or `rest` depending on intent.
 4. **Active goal** — free text. Examples: `strength_block`, `endurance_taper`, `5k_pr_build`, `marathon_base`, `bf_reduction`, `movement_maintenance`. Whatever the user says — this is their framing, not yours.
 
-Emit a single JSON object with those four keys plus `submission_id` (`m_ready_<date>_<random>`) and pipe to `hai intake readiness` for validation and persistence.
+Emit a single JSON object with those four keys plus `submission_id` (`m_ready_<date>_<random>`). Write it to a temp file, then pass that path to `hai pull --manual-readiness-json <path>` — the evidence emitted by `hai pull` will carry the manual-readiness payload through `hai clean` into `raw_summary`. A dedicated `hai intake readiness` subcommand is planned (see `STATUS.md`) to accept the four fields as CLI flags for simpler invocation; until then, the JSON-file path is the honest flagship path.
 
 ## When the user volunteers unstructured input
 

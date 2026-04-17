@@ -53,7 +53,13 @@ Optimize only for: conceptual discipline, narrowness, inspectability, boundednes
 
 - [canonical_doctrine.md](canonical_doctrine.md)
 - [flagship_loop_spec.md](flagship_loop_spec.md)
-- [state_object_schema.md](state_object_schema.md)
-- [recommendation_object_schema.md](recommendation_object_schema.md)
-- [minimal_policy_rules.md](minimal_policy_rules.md)
 - [explicit_non_goals.md](explicit_non_goals.md)
+- [tour.md](tour.md)
+- [phase_timeline.md](phase_timeline.md)
+- [agent_integration.md](agent_integration.md)
+
+Note: this brief predates the 2026-04-17 reshape. It references some schema and policy docs (`state_object_schema.md`, `recommendation_object_schema.md`, `minimal_policy_rules.md`) that were retired in commit 4c of the reshape. The current equivalents are:
+
+- classification rules + policy + recommendation shape -> `skills/recovery-readiness/SKILL.md`
+- recommendation dataclass -> `src/health_agent_infra/schemas.py`
+- code-enforced invariants -> `src/health_agent_infra/validate.py`

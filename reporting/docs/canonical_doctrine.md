@@ -70,18 +70,20 @@ Evaluates outcomes and updates memory / pattern understanding. A loop without re
 
 ### Layer -> bucket mapping
 
-The eight-bucket repo model remains the workstream organisation. The runtime layers map onto it as follows:
+The eight-bucket model is the project's organising frame. After the 2026-04-17 reshape, the Python implementation lives at `src/health_agent_infra/` with subpackages (`pull/`, `clean/`, `writeback/`, `review/`) mirroring the runtime layers; top-level directories (`safety/tests/`, `reporting/`, `merge_human_inputs/`) hold tests, artifacts, docs, and examples.
 
-- `pull/` -> PULL
-- `clean/` -> CLEAN
-- `merge_human_inputs/` -> PULL (human evidence) and STATE update surface
-- `interpretation/` -> RECOMMEND
-- `writeback/` -> ACTION and STATE persistence
-- `safety/` -> POLICY
-- `reporting/` -> proof and output surfaces for all layers
-- `research/` -> exploratory support, outside the runtime
+Runtime layer -> surface:
 
-This mapping is interpretive. Sub-namespaces inside a bucket (for example `clean/health_model/`) are implementation locations within that bucket's runtime role, not new canonical categories.
+- PULL -> `src/health_agent_infra/pull/` (Garmin adapter) + `hai pull` CLI
+- CLEAN -> `src/health_agent_infra/clean/` (CleanedEvidence + RawSummary) + `hai clean`
+- STATE / POLICY / RECOMMEND -> `skills/recovery-readiness/SKILL.md` (agent-owned judgment, not Python)
+- ACTION -> `src/health_agent_infra/writeback/` + `src/health_agent_infra/validate.py` (code-enforced boundary) + `hai writeback`
+- REVIEW -> `src/health_agent_infra/review/` + `hai review`
+- Human input -> `skills/merge-human-inputs/SKILL.md` (agent partitions raw input into typed slots) + `merge_human_inputs/examples/`
+- Safety -> `skills/safety/SKILL.md` (fail-closed rules the agent obeys) + `src/health_agent_infra/validate.py` (R2 banned tokens, action/confidence enums, R4 review window) + `safety/tests/`
+- Reporting -> `skills/reporting/SKILL.md` (narration voice) + `reporting/docs/` (doctrine) + `reporting/artifacts/` (proof bundles)
+
+The bucket model is a conceptual category system, not a package-find directive. The installable package's physical layout is `src/health_agent_infra/`.
 
 ## Scope doctrine
 
@@ -111,7 +113,7 @@ State is first-class. The system does not rely on implicit state buried in prose
 
 ## Doctrine on policy
 
-Policy is executable. At least one minimal policy rule set must run as code and be test-covered. Prose-only safety claims do not count.
+Policy has two faces: **reasoning** and **enforcement**. Reasoning is how an agent decides when to block, soften, or escalate given evidence — that lives in `skills/recovery-readiness/SKILL.md` where it can be read, revised, and argued with. Enforcement is the invariant check that the runtime code must hold regardless of how the agent reasoned — that lives in `src/health_agent_infra/validate.py` with one test per invariant id. Prose-only safety claims are not enough; every invariant the doctrine promises must have a code gate backing it.
 
 ## Doctrine on review
 
@@ -133,9 +135,13 @@ When tradeoffs arise, these dominate in this order:
 
 ## Links
 
-- [chief_operational_brief_2026-04-16.md](chief_operational_brief_2026-04-16.md)
-- [flagship_loop_spec.md](flagship_loop_spec.md)
-- [state_object_schema.md](state_object_schema.md)
-- [recommendation_object_schema.md](recommendation_object_schema.md)
-- [minimal_policy_rules.md](minimal_policy_rules.md)
+- [chief_operational_brief_2026-04-16.md](chief_operational_brief_2026-04-16.md) — founder brief, captured 2026-04-16
+- [flagship_loop_spec.md](flagship_loop_spec.md) — loop shape + inputs + outputs
+- [tour.md](tour.md) — 10-minute guided walkthrough
+- [phase_timeline.md](phase_timeline.md) — how the repo got here
+- [agent_integration.md](agent_integration.md) — how a Claude agent installs + consumes
+- [explicit_non_goals.md](explicit_non_goals.md) — what the project refuses to build
+- `skills/recovery-readiness/SKILL.md` — classify state, apply policy, shape recommendation (agent-owned judgment)
+- `src/health_agent_infra/validate.py` — code-enforced invariants the runtime guarantees
+- `src/health_agent_infra/schemas.py` — typed dataclasses at the tool boundary
 - [explicit_non_goals.md](explicit_non_goals.md)

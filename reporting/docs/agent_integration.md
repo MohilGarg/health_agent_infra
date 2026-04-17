@@ -80,9 +80,21 @@ No MCP server ships yet. A future wrapper could expose the CLI subcommands as MC
 
 ## Where the determinism boundary is
 
-**Schema validation at `hai writeback`.** When the agent produces a `TrainingRecommendation` JSON, the tool deserializes and validates against the dataclass shape in `src/health_agent_infra/schemas.py`. Missing required fields, wrong types, or unknown action values fail closed with a clear error, and nothing persists. This is the one place the runtime enforces the agent's output shape.
+**`hai writeback` calls `src/health_agent_infra/validate.py::validate_recommendation_dict` before any side effect.** That pure function enforces the following invariants — each with a stable machine-readable `invariant` id that the CLI surfaces in stderr on failure:
 
-Everything upstream of that (pull, clean) is deterministic pure functions on evidence. Everything downstream (writeback, review) is idempotent persistence with locality enforcement.
+- `required_fields_present` — every required key exists in the JSON
+- `schema_version` — exact match against the runtime's `RECOMMENDATION_SCHEMA_VERSION`
+- `action_enum` — `action` is one of the six-value `ActionKind` set (runtime-enforced; `Literal` types in Python are compile-time hints only)
+- `confidence_enum` — `confidence` ∈ {`low`, `moderate`, `high`}
+- `bounded_true` — `bounded is True`
+- `no_banned_tokens` — R2: none of the ten banned diagnosis-shaped tokens appear in `rationale[]` or `action_detail` values (case-insensitive)
+- `follow_up_shape` — `follow_up` is an object carrying `review_at`, `review_question`, `review_event_id`
+- `review_at_within_24h` — R4: `review_at` is within 24 hours of `issued_at` and not before
+- `policy_decisions_present` — at least one `PolicyDecision` entry is recorded
+
+Violations exit with code 2 and stderr `writeback rejected: invariant=<id>: <message>`. Nothing persists. Callers can pattern-match on the invariant id without parsing prose.
+
+Everything upstream (pull, clean) is deterministic pure functions on evidence. Everything downstream (writeback, review) is idempotent persistence with locality enforcement (`base_dir` must be a path segment named `recovery_readiness_v1`).
 
 ## What an agent should NOT do
 

@@ -1,21 +1,13 @@
-"""Protocol for flagship pull adapters feeding recovery_readiness_v1.
+"""Protocol for flagship pull adapters.
 
-This Protocol captures the *thin* flagship contract: a named source and a
+This Protocol captures the thin flagship contract: a named source and a
 deterministic loader that returns evidence in the dict shape
-``clean.health_model.recovery_readiness_v1.clean.clean_inputs`` consumes.
+``health_agent_infra.clean.recovery_prep.clean_inputs`` consumes (keys
+``sleep``, ``resting_hr``, ``hrv``, ``training_load``).
 
-It is deliberately narrower than the broader multi-source platform contract
-at ``reporting/docs/source_adapter_contract_v1.md``, which governs adapters
-that emit the full canonical artifact family (``source_record``,
-``provenance_record``, ``sleep_daily``, ``readiness_daily``,
-``training_session``, ``daily_health_snapshot``). The flagship slice does
-not require that broader emission; it consumes a thin dict and does not
-produce canonical artifacts. The two contracts serve different layers and
-do not conflict.
-
-Conformance is structural. No inheritance is required. See
-``pull/garmin/recovery_readiness_adapter.py::GarminRecoveryReadinessAdapter``
-for the reference conformer.
+Conformance is structural — no inheritance required. See
+``health_agent_infra.pull.garmin.GarminRecoveryReadinessAdapter`` for the
+reference conformer.
 """
 
 from __future__ import annotations

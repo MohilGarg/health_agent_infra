@@ -1,17 +1,29 @@
 # merge_human_inputs
 
-This lane owns the bounded slice of human-authored input surfaces introduced in structure-migration slice 1.
+This bucket holds examples and docs for the human-input intake surface. Typed intake logic itself is not a Python module in this tree — it's an agent concern described by the `merge-human-inputs` skill.
 
-Contents:
-- `intake/voice_note_intake.py`: canonical voice-note intake and bundle shaping
-- `intake/typed_manual_readiness_intake.py`: canonical typed/manual readiness intake and subjective-day normalization
-- `manual_logs/manual_logging.py`: canonical manual logging builders for hydration, meals, and gym sets
-- `examples/manual_gym_sessions.example.json`: manual gym logging example payload
-- `health_logger/`: migrated logger app surfaces previously rooted at `bot/`
+## What lives here
 
-Compatibility shims remain at:
-- `health_model.voice_note_intake`
-- `health_model.manual_logging`
-- `merge_human_inputs.bot.*`
+- `examples/` — example payloads illustrating the shape of structured human input the flagship loop consumes. Useful for:
+  - hand-crafting a `--manual-readiness-json` file to pass to `hai pull`
+  - reference when authoring or revising the merge-human-inputs skill
+  - regression fixtures if we add intake-validation tests later
 
-Those wrappers preserve current entrypoints while the new canonical lane becomes the architectural source of truth for this slice.
+## What used to live here
+
+Before the 2026-04-17 reshape, this bucket contained `intake/` Python modules (`typed_manual_readiness_intake.py`, `voice_note_intake.py`) and `manual_logs/manual_logging.py` that did structured parsing and canonicalisation. The reshape swept those because the judgment they encoded (how to classify free-text soreness language, how to route an ambiguous voice note, etc.) is agent work. That judgment is now expressed in `skills/merge-human-inputs/SKILL.md`.
+
+The flagship Python only sees the *output* of the intake step — a validated manual-readiness dict with `soreness`, `energy`, `planned_session_type`, `active_goal`, `submission_id`. See `src/health_agent_infra/schemas.py::CleanedEvidence` for how the flagship consumes it.
+
+## How intake works now
+
+The agent reads the merge-human-inputs skill and partitions raw user input into dataset slots. For the flagship hot path (manual readiness), the agent constructs a JSON object with the four required fields and passes it either:
+
+- directly via `hai pull --manual-readiness-json <path>`, or
+- as a stdin blob captured by a future `hai intake readiness` subcommand (planned; see `STATUS.md`).
+
+The runtime does not attempt to parse free text. If the skill returns ambiguous input, the agent asks a clarifying question before calling `hai`.
+
+## Why keep the bucket
+
+The eight-bucket mental model remains the project's organising frame even though physical Python modules moved under `src/health_agent_infra/`. `merge_human_inputs/` holds this README + examples so anyone navigating the repo or the controlling doctrine can find the intake bucket where it's expected. It is not a Python package.
