@@ -279,6 +279,58 @@ load_spike              = 0.15
 r6_resting_hr_spike_days_threshold = 3
 
 # ---------------------------------------------------------------------------
+# Running domain — classification (Phase 2)
+# ---------------------------------------------------------------------------
+
+[classify.running.weekly_mileage_trend_band]
+# Boundaries on weekly_mileage_ratio (current 7d / trailing 28d-week-mean
+# baseline). A value AT a boundary lands in the higher band.
+very_low_max_ratio = 0.5
+low_max_ratio      = 0.8
+moderate_max_ratio = 1.2
+high_max_ratio     = 1.5
+
+[classify.running.hard_session_load_band]
+# Boundaries on count of days in the last 7 with vigorous-intensity activity
+# >= 30 minutes. heavy = strictly greater than moderate_max_count.
+light_max_count    = 1
+moderate_max_count = 2
+
+[classify.running.freshness_band]
+# Boundaries on acwr_ratio. fatigued/overreaching boundaries are aligned
+# with the synthesis-layer X3a (1.3-1.5 -> soften) and X3b (>=1.5 -> block)
+# rules so synthesis can read the band directly.
+fresh_max_ratio    = 0.8
+neutral_max_ratio  = 1.3
+fatigued_max_ratio = 1.5
+
+[classify.running.recovery_adjacent_band]
+favourable_min_training_readiness_pct  = 70
+compromised_max_training_readiness_pct = 40
+
+[classify.running.readiness_score_penalty]
+# Negative values are bonuses (raise the score).
+mileage_trend_high           = 0.05
+mileage_trend_very_high      = 0.15
+hard_session_load_moderate   = 0.05
+hard_session_load_heavy      = 0.15
+freshness_fresh              = -0.02
+freshness_fatigued           = 0.15
+freshness_overreaching       = 0.30
+recovery_adjacent_favourable = -0.05
+recovery_adjacent_compromised = 0.20
+
+# ---------------------------------------------------------------------------
+# Running domain — policy rules
+# ---------------------------------------------------------------------------
+
+[policy.running]
+# R-acwr-spike: escalate when ACWR is at or above this ratio. Aligned with
+# X3b (>=1.5 -> block any hard session) so the running domain has its own
+# forced action even when synthesis is not run.
+r_acwr_spike_min_ratio = 1.5
+
+# ---------------------------------------------------------------------------
 # Synthesis layer — X-rule triggers
 # ---------------------------------------------------------------------------
 

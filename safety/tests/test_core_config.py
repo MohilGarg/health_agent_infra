@@ -161,6 +161,23 @@ def test_scaffold_thresholds_toml_is_parseable_and_yields_defaults(tmp_path: Pat
     assert merged == DEFAULT_THRESHOLDS
 
 
+def test_scaffold_thresholds_toml_includes_running_sections():
+    """Phase 2 step 3: `hai config init` must scaffold the new running
+    sections so users can override them without hand-authoring TOML."""
+
+    text = scaffold_thresholds_toml()
+    required_sections = [
+        "[classify.running.weekly_mileage_trend_band]",
+        "[classify.running.hard_session_load_band]",
+        "[classify.running.freshness_band]",
+        "[classify.running.recovery_adjacent_band]",
+        "[classify.running.readiness_score_penalty]",
+        "[policy.running]",
+    ]
+    missing = [s for s in required_sections if s not in text]
+    assert not missing, f"scaffold TOML missing running sections: {missing}"
+
+
 # ---------------------------------------------------------------------------
 # user_config_path
 # ---------------------------------------------------------------------------

@@ -25,6 +25,7 @@ from health_agent_infra.domains.running.schemas import (
     RunningProposal,
     RunningRecommendation,
 )
+from health_agent_infra.domains.running.signals import derive_running_signals
 
 __all__ = [
     "ClassifiedRunningState",
@@ -37,5 +38,6 @@ __all__ = [
     "RunningProposal",
     "RunningRecommendation",
     "classify_running_state",
+    "derive_running_signals",
     "evaluate_running_policy",
 ]

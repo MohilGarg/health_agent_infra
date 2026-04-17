@@ -220,14 +220,14 @@ def test_snapshot_full_bundle_surfaces_policy_force_when_sparse(tmp_path: Path, 
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("domain,expected_keys", [
-    ("running", {"today", "history", "missingness"}),
+    # Running expanded in Phase 2 step 3 (see test_snapshot_running_*).
     ("gym", {"today", "history", "missingness"}),
     ("nutrition", {"today", "history", "missingness"}),
 ])
 def test_snapshot_other_domains_unchanged_with_evidence_json(
     tmp_path: Path, capsys, domain: str, expected_keys: set[str]
 ):
-    """Other domains keep v1.0 shape until their own classify/policy lands.
+    """Domains without their own classify/policy yet keep v1.0 shape.
     A snapshot with --evidence-json must not accidentally expand them.
     """
 
@@ -241,6 +241,263 @@ def test_snapshot_other_domains_unchanged_with_evidence_json(
     ])
     payload = json.loads(capsys.readouterr().out)
     assert set(payload[domain].keys()) == expected_keys
+
+
+# ---------------------------------------------------------------------------
+# Running block — additive expansion under --evidence-json (Phase 2 step 3)
+# ---------------------------------------------------------------------------
+
+def _write_clean_bundle_with_running(tmp_path: Path, **overrides) -> Path:
+    """Same as _write_clean_bundle but adds running-relevant raw_summary keys."""
+
+    bundle = {
+        "cleaned_evidence": {
+            "as_of_date": "2026-04-17",
+            "user_id": "u_local_1",
+            "sleep_hours": 8.0,
+            "resting_hr": 52.0,
+            "hrv_ms": 80.0,
+            "soreness_self_report": "low",
+        },
+        "raw_summary": {
+            "as_of_date": "2026-04-17",
+            "user_id": "u_local_1",
+            "resting_hr_baseline": 52.0,
+            "resting_hr_ratio_vs_baseline": 1.0,
+            "hrv_ratio_vs_baseline": 1.0,
+            "trailing_7d_training_load": 400.0,
+            "training_load_baseline": 400.0,
+            "training_load_ratio_vs_baseline": 1.0,
+            "resting_hr_spike_days": 0,
+            # Running-relevant raw_summary keys.
+            "garmin_acwr_ratio": 1.1,
+            "training_readiness_component_mean_pct": 75.0,
+        },
+    }
+    for key, value in overrides.items():
+        if key in bundle["cleaned_evidence"]:
+            bundle["cleaned_evidence"][key] = value
+        else:
+            bundle["raw_summary"][key] = value
+    path = tmp_path / "cleaned_running.json"
+    path.write_text(json.dumps(bundle), encoding="utf-8")
+    return path
+
+
+def test_snapshot_running_block_v1_0_keys_preserved_under_evidence_json(
+    tmp_path: Path, capsys,
+):
+    """Additive expansion guarantee: today/history/missingness still present."""
+
+    db = _init_db(tmp_path)
+    bundle_path = _write_clean_bundle_with_running(tmp_path)
+    cli_main([
+        "state", "snapshot",
+        "--as-of", "2026-04-17", "--user-id", "u_local_1",
+        "--db-path", str(db),
+        "--evidence-json", str(bundle_path),
+    ])
+    payload = json.loads(capsys.readouterr().out)
+    assert {"today", "history", "missingness"}.issubset(payload["running"].keys())
+
+
+def test_snapshot_running_block_adds_signals_classified_policy_under_evidence_json(
+    tmp_path: Path, capsys,
+):
+    """The Phase 2 step 3 expansion adds three keys, no more."""
+
+    db = _init_db(tmp_path)
+    bundle_path = _write_clean_bundle_with_running(tmp_path)
+    cli_main([
+        "state", "snapshot",
+        "--as-of", "2026-04-17", "--user-id", "u_local_1",
+        "--db-path", str(db),
+        "--evidence-json", str(bundle_path),
+    ])
+    payload = json.loads(capsys.readouterr().out)
+    assert set(payload["running"].keys()) == {
+        "today", "history", "missingness",
+        "signals", "classified_state", "policy_result",
+    }
+
+
+def test_snapshot_running_block_unchanged_without_evidence_json(
+    tmp_path: Path, capsys,
+):
+    """No --evidence-json => running block stays v1.0."""
+
+    db = _init_db(tmp_path)
+    cli_main([
+        "state", "snapshot",
+        "--as-of", "2026-04-17", "--user-id", "u_local_1",
+        "--db-path", str(db),
+    ])
+    payload = json.loads(capsys.readouterr().out)
+    assert set(payload["running"].keys()) == {"today", "history", "missingness"}
+
+
+def test_snapshot_running_signals_keys_match_classify_input_contract(
+    tmp_path: Path, capsys,
+):
+    """signals dict must carry exactly the keys classify_running_state reads,
+    so a future classify-side rename surfaces here as a contract violation
+    rather than at agent-prompt time."""
+
+    db = _init_db(tmp_path)
+    bundle_path = _write_clean_bundle_with_running(tmp_path)
+    cli_main([
+        "state", "snapshot",
+        "--as-of", "2026-04-17", "--user-id", "u_local_1",
+        "--db-path", str(db),
+        "--evidence-json", str(bundle_path),
+    ])
+    payload = json.loads(capsys.readouterr().out)
+    signals = payload["running"]["signals"]
+    assert set(signals.keys()) == {
+        "weekly_mileage_m",
+        "weekly_mileage_baseline_m",
+        "recent_hard_session_count_7d",
+        "acwr_ratio",
+        "training_readiness_pct",
+        "sleep_debt_band",
+        "resting_hr_band",
+    }
+
+
+def test_snapshot_running_signals_carry_acwr_and_training_readiness_from_raw_summary(
+    tmp_path: Path, capsys,
+):
+    db = _init_db(tmp_path)
+    bundle_path = _write_clean_bundle_with_running(
+        tmp_path,
+        garmin_acwr_ratio=1.4,
+        training_readiness_component_mean_pct=55.0,
+    )
+    cli_main([
+        "state", "snapshot",
+        "--as-of", "2026-04-17", "--user-id", "u_local_1",
+        "--db-path", str(db),
+        "--evidence-json", str(bundle_path),
+    ])
+    payload = json.loads(capsys.readouterr().out)
+    signals = payload["running"]["signals"]
+    assert signals["acwr_ratio"] == 1.4
+    assert signals["training_readiness_pct"] == 55.0
+
+
+def test_snapshot_running_signals_pull_recovery_bands_for_cross_domain_peek(
+    tmp_path: Path, capsys,
+):
+    """sleep_debt_band + resting_hr_band on signals echo recovery's
+    classified_state — that's the cross-domain peek the running domain
+    consumes (no separate Garmin re-pull)."""
+
+    db = _init_db(tmp_path)
+    bundle_path = _write_clean_bundle_with_running(tmp_path, sleep_hours=6.5)
+    cli_main([
+        "state", "snapshot",
+        "--as-of", "2026-04-17", "--user-id", "u_local_1",
+        "--db-path", str(db),
+        "--evidence-json", str(bundle_path),
+    ])
+    payload = json.loads(capsys.readouterr().out)
+    recovery = payload["recovery"]["classified_state"]
+    signals = payload["running"]["signals"]
+    assert signals["sleep_debt_band"] == recovery["sleep_debt_band"]
+    assert signals["resting_hr_band"] == recovery["resting_hr_band"]
+    assert signals["sleep_debt_band"] == "moderate"  # 6.5h sleep → moderate
+
+
+def test_snapshot_running_classified_state_has_all_running_band_keys(
+    tmp_path: Path, capsys,
+):
+    db = _init_db(tmp_path)
+    bundle_path = _write_clean_bundle_with_running(tmp_path)
+    cli_main([
+        "state", "snapshot",
+        "--as-of", "2026-04-17", "--user-id", "u_local_1",
+        "--db-path", str(db),
+        "--evidence-json", str(bundle_path),
+    ])
+    payload = json.loads(capsys.readouterr().out)
+    classified = payload["running"]["classified_state"]
+    assert set(classified.keys()) == {
+        "weekly_mileage_trend_band",
+        "hard_session_load_band",
+        "freshness_band",
+        "recovery_adjacent_band",
+        "coverage_band",
+        "running_readiness_status",
+        "readiness_score",
+        "uncertainty",
+    }
+    assert isinstance(classified["uncertainty"], list)
+
+
+def test_snapshot_running_policy_result_has_three_decisions(
+    tmp_path: Path, capsys,
+):
+    db = _init_db(tmp_path)
+    bundle_path = _write_clean_bundle_with_running(tmp_path)
+    cli_main([
+        "state", "snapshot",
+        "--as-of", "2026-04-17", "--user-id", "u_local_1",
+        "--db-path", str(db),
+        "--evidence-json", str(bundle_path),
+    ])
+    payload = json.loads(capsys.readouterr().out)
+    policy = payload["running"]["policy_result"]
+    assert set(policy.keys()) == {
+        "policy_decisions",
+        "forced_action",
+        "forced_action_detail",
+        "capped_confidence",
+    }
+    rule_ids = {d["rule_id"] for d in policy["policy_decisions"]}
+    assert rule_ids == {
+        "require_min_coverage",
+        "no_high_confidence_on_sparse_signal",
+        "acwr_spike_escalation",
+    }
+
+
+def test_snapshot_running_policy_escalates_on_acwr_spike(
+    tmp_path: Path, capsys,
+):
+    """ACWR ≥ 1.5 in raw_summary forces escalate via the running R-rule."""
+
+    db = _init_db(tmp_path)
+    bundle_path = _write_clean_bundle_with_running(tmp_path, garmin_acwr_ratio=1.6)
+    cli_main([
+        "state", "snapshot",
+        "--as-of", "2026-04-17", "--user-id", "u_local_1",
+        "--db-path", str(db),
+        "--evidence-json", str(bundle_path),
+    ])
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["running"]["classified_state"]["freshness_band"] == "overreaching"
+    assert payload["running"]["policy_result"]["forced_action"] == "escalate_for_user_review"
+
+
+def test_snapshot_running_expansion_does_not_modify_recovery_block_keys(
+    tmp_path: Path, capsys,
+):
+    """Adding running expansion must leave recovery's full-bundle key set
+    exactly as Phase 1 froze it."""
+
+    db = _init_db(tmp_path)
+    bundle_path = _write_clean_bundle_with_running(tmp_path)
+    cli_main([
+        "state", "snapshot",
+        "--as-of", "2026-04-17", "--user-id", "u_local_1",
+        "--db-path", str(db),
+        "--evidence-json", str(bundle_path),
+    ])
+    payload = json.loads(capsys.readouterr().out)
+    assert set(payload["recovery"].keys()) == {
+        "today", "history", "missingness",
+        "evidence", "raw_summary", "classified_state", "policy_result",
+    }
 
 
 # ---------------------------------------------------------------------------

@@ -215,19 +215,29 @@ def build_snapshot(
     inject a fixed value to exercise both sides of the 23:30 cutover.
 
     ``evidence_bundle`` is a ``dict`` matching the stdout of ``hai clean``
-    (keys: ``cleaned_evidence``, ``raw_summary``). When supplied, the
-    recovery block is expanded from ``{today, history, missingness}`` to
-    the full Phase 1 per-domain bundle::
+    (keys: ``cleaned_evidence``, ``raw_summary``). When supplied:
 
-        recovery = {
-            today, history, missingness,            # existing keys
-            evidence, raw_summary,                  # from evidence_bundle
-            classified_state, policy_result,        # derived via classify + policy
-        }
+      - The **recovery** block is expanded from ``{today, history,
+        missingness}`` to the full per-domain bundle::
 
-    When the bundle is absent, the recovery block keeps its v1.0 shape so
-    existing callers are unaffected. Other domains always keep their
-    v1.0 shape until their own classify/policy lands.
+            recovery = {
+                today, history, missingness,
+                evidence, raw_summary,
+                classified_state, policy_result,
+            }
+
+      - The **running** block is expanded with derived signals + classify
+        + policy (Phase 2 step 3)::
+
+            running = {
+                today, history, missingness,
+                signals,
+                classified_state, policy_result,
+            }
+
+    When the bundle is absent, both blocks keep their v1.0 shape so
+    existing callers are unaffected. Other domains keep v1.0 shape until
+    their own classify/policy lands.
 
     The plan's end-state is for ``hai state snapshot`` to derive the
     evidence bundle internally from stored raw data; that lands once the
@@ -381,31 +391,59 @@ def build_snapshot(
         else:
             stress_mx = "partial:manual_stress_score"
 
+    recovery_history = _history("recovery")
+    running_history = _history("running")
+
     recovery_block: dict[str, Any] = {
         "today": recovery_today,
-        "history": _history("recovery"),
+        "history": recovery_history,
         "missingness": recovery_mx,
     }
+    running_block: dict[str, Any] = {
+        "today": running_today,
+        "history": running_history,
+        "missingness": running_mx,
+    }
     if evidence_bundle is not None:
-        # Phase 1 full-bundle shape: add evidence + raw_summary +
-        # classified_state + policy_result to the recovery block.
-        # Import here (not at module top) to keep `core.schemas` /
-        # `domains.recovery` out of the state package's import cycle at
+        # Full-bundle shape: per-domain expansion with classify + policy.
+        # Imports happen here (not at module top) so `core.schemas` /
+        # `domains.*` stay out of the state package's import cycle at
         # load time.
         from health_agent_infra.domains.recovery import (
             classify_recovery_state,
             evaluate_recovery_policy,
         )
+        from health_agent_infra.domains.running import (
+            classify_running_state,
+            derive_running_signals,
+            evaluate_running_policy,
+        )
 
         cleaned = evidence_bundle.get("cleaned_evidence") or {}
         raw_summary = evidence_bundle.get("raw_summary") or {}
-        classified = classify_recovery_state(cleaned, raw_summary)
-        policy = evaluate_recovery_policy(classified, raw_summary)
 
+        # Recovery (Phase 1).
+        recovery_classified = classify_recovery_state(cleaned, raw_summary)
+        recovery_policy = evaluate_recovery_policy(recovery_classified, raw_summary)
         recovery_block["evidence"] = cleaned
         recovery_block["raw_summary"] = raw_summary
-        recovery_block["classified_state"] = _classified_to_dict(classified)
-        recovery_block["policy_result"] = _policy_to_dict(policy)
+        recovery_block["classified_state"] = _classified_to_dict(recovery_classified)
+        recovery_block["policy_result"] = _policy_to_dict(recovery_policy)
+
+        # Running (Phase 2 step 3). Reuses recovery's classified_state
+        # for the cross-domain peek (sleep_debt_band + resting_hr_band)
+        # so a single `--evidence-json` invocation lights up both domains.
+        running_signals = derive_running_signals(
+            raw_summary,
+            running_today=running_today,
+            running_history=running_history,
+            recovery_classified=recovery_block["classified_state"],
+        )
+        running_classified = classify_running_state(running_signals)
+        running_policy = evaluate_running_policy(running_classified, running_signals)
+        running_block["signals"] = running_signals
+        running_block["classified_state"] = _running_classified_to_dict(running_classified)
+        running_block["policy_result"] = _policy_to_dict(running_policy)
 
     return {
         "schema_version": "state_snapshot.v1",
@@ -414,11 +452,7 @@ def build_snapshot(
         "lookback_days": lookback_days,
         "history_range": [lookback_start.isoformat(), (as_of_date - timedelta(days=1)).isoformat()],
         "recovery": recovery_block,
-        "running": {
-            "today": running_today,
-            "history": _history("running"),
-            "missingness": running_mx,
-        },
+        "running": running_block,
         "gym": {
             "today": gym_today,
             "history": _history("gym"),
@@ -472,8 +506,32 @@ def _classified_to_dict(classified: Any) -> dict[str, Any]:
     }
 
 
+def _running_classified_to_dict(classified: Any) -> dict[str, Any]:
+    """Convert a ClassifiedRunningState frozen dataclass to a plain dict.
+
+    Field names are the running-readiness skill's contract; do not rename
+    here without updating the skill.
+    """
+
+    return {
+        "weekly_mileage_trend_band": classified.weekly_mileage_trend_band,
+        "hard_session_load_band": classified.hard_session_load_band,
+        "freshness_band": classified.freshness_band,
+        "recovery_adjacent_band": classified.recovery_adjacent_band,
+        "coverage_band": classified.coverage_band,
+        "running_readiness_status": classified.running_readiness_status,
+        "readiness_score": classified.readiness_score,
+        "uncertainty": list(classified.uncertainty),
+    }
+
+
 def _policy_to_dict(policy: Any) -> dict[str, Any]:
-    """Convert a RecoveryPolicyResult frozen dataclass to a plain dict."""
+    """Convert a {Recovery,Running}PolicyResult frozen dataclass to a plain dict.
+
+    Both per-domain results carry the same field set
+    (``policy_decisions`` + ``forced_action`` + ``forced_action_detail`` +
+    ``capped_confidence``); a single helper handles both.
+    """
 
     return {
         "policy_decisions": [
