@@ -1,250 +1,156 @@
 # Health Agent Infra
 
-**Health Agent Infra (internal name: Health Lab) is a governed runtime and contract layer that turns user-owned health evidence into structured state, making safe, personally tailored agent action possible.**
+**Health Agent Infra is a governed runtime and contract layer that turns user-owned health evidence into structured state, so a Claude agent (or open equivalent) can make safe, personally tailored training recommendations.**
 
-It is not a chatbot, a wearable API, a broad AI health app, or a clinical product. It is the narrow, currently under-built layer between raw personal evidence and bounded agent action, proved end-to-end through one flagship loop: `PULL → CLEAN → STATE → POLICY → RECOMMEND → ACTION → REVIEW`.
+It is not a chatbot, a wearable API, a broad AI health app, or a clinical product. It is infrastructure the agent consumes: **deterministic Python tools** that ingest and validate evidence, plus **markdown skills** that instruct the agent in how to classify state, apply policy, and shape recommendations.
 
-## Read this repo in 3 minutes
-
-1. **Thesis and runtime model** — [reporting/docs/canonical_doctrine.md](reporting/docs/canonical_doctrine.md)
-2. **Flagship loop spec** — [reporting/docs/flagship_loop_spec.md](reporting/docs/flagship_loop_spec.md)
-3. **End-to-end walkthrough** — [reporting/docs/flagship_walkthrough.md](reporting/docs/flagship_walkthrough.md)
-4. **Inspect one captured synthetic scenario** — `reporting/artifacts/flagship_loop_proof/2026-04-16-recovery-readiness-v1/captured/recovered_with_easy_plan.json`
-5. **Inspect the real Garmin slice** — `reporting/artifacts/flagship_loop_proof/2026-04-16-garmin-real-slice/captured/real_garmin_slice_2026-04-08.json`
-
-That sequence takes a smart outsider from thesis to running code — over both synthetic and real evidence — in under three minutes.
-
-If you have ten minutes instead of three, read the [reading tour](reporting/docs/tour.md) — a guided walkthrough that explains *why* each piece exists, not just what it does.
+- Python = tools (data acquisition, normalization, writeback, schema validation, tests)
+- Markdown = skills (judgment: state classification, policy, recommendation, reporting, safety)
+- The agent reads skills; the runtime owns no judgment.
 
 ## Runtime at a glance
 
 ```
-PULL       raw Garmin evidence + typed manual readiness intake
-  │
-  ▼
-CLEAN      validate, compute baselines, assemble CleanedEvidence
-  │
-  ▼
-STATE      typed RecoveryState with signal_quality + uncertainties
-  │
-  ▼
-POLICY     executable rules (R1 block, R2 soften, R6 escalate, …)
-  │        leaves a PolicyDecision audit trail
-  ▼
-RECOMMEND  bounded TrainingRecommendation with confidence,
-  │        uncertainty, rationale, goal-conditioned action_detail
-  ▼
-ACTION     idempotent local writeback (JSONL + daily plan note)
-  │        writeback_locality enforced at the I/O boundary
-  ▼
-REVIEW     schedule + record outcome; summarize_review_history returns
-           counts by category for a downstream LLM to act on
+┌──────────────────────────────────────────────────────────────────────────┐
+│                      user installs `hai` in their terminal               │
+└──────────────────────────────────────────────────────────────────────────┘
+           │                                                  ▲
+           ▼                                                  │
+   hai setup-skills  ─── copies skills/ to ~/.claude/skills/  │
+                                                              │
+┌─────────────┐   hai pull   ┌─────────────────┐              │
+│   Garmin    │ ───────────► │  Evidence JSON  │              │
+│   CSV       │              │  (raw pull)     │              │
+└─────────────┘              └─────────────────┘              │
+                                     │                        │
+                                     │ hai clean              │
+                                     ▼                        │
+                       ┌──────────────────────────┐           │
+                       │  CleanedEvidence +       │           │
+                       │  RawSummary JSON         │────► agent reads this
+                       └──────────────────────────┘        plus the
+                                                           recovery-readiness
+                                                           skill, produces a
+                                                           TrainingRecommendation
+                                                           JSON
+                                                              │
+                                ┌─────────────────────────────┘
+                                ▼
+                       ┌──────────────────────┐
+                       │  hai writeback       │ ◄── schema-validates the
+                       │  (recommendation)    │     agent's JSON before
+                       └──────────────────────┘     persisting. This is
+                                │                    the determinism
+                                ▼                    boundary.
+                       ┌──────────────────────┐
+                       │  recommendation_log  │
+                       │  .jsonl + daily_plan │
+                       │  markdown note       │
+                       └──────────────────────┘
+                                │
+                                ▼
+                       ┌──────────────────────┐
+                       │  hai review schedule │── logs next-morning
+                       │  hai review record   │   review event + outcome
+                       │  hai review summary  │── counts by category
+                       └──────────────────────┘
 ```
 
-Each arrow increases commitment: raw evidence becomes a validated claim, then a typed state, then a policy-approved proposal, then a bounded local write, then a reviewable outcome. Nothing in this chain reaches outside the local writeback boundary.
+## Install
+
+```bash
+pip install -e .                # or pip install health_agent_infra after publish
+hai setup-skills                # copies skills/ to ~/.claude/skills/
+hai --help
+```
+
+`hai` exposes these subcommands:
+
+```
+hai pull      --date 2026-04-17 [--use-default-manual-readiness] --user-id u_local_1
+hai clean     --evidence-json evidence.json
+hai writeback --recommendation-json rec.json --base-dir <writeback_root>
+hai review    schedule --recommendation-json rec.json --base-dir <root>
+hai review    record   --outcome-json outcome.json --base-dir <root>
+hai review    summary  --base-dir <root> [--user-id u_local_1]
+hai setup-skills [--dest ~/.claude/skills] [--force]
+```
+
+The writeback root must end in `recovery_readiness_v1/` — enforced at the I/O boundary.
+
+## Read this repo in 3 minutes
+
+1. **Thesis and runtime model** — [reporting/docs/canonical_doctrine.md](reporting/docs/canonical_doctrine.md)
+2. **Reading tour** — [reporting/docs/tour.md](reporting/docs/tour.md) (10-minute guided walkthrough)
+3. **How an agent integrates** — [reporting/docs/agent_integration.md](reporting/docs/agent_integration.md)
+4. **Inspect one captured synthetic scenario** — `reporting/artifacts/flagship_loop_proof/2026-04-16-recovery-readiness-v1/captured/recovered_with_easy_plan.json`
+5. **Inspect the real Garmin slice** — `reporting/artifacts/flagship_loop_proof/2026-04-16-garmin-real-slice/captured/real_garmin_slice_2026-04-08.json`
 
 ## Scope
 
-- **Controlling doctrine**: [reporting/docs/canonical_doctrine.md](reporting/docs/canonical_doctrine.md) — wins any conflict with other docs until explicitly retired.
-- **Explicit non-goals**: [reporting/docs/explicit_non_goals.md](reporting/docs/explicit_non_goals.md) — 12 hard + 2 soft non-goals, including no second connector, no rich UI, no medical-style outputs, no connector sprawl.
-- **Phase 2 plan (executed 2026-04-16)**: [reporting/docs/plan_2026-04-16.md](reporting/docs/plan_2026-04-16.md).
-- **Reading tour**: [reporting/docs/tour.md](reporting/docs/tour.md) — 10-minute guided walkthrough.
-- **Phase timeline**: [reporting/docs/phase_timeline.md](reporting/docs/phase_timeline.md) — how the repo got to its current shape.
+- **Controlling doctrine**: [reporting/docs/canonical_doctrine.md](reporting/docs/canonical_doctrine.md).
+- **Explicit non-goals**: [reporting/docs/explicit_non_goals.md](reporting/docs/explicit_non_goals.md).
+- **Phase timeline** (how we got here): [reporting/docs/phase_timeline.md](reporting/docs/phase_timeline.md).
+- **Executed reshape plan**: `/Users/domcolligan/.claude/plans/eventual-weaving-pnueli.md`.
 - **How to contribute**: [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Repo organisation
+## Repo layout
 
-The canonical project shape is only these eight buckets:
-
-- `pull`
-- `clean`
-- `merge_human_inputs`
-- `research`
-- `interpretation`
-- `reporting`
-- `writeback`
-- `safety`
-
-Anything else in the repo should be treated as implementation detail, compatibility surface, proof material, or legacy/archive content, not as an extra canonical layer. The 7-part runtime model (`PULL → CLEAN → STATE → POLICY → RECOMMEND → ACTION → REVIEW`) is a conceptual overlay on top of these buckets, not a replacement for them.
-
-## Repo truth right now
-
-This repo currently exposes a narrow CLI-first proof path plus supporting docs, tests, and artifacts. It is not a hosted product, polished consumer app, clinical system, or the durable private memory authority for user health data.
-
-Current implementation locations that matter for review:
-
-- `pull/` contains passive and machine-readable input acquisition surfaces and current local runtime data locations such as `pull/data/garmin/` and `pull/data/health/`
-- `clean/health_model/` contains the main current deterministic cleaning and contract-oriented implementation namespace
-- `merge_human_inputs/` contains current human-input intake and manual logging surfaces
-- `reporting/` contains operator-facing docs, scripts, and checked-in proof artifacts
-- `writeback/agent_memory_write_cli.py` is the current explicit writeback entrypoint
-- `safety/` contains tests, compatibility wrappers, and safety-oriented proof enforcement surfaces
-- `research/` and `interpretation/` hold exploratory or model-oriented work within their respective buckets
-- `archive/legacy_product_surfaces/` contains older adjacent surfaces and is not part of the canonical current review path
-
-Important rule: namespaces inside a bucket, like `clean/health_model/`, are current implementation locations within that bucket. They are not separate canonical project-shape categories.
-
-## Bucket model
-
-### `pull`
-Deterministic acquisition of passive or machine-readable inputs.
-
-### `clean`
-Deterministic normalization, validation, bundle assembly, retrieval shaping, and preparation of interpretation-ready artifacts.
-
-### `merge_human_inputs`
-Human notes, voice-note intake, manual logs, and related merge surfaces that sit between deterministic infra and later interpretation.
-
-### `research`
-Exploration, notebooks, and bounded research material.
-
-### `interpretation`
-Model-oriented interpretation code and experiments. This bucket is distinct from the deterministic infra buckets.
-
-### `reporting`
-Docs, proof bundles, review artifacts, and operator-facing runnable demos.
-
-### `writeback`
-Explicit persisted state or memory update surfaces.
-
-### `safety`
-Compatibility wrappers, tests, fail-closed checks, and trust-boundary enforcement.
-
-## Phase 1 doctrine (adopted 2026-04-16)
-
-A dated Phase 1 doctrine set anchors current project direction. It is authoritative for what the project is trying to prove right now, what the runtime is shaped like, and what is explicitly out of scope.
-
-- `reporting/docs/chief_operational_brief_2026-04-16.md`
-- `reporting/docs/canonical_doctrine.md`
-- `reporting/docs/flagship_loop_spec.md`
-- `reporting/docs/state_object_schema.md`
-- `reporting/docs/recommendation_object_schema.md`
-- `reporting/docs/minimal_policy_rules.md`
-- `reporting/docs/explicit_non_goals.md`
-
-The canonical runtime architecture from that doctrine is:
-
-`PULL -> CLEAN -> STATE -> POLICY -> RECOMMEND -> ACTION -> REVIEW`
-
-That runtime model sits on top of the eight-bucket repo organisation, it does not replace it.
-
-## Phase 2 flagship proof (landed 2026-04-16)
-
-The flagship loop runs end-to-end against the Phase 1 schemas over both synthetic fixtures and real Garmin evidence. One module, one CLI, 28 passing tests, eight captured synthetic scenarios plus one real Garmin slice.
-
-- code: `clean/health_model/recovery_readiness_v1/`
-- tests: `safety/tests/test_recovery_readiness_v1.py`
-- captured proof: `reporting/artifacts/flagship_loop_proof/2026-04-16-recovery-readiness-v1/`
-- walkthrough: `reporting/docs/flagship_walkthrough.md`
-
-Run it from repo root:
-
-```bash
-PYTHONPATH=clean:safety python -m health_model.recovery_readiness_v1.cli run \
-  --scenario mildly_impaired_with_hard_plan \
-  --base-dir /tmp/recovery_readiness_v1 \
-  --date 2026-04-16 \
-  --now 2026-04-16T07:15:00+00:00 \
-  --record-review-outcome followed_and_improved
 ```
-
-The captured proof bundle demonstrates all six flagship-spec conditions: deterministic evidence path, typed state, policy audit trail, structured recommendation, bounded local writeback, and a recorded review outcome.
-
-## Current proof path
-
-The flagship public proof is `recovery_readiness_v1`:
-
-`PULL -> CLEAN -> STATE -> POLICY -> RECOMMEND -> ACTION -> REVIEW`
-
-Implemented in `clean/health_model/recovery_readiness_v1/`, runs end-to-end over both synthetic fixtures and a committed real Garmin CSV export. Captured proof bundles:
-
-- synthetic (8 scenarios): `reporting/artifacts/flagship_loop_proof/2026-04-16-recovery-readiness-v1/`
-- real Garmin slice: `reporting/artifacts/flagship_loop_proof/2026-04-16-garmin-real-slice/`
-
-An older CLI-first proof path — `contract describe -> bundle init -> voice-note submit -> context get -> recommendation create` — is still present under `clean/health_model/` with compatibility wrappers under `safety/health_agent_infra/` and writeback surface under `writeback/`. It predates the flagship and is retained as historical compatibility, not as the current proof path.
-
-Repo-facing truth should follow the transformation plan. For the current gym-source doctrine interval, manual structured gym logs remain the source-of-truth path, `wger` is a bounded exploratory non-flagship connector prototype, and leftover connector surfaces outside that doctrine are not the canonical current direction unless the plan explicitly promotes them.
-
-## Current Phase 3 source-truth review path
-
-For truthful source-scope and connector review from repo root, route through:
-
-- `reporting/docs/v1_source_scope.md`
-- `reporting/docs/source_registry_v1.md`
-- `reporting/docs/source_adapter_contract_v1.md`
-
-Current doctrine to preserve:
-
-- manual structured gym logs are the current source-of-truth path
-- `wger` remains a bounded exploratory non-flagship connector only
-- the next bounded deliverable is Phase 3 connector-truth/source-registry reconciliation
-- manual `program_block` remains explicitly out of scope for the current slice
-
-There is now one explicit bounded Phase 4 manual-gym prototype on the tree. Review it here:
-
-- `reporting/artifacts/protocol_layer_proof/2026-04-14-manual-gym-phase-4-prototype/`
-- `merge_human_inputs/examples/manual_gym_sessions.example.json`
-- `clean/health_model/daily_snapshot.py`
-- `safety/tests/test_manual_logging.py`
-
-That slice proves manual structured session input, canonical `training_session` / `gym_set_record` emission, and daily snapshot gym rollups. Any retained `gym_exercise_set` snapshot surface is legacy compatibility only, not canonical truth. It does **not** claim full resistance-training source-family completion yet.
-
-Start with:
-
-- `reporting/docs/v1_source_scope.md`
-- `reporting/docs/source_registry_v1.md`
-- `reporting/docs/source_adapter_contract_v1.md`
-- `reporting/docs/health_lab_canonical_definition.md`
-- `reporting/docs/health_lab_canonical_public_demo.md`
-- `reporting/artifacts/public_demo/captured/`
-- `reporting/artifacts/flagship_loop_proof/2026-04-09/`
-- `reporting/artifacts/protocol_layer_proof/2026-04-14-manual-gym-phase-4-prototype/`
-- `STATUS.md`
-
-For checked-in proof review, `reporting/artifacts/` is the sole canonical proof root for this repo.
-
-Run the canonical public demo from repo root:
-
-```bash
-python3 reporting/scripts/run_canonical_public_demo.py
+health_agent_infra/
+├── src/health_agent_infra/            # installable package — deterministic tools
+│   ├── cli.py                         # `hai` dispatcher
+│   ├── pull/                          # Garmin adapter + flagship Protocol
+│   ├── clean/                         # evidence validation + raw-number aggregation
+│   ├── writeback/                     # schema-validated local persistence
+│   ├── review/                        # event + outcome persistence, summary counts
+│   └── schemas.py                     # typed dataclasses (the agent's contract)
+├── skills/                            # markdown skills — agent judgment layer
+│   ├── recovery-readiness/SKILL.md    # state classification + policy + shaping
+│   ├── reporting/SKILL.md             # narration voice
+│   ├── merge-human-inputs/SKILL.md    # partitioning raw human input
+│   ├── writeback-protocol/SKILL.md    # when/how to invoke hai writeback
+│   └── safety/SKILL.md                # fail-closed boundaries
+├── reporting/
+│   ├── docs/                          # doctrine, tour, timeline, flagship spec
+│   └── artifacts/
+│       └── flagship_loop_proof/
+│           ├── 2026-04-16-recovery-readiness-v1/   # synthetic 8-scenario bundle
+│           └── 2026-04-16-garmin-real-slice/        # real Garmin CSV bundle
+├── pull/data/garmin/export/           # committed offline CSV export used by `hai pull`
+├── safety/tests/                      # deterministic + contract tests (14 passing)
+├── merge_human_inputs/                # README + examples for the intake skill
+├── pyproject.toml                     # declares `hai` console_script
+├── README.md, STATUS.md, CONTRIBUTING.md
+└── LICENSE
 ```
-
-## Current path truth
-
-Older docs often taught runtime outputs under top-level `data/`. Current repo truth is more mixed:
-
-- checked-in public proof artifacts live under the canonical root `reporting/artifacts/`
-- many disposable demo/runtime examples still write under `data/` paths in command examples
-- current repo-local runtime data also exists under bucketed locations such as `pull/data/`
-
-When updating docs or commands, prefer the real path used by the specific script or CLI, and do not teach `data/...` as a universal canonical repo root.
 
 ## What is proven now
 
-- contract discovery via `PYTHONPATH=clean:safety python3 -m health_model.agent_contract_cli describe`
-- bundle initialization via `PYTHONPATH=clean:safety python3 -m health_model.agent_bundle_cli init`
-- same-day voice-note submission via `PYTHONPATH=clean:safety python3 -m health_model.agent_voice_note_cli submit`
-- scoped context reads via `PYTHONPATH=clean:safety python3 -m health_model.agent_context_cli get`
-- recommendation creation via `PYTHONPATH=clean:safety python3 -m health_model.agent_recommendation_cli create`
-- bounded recommendation-judgment writeback via `PYTHONPATH=clean:safety python3 -m health_model.agent_memory_write_cli recommendation-judgment`
+- `hai pull` reads the committed Garmin CSV export and emits evidence JSON.
+- `hai clean` computes CleanedEvidence + RawSummary deterministically — no bands, no classifications, no scores.
+- `hai writeback` schema-validates an agent-produced TrainingRecommendation and persists it idempotently, with writeback-locality enforced at the I/O boundary.
+- `hai review schedule/record/summary` covers the review loop.
+- 14 tests passing covering deterministic tooling + contract validation.
+- 8 synthetic captured scenarios + 1 real Garmin slice under `reporting/artifacts/flagship_loop_proof/`.
 
 ## Not claimed
 
-- not a clinical product or medical device
-- not a hosted multi-user product
-- not a polished general-user install flow
-- not a claim that `health_model` is a canonical project layer
-- not a claim that every repo surface has already been reorganized around the bucket model
-- not a claim that the frozen Garmin plus typed-manual-readiness flagship path is already implemented end-to-end
+- Not a clinical product or medical device.
+- Not hosted or multi-user.
+- Not a polished general-user install flow.
+- Not a learning loop — the runtime holds no ML model.
+- Not a source-fusion platform — the flagship only consumes Garmin + typed manual readiness. Broader multi-source merging is out of scope for this interval.
 
-## Contributing and review
+## Phase 6 reshape — 2026-04-17
 
-For truthful review and contribution guidance, see:
+The repo was reshaped from a self-contained Python implementation of the flagship loop into a tools-plus-skills package an agent can install and consume. Seven commits:
 
-- `STATUS.md`
-- `CONTRIBUTING.md`
-- `reporting/docs/v1_source_scope.md`
-- `reporting/docs/source_registry_v1.md`
-- `reporting/docs/source_adapter_contract_v1.md`
-- `reporting/docs/offline_garmin_export_adapter.md`
-- `reporting/docs/health_lab_canonical_definition.md`
+1. Delete obvious legacy (archive, research notebooks, older Garmin extractors, gray-area connector dirs).
+2. Move surviving runtime into `src/health_agent_infra/` installable layout.
+3. Strip runtime judgment — policy, state classification, recommendation shaping became skill markdown. The agent owns all classification.
+4. Sweep older CLI chain (`agent_*_cli.py`), compat wrappers, data-layer modules, their tests.
+4c. Sweep older proof bundles and legacy doctrine docs.
+5. Docs refresh + install story (this commit).
+
+See `reporting/docs/phase_timeline.md` for the full history.

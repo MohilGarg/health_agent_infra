@@ -25,9 +25,9 @@ On a daily cadence, turn passively pulled wearable evidence plus a short manual 
 ```
 PULL        -> Garmin passive pull + typed manual readiness intake
 CLEAN       -> canonical cleaned evidence objects
-STATE       -> recovery_state object (see state_object_schema.md)
-POLICY      -> minimal executable policy rules (see minimal_policy_rules.md)
-RECOMMEND   -> training_recommendation object (see recommendation_object_schema.md)
+STATE       -> recovery-state classification (agent per skills/recovery-readiness/SKILL.md)
+POLICY      -> R1-R6 policy gates (agent per skills/recovery-readiness/SKILL.md)
+RECOMMEND   -> training_recommendation JSON (shape: src/health_agent_infra/schemas.py::TrainingRecommendation)
 ACTION      -> bounded writeback (daily plan note + recommendation log entry)
 REVIEW      -> next-day follow-up event asking whether the intervention helped
 ```
@@ -54,13 +54,13 @@ REVIEW      -> next-day follow-up event asking whether the intervention helped
 Nutrition is explicitly out of scope for this flagship loop (see [explicit_non_goals.md](explicit_non_goals.md)).
 
 ### Missingness handling
-See [minimal_policy_rules.md](minimal_policy_rules.md). The loop must degrade gracefully when non-required inputs are absent, and must refuse to produce a confident recommendation when required inputs are too sparse.
+See `skills/recovery-readiness/SKILL.md` for coverage-banding + R1 (require-min-coverage) behavior. The loop must degrade gracefully when non-required inputs are absent, and must refuse to produce a confident recommendation when required inputs are too sparse.
 
 ## Outputs
 
 ### Per run
-1. one `recovery_state` object conforming to [state_object_schema.md](state_object_schema.md)
-2. one `training_recommendation` object conforming to [recommendation_object_schema.md](recommendation_object_schema.md)
+1. one classified recovery state (agent's interpretation of `raw_summary` per the recovery-readiness skill)
+2. one `training_recommendation` JSON validated at `hai writeback` against `src/health_agent_infra/schemas.py::TrainingRecommendation`
 3. one `action_record` describing the writeback performed (path, timestamp, idempotency key)
 4. one `review_event` scheduled for the next-day follow-up
 
@@ -110,6 +110,6 @@ This spec is the contract that Phase 2 (narrow end-to-end implementation) builds
 
 Data shapes referenced here are authoritative in the named schema docs:
 
-- `recovery_state` -> [state_object_schema.md](state_object_schema.md)
-- `training_recommendation` -> [recommendation_object_schema.md](recommendation_object_schema.md)
-- policy rules -> [minimal_policy_rules.md](minimal_policy_rules.md)
+- recovery-state classification -> `skills/recovery-readiness/SKILL.md` (section: classify state)
+- `training_recommendation` shape -> `src/health_agent_infra/schemas.py::TrainingRecommendation`
+- policy rules R1–R6 -> `skills/recovery-readiness/SKILL.md` (section: apply policy)

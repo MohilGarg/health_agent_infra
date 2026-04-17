@@ -1,16 +1,12 @@
-# Flagship Loop Proof — recovery_readiness_v1
+# Flagship Loop Proof — recovery_readiness_v1 (2026-04-16, synthetic)
 
-Captured: 2026-04-16. Adopted under [reporting/docs/canonical_doctrine.md](../../../docs/canonical_doctrine.md) and [reporting/docs/flagship_loop_spec.md](../../../docs/flagship_loop_spec.md).
+This bundle captures end-to-end runs of the flagship loop across eight synthetic scenarios, using the pre-reshape Python implementation (dated 2026-04-16). It is retained as an inputs-and-outputs reference — useful for pattern-matching on what the agent-plus-skills should produce on similar inputs after the 2026-04-17 tools-plus-skills reshape.
 
-This artifact is the first inspectable end-to-end proof of the flagship
-`recovery_readiness_v1` loop. It runs the full runtime path:
+**Important caveat for post-reshape readers:** the `captured/*.json` files were produced by Python modules that executed state classification, policy rules, and recommendation shaping deterministically. After the reshape, that judgment moved to the `skills/recovery-readiness/SKILL.md` markdown and is produced by an agent. Regenerating these captures via the agent+skills flow is a follow-on task (see `STATUS.md`). Until then:
 
-```
-PULL -> CLEAN -> STATE -> POLICY -> RECOMMEND -> ACTION -> REVIEW
-```
-
-across eight scenarios, using synthetic PULL-layer fixtures. Every other
-layer is the real implementation under `clean/health_model/recovery_readiness_v1/`.
+- The **inputs** (cleaned evidence + raw summary) remain valid examples.
+- The **outputs** (recommendations, policy decisions) show what the pre-reshape Python emitted. An agent working from the same inputs plus the recovery-readiness skill will produce shape-compatible outputs but may differ in specifics (e.g., rationale wording).
+- **`recovery_state`** objects in the captures reference types that no longer exist in `schemas.py` (they were stripped in the reshape). Treat those as legacy context, not current schema.
 
 ## Scenarios captured
 
@@ -19,98 +15,41 @@ layer is the real implementation under `clean/health_model/recovery_readiness_v1
 | recovered_with_easy_plan | recovered | proceed_with_planned_session | full | green-path behavior |
 | mildly_impaired_with_hard_plan | mildly_impaired | downgrade_hard_session_to_zone_2 | full | bounded downgrade for mild signals + hard plan |
 | impaired_with_hard_plan | impaired | downgrade_session_to_mobility_only | full | stronger downgrade for impaired signals + hard plan |
-| rhr_spike_three_days | mildly_impaired | escalate_for_user_review | full | R4 persistent-RHR-spike escalation |
+| rhr_spike_three_days | mildly_impaired | escalate_for_user_review | full | R6 persistent-RHR-spike escalation |
 | insufficient_signal | unknown | defer_decision_insufficient_signal | insufficient | R1 block on missing required inputs |
-| sparse_signal | mildly_impaired | proceed_with_planned_session (confidence: low) | sparse | confidence downgrade under sparse coverage |
-| tailoring_recovered_strength_block | recovered | proceed_with_planned_session | full | state-conditioned tailoring — identical evidence as endurance row, `active_goal=strength_block` surfaces in `action_detail` and `rationale` |
-| tailoring_recovered_endurance_taper | recovered | proceed_with_planned_session | full | state-conditioned tailoring — identical evidence as strength row, `active_goal=endurance_taper` surfaces in `action_detail` and `rationale` |
-
-### The tailoring pair
-
-The two `tailoring_*` rows demonstrate **the user's active goal being surfaced
-in the recommendation output** on identical physiological evidence. Both
-scenarios use the same Garmin sleep/RHR/HRV/training-load fixtures and the
-same low-soreness / high-energy manual readiness — only `active_goal` differs.
-The recommendation's `action_detail` carries `{"active_goal": <string>}` and
-one `rationale` line names the goal.
-
-The tailoring layer is **deliberately thin**. The runtime does not invent
-RPE caps, zone ceilings, or session-shape decisions from the goal — that is
-periodization judgment that belongs to a downstream LLM consumer reading this
-recommendation. The runtime's contribution is making the goal visible at the
-point of recommendation, so the LLM (or human reader) can act on it with
-full structured context. See
-`clean/health_model/recovery_readiness_v1/recommend.py::_goal_conditioned_detail`
-for the shape of the hook.
+| sparse_signal | mildly_impaired | proceed_with_planned_session (confidence: moderate) | sparse | R5 confidence cap under sparse coverage |
+| tailoring_recovered_strength_block | recovered | proceed_with_planned_session | full | active_goal surfaces in action_detail — identical evidence as endurance row |
+| tailoring_recovered_endurance_taper | recovered | proceed_with_planned_session | full | active_goal surfaces in action_detail — identical evidence as strength row |
 
 ## Files
 
-- `captured/*.json` — one full run artifact per scenario (run metadata,
-  cleaned evidence, recovery state, training recommendation with policy
-  decisions, action record, review event, review outcome). These files are
-  the authoritative per-scenario evidence.
-- `summary/*.txt` — human-readable one-screen summaries from the CLI's
-  default output.
-- `writeback/recovery_readiness_v1/` — the actual local writeback targets
-  the ACTION layer produced during this capture:
-  - `recommendation_log.jsonl` — eight typed recommendation records (six
-    original scenarios plus the two `tailoring_*` scenarios)
-  - `daily_plan_2026-04-16.md` — eight daily-plan entries, one per scenario
-  - `review_events.jsonl` — eight scheduled review events
-  - `review_outcomes.jsonl` — eight synthetic `followed_and_improved` outcomes
-    recorded via the REVIEW layer
+- `captured/*.json` — one full run artifact per scenario.
+- `summary/*.txt` — human-readable one-screen summaries.
+- `writeback/recovery_readiness_v1/` — actual local writeback targets produced during the 2026-04-16 capture: `recommendation_log.jsonl`, `daily_plan_2026-04-16.md`, `review_events.jsonl`, `review_outcomes.jsonl`.
 
-## How to reproduce
+## How to regenerate under the current (post-reshape) flow
 
-From repo root:
+1. Pick a scenario and construct a synthetic evidence JSON matching the pre-reshape fixture shape (reference the scenario's `cleaned_evidence` field in `captured/*.json`).
+2. Run `hai clean --evidence-json <path>` to get CleanedEvidence + RawSummary.
+3. Have a Claude agent read the output plus `skills/recovery-readiness/SKILL.md` and produce a TrainingRecommendation JSON.
+4. Run `hai writeback --recommendation-json <path> --base-dir <somewhere/recovery_readiness_v1>`.
+5. Run `hai review schedule` and `hai review record` as needed.
 
-```bash
-PYTHONPATH=clean:safety python -m health_model.recovery_readiness_v1.cli run \
-  --scenario mildly_impaired_with_hard_plan \
-  --base-dir /tmp/recovery_readiness_v1 \
-  --date 2026-04-16 \
-  --now 2026-04-16T07:15:00+00:00 \
-  --record-review-outcome followed_and_improved
-```
+The bundle file layout above is what you'd expect the new flow to produce. Specific numeric values may drift because the agent's classification is skill-driven, not formula-driven. That's working as intended.
 
-Change `--scenario` to replay any row of the table above. The fixtures and
-loop implementation live under
-`clean/health_model/recovery_readiness_v1/`. Tests covering each layer live
-in `safety/tests/test_recovery_readiness_v1.py`.
+## Proof conditions (from the pre-reshape flagship spec)
 
-## Proof conditions from the flagship spec
+Each `captured/*.json` includes:
 
-The flagship spec requires six visible proof conditions. This capture
-satisfies them:
-
-1. **Deterministic evidence path** — `captured/*.json` contain `cleaned_evidence`
-   showing the inputs that produced each state.
-2. **Explicit state object** — `captured/*.json > recovery_state` is a typed
-   object conforming to `recovery_state.v1` including `signal_quality` and
-   `uncertainties`.
-3. **Policy gate** — `captured/*.json > training_recommendation.policy_decisions`
-   shows each rule that fired, including R1 block (insufficient_signal),
-   R4 escalate (rhr_spike_three_days).
-4. **Structured recommendation** — typed fields: `action`, `rationale`,
-   `confidence`, `uncertainty`, `follow_up`, `policy_decisions`, `bounded=true`.
-5. **Bounded writeback** — `writeback/recovery_readiness_v1/` shows only
-   local JSONL appends and a local daily-plan markdown note. No external
-   writes. The writeback function enforces this at the I/O boundary via the
-   `writeback_locality` check.
-6. **Review loop** — `review_events.jsonl` and `review_outcomes.jsonl`
-   show scheduled events and recorded outcomes linked via `recommendation_id`.
+1. **Deterministic evidence path** — `cleaned_evidence` showing the inputs.
+2. **Typed state** — `recovery_state` object (legacy, stripped from current schemas; retained here for historical context).
+3. **Policy gate** — `training_recommendation.policy_decisions` records each rule that fired.
+4. **Structured recommendation** — `action`, `rationale`, `confidence`, `uncertainty`, `follow_up`, `policy_decisions`, `bounded=true`.
+5. **Bounded writeback** — `writeback/recovery_readiness_v1/` shows only local JSONL appends + a daily-plan markdown note.
+6. **Review loop** — `review_events.jsonl` + `review_outcomes.jsonl` linked via `recommendation_id`.
 
 ## Scope and honesty
 
-- PULL in this bundle is a synthetic fixture, not a live Garmin API
-  call. Real Garmin evidence flows through the same CLEAN→REVIEW
-  pipeline in the sibling capture
-  `reporting/artifacts/flagship_loop_proof/2026-04-16-garmin-real-slice/`.
-  Live scheduled pulls are explicitly out of scope; the adapter reads
-  the already-committed offline CSV export.
-- The readiness-score formula is a first-pass deterministic heuristic.
-  Confidence in the score itself is not yet calibrated against user
-  outcomes; review data is the intended input to that calibration over
-  time.
-- No diagnostic, clinical, or nutrition outputs are produced, per the
-  doctrine's explicit non-goals.
+- PULL here is a synthetic fixture. The sibling bundle `reporting/artifacts/flagship_loop_proof/2026-04-16-garmin-real-slice/` runs the same pipeline against the real committed Garmin CSV export.
+- Live scheduled pulls are out of scope per the explicit non-goals.
+- No diagnostic, clinical, or nutrition outputs.

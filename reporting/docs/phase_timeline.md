@@ -96,18 +96,37 @@ Chief Operational Brief's Phase 1 doctrine pass lands. The flagship `recovery_re
 
 ---
 
-## Current state (2026-04-16)
+## 2026-04-17 — Phase 6 reshape to tools-plus-skills architecture
 
-- 28 passing tests; 8 synthetic scenarios + 1 real Garmin slice in the captured proof bundles.
-- Phase 1 doctrine is controlling (`reporting/docs/canonical_doctrine.md`).
-- Phase 2 flagship is shipped and inspectable.
-- Phase 3 (adapter/connector reframing) is queued but not started — see `STATUS.md` for the specific lane.
-- No `TODO(founder)` markers remain in code. `_goal_conditioned_detail` now surfaces `active_goal` as pass-through; `derive_confidence_adjustment` was reshaped into `summarize_review_history` returning structured counts. The runtime does not invent judgment; that work belongs to a downstream LLM consumer.
+The founder reframed the project's shape in conversation: **the runtime should be deterministic tools; judgment belongs to the agent via markdown skills.** Everything that looked like judgment disguised as code (policy rules, state classification, recommendation shaping, report-generating scripts) was overstepping and got stripped or moved. Seven commits landed the reshape:
+
+- `77493a2` — Delete obvious legacy (archive, research notebooks, older Garmin extractors, gray-area connector dirs).
+- `9686ea5` — Move surviving runtime into `src/health_agent_infra/` installable layout.
+- `8175cc0` — Strip runtime judgment (policy.py, state.py classification, recommend.py action-selection, reporting/scripts/*). Create five `SKILL.md` files. Rewire `hai` CLI with thin subcommands and a schema-validated writeback boundary.
+- `a543cc8` — Sweep the older CLI chain (`agent_*_cli.py`), compat wrappers, their tests.
+- `61ca794` — Sweep older data-layer modules (daily_snapshot, shared_input_backbone, manual_logging, etc.) and their tests.
+- `910f27a` — Sweep older proof bundles (all pre-2026-04-16), `reporting/scripts/*`, and ~19 legacy doctrine docs.
+- `<this commit>` — Docs refresh. README, STATUS, tour, CONTRIBUTING rewritten for the tools-plus-skills model. `agent_integration.md` added. Legacy bucket dirs (archive/, clean/, writeback/ empty shell) removed.
+
+**Why it mattered:** The project stops being a Python implementation of a health app and becomes what it was always trying to be — infrastructure an agent consumes. The runtime holds no `TODO(founder)` markers because judgment is no longer the runtime's job. A future user runs `pip install health_agent_infra && hai setup-skills` and their Claude agent has the tools-plus-skills surface automatically.
+
+14 deterministic + contract tests passing. Two 2026-04-16 proof bundles preserved as input/output examples (captured by the pre-reshape runtime; regenerating them with a real agent is a follow-on).
+
+---
+
+## Current state (2026-04-17, post-reshape)
+
+- `hai` CLI installable via `pip install -e .`. Five subcommands: `pull`, `clean`, `writeback`, `review`, `setup-skills`.
+- Five markdown skills in `skills/` (recovery-readiness, reporting, merge-human-inputs, writeback-protocol, safety).
+- 14 tests passing. No `TODO(founder)` markers.
+- Two captured proof bundles under `reporting/artifacts/flagship_loop_proof/2026-04-16-*`.
+- The broader multi-source platform contract (daily_health_snapshot merge, source registry, adapter contract doc) was deleted in commit 4c — aspirational scope that no longer fits the narrow flagship.
 
 ## Reading this timeline
 
-If you're coming back cold, the three loadbearing commits to re-read first are:
+If you're coming back cold, four loadbearing commits:
 
 1. `1c6c487` (2026-04-09, Health Lab execution spec) — where the thesis locks.
-2. `fdba78e` (2026-04-12, repo restructure) — where the shape locks.
-3. `f3a73e6` (2026-04-16, Phase 2 closure) — where the current proof locks.
+2. `f3a73e6` (2026-04-16, Phase 2 closure) — where the pre-reshape proof locks.
+3. `8175cc0` (2026-04-17, reshape commit 3) — where runtime judgment ends and skill-layer judgment begins.
+4. The current HEAD — where docs catch up with the new shape.

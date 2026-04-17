@@ -1,171 +1,75 @@
 # Status
 
-## Phase 1 doctrine (adopted 2026-04-16)
+## Architecture (post-reshape, 2026-04-17)
 
-The Phase 1 doctrine pass per the Chief Operational Brief landed as a dated doc set under `reporting/docs/`. It is authoritative for current project direction:
+Health Agent Infra is a **tools-plus-skills package** an agent installs:
 
-- `reporting/docs/chief_operational_brief_2026-04-16.md`
-- `reporting/docs/canonical_doctrine.md`
-- `reporting/docs/flagship_loop_spec.md`
-- `reporting/docs/state_object_schema.md`
-- `reporting/docs/recommendation_object_schema.md`
-- `reporting/docs/minimal_policy_rules.md`
-- `reporting/docs/explicit_non_goals.md`
+- **Python tools** — `src/health_agent_infra/` exposes a `hai` CLI with subcommands for pull, clean, writeback, review, and setup-skills. All deterministic. The runtime holds no classification, no policy, no recommendation logic.
+- **Markdown skills** — `skills/` ships five skills: `recovery-readiness`, `reporting`, `merge-human-inputs`, `writeback-protocol`, `safety`. An agent reads these to decide what to do with the evidence.
+- **Determinism boundary** — `hai writeback` validates the agent's recommendation JSON against `TrainingRecommendation` before persisting. Malformed recommendations fail closed.
 
-That set defines the runtime model (`PULL -> CLEAN -> STATE -> POLICY -> RECOMMEND -> ACTION -> REVIEW`), the single flagship loop (`recovery_readiness_v1`), and the explicit non-goals.
+## What's proven
 
-## Phase 2 flagship implementation (landed 2026-04-16)
+The flagship loop runs end-to-end with an agent doing the judgment:
 
-The flagship `recovery_readiness_v1` loop runs end-to-end against the Phase 1 schemas over both synthetic fixtures and real Garmin evidence.
+```
+hai pull (Garmin CSV)
+    └─► hai clean
+            └─► agent reads CleanedEvidence + RawSummary + recovery-readiness skill
+                    └─► agent produces TrainingRecommendation JSON
+                            └─► hai writeback (schema-validated + idempotent)
+                                    └─► hai review schedule
+                                            └─► hai review record (next day)
+```
 
-- implementation: `clean/health_model/recovery_readiness_v1/`
-- tests (28 passing): `safety/tests/test_recovery_readiness_v1.py`
-- captured synthetic proof: `reporting/artifacts/flagship_loop_proof/2026-04-16-recovery-readiness-v1/`
-- captured real Garmin slice: `reporting/artifacts/flagship_loop_proof/2026-04-16-garmin-real-slice/`
-- walkthrough: `reporting/docs/flagship_walkthrough.md`
+- 14 deterministic + contract tests passing in `safety/tests/test_recovery_readiness_v1.py`.
+- Two proof bundles preserved as inputs-and-outputs examples:
+  - `reporting/artifacts/flagship_loop_proof/2026-04-16-recovery-readiness-v1/` — 8 synthetic scenarios (from the pre-reshape era). Bundle contents describe what the agent-plus-skills can be expected to produce on those inputs.
+  - `reporting/artifacts/flagship_loop_proof/2026-04-16-garmin-real-slice/` — the real Garmin CSV slice.
+  - Note: the captured JSONs were produced by the pre-reshape Python runtime. Regenerating them under the new skills-driven flow is a follow-on.
 
-Eight synthetic scenarios are captured (six original runtime facets plus two goal-conditioned tailoring captures): `recovered_with_easy_plan`, `mildly_impaired_with_hard_plan`, `impaired_with_hard_plan`, `rhr_spike_three_days`, `insufficient_signal`, `sparse_signal`, `tailoring_recovered_strength_block`, `tailoring_recovered_endurance_taper`. The tailoring pair demonstrates state-conditioned action-parameter variance on identical evidence. One real Garmin slice is additionally captured as the Phase 2 real-evidence proof.
+## Install and run
 
-## Report-phase tracker
+```bash
+pip install -e .
+hai setup-skills
+hai --help
+```
 
-Source plan: `reporting/docs/health_lab_repo_transformation_plan_2026-04-09.md`
+See [README.md](README.md) for the full subcommand list and [reporting/docs/agent_integration.md](reporting/docs/agent_integration.md) for Claude Code and Claude Agent SDK integration notes.
 
-Note: the Phase 1/2/3/4/5/6 numbering below is from the 2026-04-09 transformation plan and is **separate** from the 2026-04-16 doctrine's Phase 1 (doctrine pass) and Phase 2 (flagship). The two numbering systems coexist: doctrine phases track what the runtime proves; transformation-plan phases track how the repo shape evolves. They are not the same index.
+## Doctrine
 
-- Phase 1 — identity and contract correction: mostly done locally
-  - evidence: `README.md` and `STATUS.md` now frame the repo as Health Lab rather than a Garmin-only repo, and distinguish current proof from target flagship doctrine
-- Phase 2 — canonical data model introduction: partially done locally
-  - evidence: the repo has a schema-backed daily snapshot path under `clean/health_model/`, and the deterministic day-snapshot reconciliation lane passed as a bounded proof slice
-- Phase 3 — adapter reframing: in progress
-  - evidence: Garmin is being treated as an adapter into the shared health model, but source-registry / connector-truth cleanup is still incomplete and the current lane was interrupted before completion
-- Phase 4 — gym ingestion introduction: first bounded manual-gym prototype deliverable landed
-  - evidence: `merge_human_inputs/examples/manual_gym_sessions.example.json`, `clean/health_model/daily_snapshot.py`, `safety/tests/test_manual_logging.py`, and `reporting/artifacts/protocol_layer_proof/2026-04-14-manual-gym-phase-4-prototype/`
-- Phase 5 — nutrition surface cleanup: not yet landed as an interpretable phase deliverable
-- Phase 6 — ClawSuite-facing outputs: not yet landed as an interpretable phase deliverable
+The controlling doctrine is [`reporting/docs/canonical_doctrine.md`](reporting/docs/canonical_doctrine.md). Non-goals are frozen in [`reporting/docs/explicit_non_goals.md`](reporting/docs/explicit_non_goals.md). The reshape itself is recorded in [`reporting/docs/phase_timeline.md`](reporting/docs/phase_timeline.md).
 
-## Current plan position
+## What this is not
 
-- current_phase: Phase 3 — adapter reframing
-- current_bounded_lane: source-registry and connector-truth reconciliation
-- intended_stack_to_reconcile: Garmin + manual structured logging surfaces + nutrition pipeline, with `wger` kept only as the bounded exploratory non-flagship connector prototype defined in `reporting/docs/wger_connector_plan_v1.md`
-- current_truth: the last several local slices mainly hardened Phase 2 foundations and the Phase 2 -> Phase 3 handoff, and Phase 4 now has a first bounded manual-gym prototype deliverable surfaced on the tree
-- blocker: the connector/source-registry lane was interrupted, and repo-facing doctrine still needs to be reconciled cleanly against the intended stack
+- Not a clinical product or medical device.
+- Not hosted or multi-user.
+- Not a polished install flow for general users.
+- Not a learning loop — no ML model in the runtime.
+- Not a multi-source platform — Garmin plus typed manual readiness only. Broader source fusion is out of scope.
+- Not a replacement for a coach, clinician, or informed user judgment.
 
-## Current Phase 3 review path
+## Tools + skills at a glance
 
-For truthful source-scope and connector review, route through:
+| Layer | Surface | Location |
+|---|---|---|
+| Data acquisition | `hai pull` + Garmin adapter | `src/health_agent_infra/pull/` |
+| Normalization / raw aggregation | `hai clean` | `src/health_agent_infra/clean/` |
+| Schema-validated writeback | `hai writeback` | `src/health_agent_infra/writeback/` |
+| Review scheduling + outcomes | `hai review` | `src/health_agent_infra/review/` |
+| State classification + policy + recommendation | recovery-readiness skill | `skills/recovery-readiness/SKILL.md` |
+| User-facing narration | reporting skill | `skills/reporting/SKILL.md` |
+| Raw human input partitioning | merge-human-inputs skill | `skills/merge-human-inputs/SKILL.md` |
+| Writeback invocation protocol | writeback-protocol skill | `skills/writeback-protocol/SKILL.md` |
+| Fail-closed boundaries | safety skill | `skills/safety/SKILL.md` |
 
-- `reporting/docs/v1_source_scope.md`
-- `reporting/docs/source_registry_v1.md`
-- `reporting/docs/source_adapter_contract_v1.md`
+## What's next
 
-Current doctrine to preserve:
+No active roadmap beyond the reshape. Candidate directions — to be picked deliberately, not executed by default:
 
-- manual structured gym logs are the source-of-truth path for this doctrine interval
-- `wger` remains the bounded exploratory non-flagship connector prototype
-- next bounded deliverable: Phase 3 connector-truth/source-registry reconciliation
-- manual `program_block` is explicitly out of scope for the current slice
-
-## Canonical repo framing
-
-This repo should be read through the canonical eight-bucket model only:
-
-- `pull`
-- `clean`
-- `merge_human_inputs`
-- `research`
-- `interpretation`
-- `reporting`
-- `writeback`
-- `safety`
-
-Those eight buckets are the only canonical project-shape categories. Subpaths inside them, such as `clean/health_model/` or `writeback/agent_memory_write_cli.py`, are current implementation locations, not separate canonical layers.
-
-## Current repo reality
-
-The repo currently presents one bounded, CLI-first proof path plus supporting artifacts, tests, and compatibility surfaces. It is not a hosted product, consumer app, clinical system, or the durable private memory authority for user health data.
-
-Current implementation highlights by bucket:
-
-- `pull/` contains passive-data and machine-readable input acquisition surfaces plus current bucket-local runtime data paths such as `pull/data/`
-- `clean/health_model/` is the current main deterministic implementation namespace inside the `clean` bucket
-- `merge_human_inputs/` contains manual logging and intake surfaces
-- `reporting/` contains docs, scripts, public demo material, and proof bundles
-- `writeback/` contains explicit persisted-update surfaces
-- `safety/` contains tests, fail-closed proof checks, and compatibility wrappers
-- `research/` and `interpretation/` contain bounded exploratory and model-oriented work in their own buckets
-- `archive/legacy_product_surfaces/` remains legacy material outside the canonical bucket model
-
-## Proven now
-
-The flagship current proof loop is `recovery_readiness_v1`:
-
-`PULL -> CLEAN -> STATE -> POLICY -> RECOMMEND -> ACTION -> REVIEW`
-
-Implemented in `clean/health_model/recovery_readiness_v1/`; runs end-to-end over both synthetic fixtures and the committed real Garmin CSV export.
-
-An older CLI-first proof path (`contract describe -> bundle init -> voice-note submit -> context get -> recommendation create`) remains present under `clean/health_model/` with compatibility wrappers under `safety/health_agent_infra/`. It is retained as historical compatibility, not the current flagship.
-
-Public review surfaces:
-
-- `reporting/artifacts/flagship_loop_proof/2026-04-16-recovery-readiness-v1/` — 8 synthetic scenarios, full captured bundle
-- `reporting/artifacts/flagship_loop_proof/2026-04-16-garmin-real-slice/` — real Garmin slice, same pipeline
-- `reporting/docs/flagship_walkthrough.md` — narrative walkthrough
-- `reporting/docs/v1_source_scope.md`
-- `reporting/docs/source_registry_v1.md`
-- `reporting/docs/source_adapter_contract_v1.md`
-- `reporting/docs/health_lab_canonical_definition.md`
-- `reporting/docs/health_lab_canonical_public_demo.md`
-- `reporting/artifacts/public_demo/captured/` — older CLI-path public demo
-- `reporting/artifacts/flagship_loop_proof/2026-04-09/` — pre-Phase-2 flagship bundle
-- `reporting/artifacts/protocol_layer_proof/2026-04-14-manual-gym-phase-4-prototype/`
-
-For checked-in proof review, `reporting/artifacts/` is the sole canonical root.
-
-Additional bounded writeback proof:
-
-- `reporting/artifacts/protocol_layer_proof/2026-04-11-writeback-judgment/`
-- `reporting/artifacts/protocol_layer_proof/2026-04-11-recommendation-resolution-transition/`
-
-## Flagship status
-
-The narrow flagship loop (Garmin passive pull → typed manual readiness → deterministic normalization → typed state → policy → bounded recommendation → bounded local writeback → review) was delivered 2026-04-16 as `recovery_readiness_v1`. See `clean/health_model/recovery_readiness_v1/` and the proof bundles under `reporting/artifacts/flagship_loop_proof/2026-04-16-*`.
-
-For truthful review right now:
-- treat `recovery_readiness_v1` as the current flagship proof path
-- treat the older CLI-first chain as retained compatibility, not current flagship
-- treat the broader multi-source platform contract (full canonical artifact families, daily_health_snapshot merge) as aspirational scope distinct from the delivered narrow flagship
-- treat the transformation plan as the canonical direction for connector and ingestion scope
-- treat Phase 4 gym ingestion as having one explicit manual-first prototype deliverable on the tree, not a full resistance-training completion claim
-- treat manual structured gym logs as the source-of-truth path for this doctrine interval
-- treat `wger` only as the bounded exploratory non-flagship connector prototype defined in `reporting/docs/wger_connector_plan_v1.md`
-- treat leftover connector surfaces outside that doctrine as non-canonical until a later plan phase explicitly promotes them
-
-## Pathing truth to keep straight
-
-- checked-in proof artifacts live under the canonical root `reporting/artifacts/`
-- there is no separate repo-root `artifacts/` proof tree anymore
-- some runtime examples still write to `data/` paths
-- current bucket-local runtime data also exists under `pull/data/`
-
-So `data/...` should not be taught as the universal canonical repo layout.
-
-## What this repo is not claiming
-
-- not a clinical product or medical device
-- not a hosted or multi-user runtime
-- not a polished install flow for general users
-- not a claim that `health_model` is a canonical project-shape category
-- not a claim that all older adjacent material has been deleted or reorganized
-- not a claim that the frozen Garmin plus typed-manual-readiness flagship doctrine is already fully landed end-to-end
-
-## Reviewer checklist
-
-- [x] Root docs frame the repo through the canonical eight buckets
-- [x] Root docs distinguish current proof from the frozen target flagship doctrine
-- [x] Touched public/operator-facing docs demote `health_model` to implementation-namespace status
-- [x] Current path teaching avoids treating `data/...` as universal repo truth
-- [x] Public proof surfaces remain rooted in `reporting/`
-- [x] Root docs now defer connector and ingestion scope to the transformation plan instead of teaching exploratory connector doctrine at repo root
-- [x] Legacy material stays explicitly non-canonical
-- [ ] Destructive cleanup, moves, and archive pruning remain deferred to later slices
+- Regenerate the 2026-04-16 proof bundles with a real agent driving the skills-driven flow, so the captured JSONs match what the runtime actually produces now (not just what the pre-reshape Python produced).
+- Add a second source adapter conforming to `FlagshipPullAdapter` (e.g., a typed manual readiness intake adapter distinct from the neutral default).
+- Publish to PyPI once the install story is validated by a real user run.
+- MCP server wrapper for agents that prefer MCP over CLI subcommands.
