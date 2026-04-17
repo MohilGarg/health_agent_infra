@@ -373,6 +373,116 @@ def cmd_writeback(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
+# hai propose — schema-validated DomainProposal persistence
+# ---------------------------------------------------------------------------
+
+def cmd_propose(args: argparse.Namespace) -> int:
+    from health_agent_infra.core.state import project_proposal
+    from health_agent_infra.core.writeback.proposal import (
+        ProposalValidationError,
+        perform_proposal_writeback,
+        validate_proposal_dict,
+    )
+
+    data = json.loads(Path(args.proposal_json).read_text(encoding="utf-8"))
+    try:
+        validate_proposal_dict(data, expected_domain=args.domain)
+    except ProposalValidationError as exc:
+        print(
+            f"propose rejected: invariant={exc.invariant}: {exc}",
+            file=sys.stderr,
+        )
+        return 2
+    except (ValueError, KeyError) as exc:
+        print(f"propose rejected: {exc}", file=sys.stderr)
+        return 2
+
+    # JSONL audit first.
+    record = perform_proposal_writeback(data, base_dir=Path(args.base_dir))
+
+    # DB projection is best-effort; failure becomes a stderr warning.
+    _dual_write_project(
+        args.db_path,
+        lambda conn: project_proposal(conn, data),
+        "proposal",
+    )
+
+    _emit_json(record.to_dict())
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# hai synthesize — atomic Phase A + Phase B plan commit
+# ---------------------------------------------------------------------------
+
+def cmd_synthesize(args: argparse.Namespace) -> int:
+    from health_agent_infra.core.state import open_connection, resolve_db_path
+    from health_agent_infra.core.synthesis import (
+        SynthesisError,
+        run_synthesis,
+    )
+    from health_agent_infra.core.synthesis_policy import XRuleWriteSurfaceViolation
+
+    for_date = _coerce_date(args.as_of)
+    user_id = args.user_id
+
+    db_path = resolve_db_path(args.db_path)
+    if not db_path.exists():
+        print(
+            f"hai synthesize requires an initialized state DB; not found at "
+            f"{db_path}. Run `hai state init` first.",
+            file=sys.stderr,
+        )
+        return 2
+
+    skill_drafts: Optional[list[dict]] = None
+    if args.drafts_json:
+        try:
+            skill_drafts = json.loads(
+                Path(args.drafts_json).read_text(encoding="utf-8"),
+            )
+        except (json.JSONDecodeError, OSError) as exc:
+            print(
+                f"hai synthesize rejected: could not read drafts JSON "
+                f"({args.drafts_json}): {exc}",
+                file=sys.stderr,
+            )
+            return 2
+        if not isinstance(skill_drafts, list):
+            print(
+                f"hai synthesize rejected: drafts JSON must be a JSON array; "
+                f"got {type(skill_drafts).__name__}",
+                file=sys.stderr,
+            )
+            return 2
+
+    conn = open_connection(db_path)
+    try:
+        result = run_synthesis(
+            conn,
+            for_date=for_date,
+            user_id=user_id,
+            skill_drafts=skill_drafts,
+            agent_version=args.agent_version,
+            supersede=args.supersede,
+        )
+    except SynthesisError as exc:
+        print(f"hai synthesize rejected: {exc}", file=sys.stderr)
+        return 2
+    except XRuleWriteSurfaceViolation as exc:
+        print(
+            f"hai synthesize rejected: write_surface_violation: {exc}",
+            file=sys.stderr,
+        )
+        return 2
+    finally:
+        conn.close()
+
+    _emit_json(result.to_dict())
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # hai review
 # ---------------------------------------------------------------------------
 
@@ -1487,6 +1597,44 @@ def build_parser() -> argparse.ArgumentParser:
                       help="State DB path (default: $HAI_STATE_DB or ~/.local/share/health_agent_infra/state.db). "
                            "If the DB is absent, projection is skipped with a stderr note.")
     p_wb.set_defaults(func=cmd_writeback)
+
+    p_prop = sub.add_parser(
+        "propose",
+        help="Validate and persist a DomainProposal JSON to proposal_log",
+    )
+    p_prop.add_argument("--domain", required=True,
+                        choices=("recovery", "running"),
+                        help="Domain whose proposal is being written")
+    p_prop.add_argument("--proposal-json", required=True,
+                        help="Path to a JSON file matching DomainProposal shape")
+    p_prop.add_argument("--base-dir", required=True,
+                        help="Writeback root; <domain>_proposals.jsonl will be appended here")
+    p_prop.add_argument("--db-path", default=None,
+                        help="State DB path (same semantics as `hai writeback --db-path`)")
+    p_prop.set_defaults(func=cmd_propose)
+
+    p_syn = sub.add_parser(
+        "synthesize",
+        help="Read proposals + snapshot, run X-rules, atomically commit daily_plan + recommendations + firings",
+    )
+    p_syn.add_argument("--as-of", required=True,
+                       help="Civil date to synthesize for, ISO-8601 YYYY-MM-DD")
+    p_syn.add_argument("--user-id", required=True,
+                       help="User whose proposals to reconcile")
+    p_syn.add_argument("--drafts-json", default=None,
+                       help="Optional JSON array of skill-authored draft recommendations. "
+                            "When present, overlays rationale + uncertainty + review_question "
+                            "onto the mechanical drafts. action / action_detail / confidence "
+                            "are runtime-owned after Phase A and cannot be changed by the skill.")
+    p_syn.add_argument("--supersede", action="store_true",
+                       help="Keep the prior canonical plan and write a fresh suffixed "
+                            "plan id. Default is atomic replacement.")
+    p_syn.add_argument("--agent-version", default="claude_agent_v1",
+                       help="Agent version string to record on every row "
+                            "(not part of the canonical plan idempotency key)")
+    p_syn.add_argument("--db-path", default=None,
+                       help="State DB path (same semantics as `hai writeback --db-path`)")
+    p_syn.set_defaults(func=cmd_synthesize)
 
     p_review = sub.add_parser("review", help="Review scheduling + outcome persistence")
     review_sub = p_review.add_subparsers(dest="review_command", required=True)

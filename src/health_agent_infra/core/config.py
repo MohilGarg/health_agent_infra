@@ -147,7 +147,15 @@ DEFAULT_THRESHOLDS: dict[str, Any] = {
             "x3b": {"acwr_ratio_min": 1.5},
             "x6a": {"body_battery_max": 30},
             "x6b": {"body_battery_max": 15},
-            "x7": {"stress_trigger_bands": ["high", "very_high"]},
+            # Phase 3 will add a dedicated stress classifier; until then,
+            # X7 locally bands Garmin's 0-100 ``all_day_stress`` by these
+            # numeric thresholds so the rule is evaluable pre-Phase-3.
+            "x7": {
+                "stress_trigger_bands": ["high", "very_high"],
+                "moderate_min_score": 40,
+                "high_min_score": 60,
+                "very_high_min_score": 80,
+            },
         },
     },
 }
@@ -354,7 +362,12 @@ body_battery_max = 30
 body_battery_max = 15
 
 [synthesis.x_rules.x7]
+# Phase 3 will ship a dedicated stress classifier; until then, X7 bands
+# Garmin's numeric all_day_stress score locally using these thresholds.
 stress_trigger_bands = ["high", "very_high"]
+moderate_min_score = 40
+high_min_score     = 60
+very_high_min_score = 80
 """
 
 
