@@ -11,5 +11,29 @@ from health_agent_infra.core.config import (
     load_thresholds,
     user_config_path,
 )
+from health_agent_infra.core.schemas import (
+    BOUNDED_RECOMMENDATION_FIELDS,
+    BoundedRecommendation,
+    DAILY_PLAN_FIELDS,
+    DOMAIN_PROPOSAL_FIELDS,
+    DailyPlan,
+    DomainProposal,
+    FollowUpRecord,
+    PolicyDecisionRecord,
+    canonical_daily_plan_id,
+)
 
-__all__ = ["DEFAULT_THRESHOLDS", "load_thresholds", "user_config_path"]
+__all__ = [
+    "DEFAULT_THRESHOLDS",
+    "load_thresholds",
+    "user_config_path",
+    "BOUNDED_RECOMMENDATION_FIELDS",
+    "BoundedRecommendation",
+    "DAILY_PLAN_FIELDS",
+    "DOMAIN_PROPOSAL_FIELDS",
+    "DailyPlan",
+    "DomainProposal",
+    "FollowUpRecord",
+    "PolicyDecisionRecord",
+    "canonical_daily_plan_id",
+]
