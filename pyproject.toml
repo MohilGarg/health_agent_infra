@@ -30,6 +30,7 @@ where = ["src"]
 "health_agent_infra" = [
   "skills/**/*.md",
   "data/**/*.csv",
+  "state/migrations/*.sql",
 ]
 
 [tool.pytest.ini_options]

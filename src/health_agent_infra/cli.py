@@ -302,6 +302,62 @@ def cmd_intake_readiness(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
+# hai state init / hai state migrate — SQLite substrate (7A.1)
+# ---------------------------------------------------------------------------
+
+def cmd_state_init(args: argparse.Namespace) -> int:
+    """Create the state DB file (if absent) and apply pending migrations."""
+
+    from health_agent_infra.state import initialize_database, resolve_db_path
+
+    db_path = resolve_db_path(args.db_path)
+    resolved, applied = initialize_database(db_path)
+    _emit_json({
+        "db_path": str(resolved),
+        "created": applied,  # empty list if nothing was applied in this call
+    })
+    return 0
+
+
+def cmd_state_migrate(args: argparse.Namespace) -> int:
+    """Apply any pending migrations against an existing state DB.
+
+    Behaves like ``hai state init`` but explicitly intended for upgrading an
+    already-initialised DB. Idempotent — re-running against a DB already at
+    head returns an empty applied list.
+    """
+
+    from health_agent_infra.state import (
+        apply_pending_migrations,
+        current_schema_version,
+        open_connection,
+        resolve_db_path,
+    )
+
+    db_path = resolve_db_path(args.db_path)
+    if not db_path.exists():
+        print(
+            f"state DB not found at {db_path}. Run `hai state init` first.",
+            file=sys.stderr,
+        )
+        return 2
+    conn = open_connection(db_path)
+    try:
+        before = current_schema_version(conn)
+        applied = apply_pending_migrations(conn)
+        after = current_schema_version(conn)
+    finally:
+        conn.close()
+    _emit_json({
+        "db_path": str(db_path),
+        "schema_version_before": before,
+        "schema_version_after": after,
+        "applied": applied,
+    })
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # hai setup-skills
 # ---------------------------------------------------------------------------
 
@@ -390,6 +446,19 @@ def build_parser() -> argparse.ArgumentParser:
     p_ir.add_argument("--as-of", default=None,
                       help="As-of date for submission_id (ISO-8601, default today UTC)")
     p_ir.set_defaults(func=cmd_intake_readiness)
+
+    p_state = sub.add_parser("state", help="Local SQLite state store management")
+    state_sub = p_state.add_subparsers(dest="state_command", required=True)
+
+    p_si = state_sub.add_parser("init", help="Create the state DB and apply pending migrations")
+    p_si.add_argument("--db-path", default=None,
+                      help="Path to state.db (default: $HAI_STATE_DB or ~/.local/share/health_agent_infra/state.db)")
+    p_si.set_defaults(func=cmd_state_init)
+
+    p_sm = state_sub.add_parser("migrate", help="Apply pending migrations against an existing state DB")
+    p_sm.add_argument("--db-path", default=None,
+                      help="Path to state.db (default: $HAI_STATE_DB or ~/.local/share/health_agent_infra/state.db)")
+    p_sm.set_defaults(func=cmd_state_migrate)
 
     p_setup = sub.add_parser("setup-skills", help="Copy packaged skills/ into ~/.claude/skills/")
     p_setup.add_argument("--dest", default=str(DEFAULT_CLAUDE_SKILLS_DIR))
