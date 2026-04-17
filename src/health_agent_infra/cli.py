@@ -193,7 +193,44 @@ def _recommendation_from_dict(data: dict) -> TrainingRecommendation:
     )
 
 
+def _dual_write_project(db_path_arg, project_fn, label: str) -> None:
+    """Run a projector against the resolved state DB.
+
+    Fails soft: if the DB doesn't exist or the projector raises, we print a
+    stderr warning and return. The JSONL write is the audit boundary; the DB
+    is a queryable projection that ``hai state reproject`` can rebuild.
+    ``project_fn`` receives the open connection.
+    """
+
+    from health_agent_infra.state import open_connection, resolve_db_path
+
+    db_path = resolve_db_path(db_path_arg)
+    if not db_path.exists():
+        print(
+            f"note: state DB projection skipped ({db_path} not found). "
+            f"JSONL audit record is durable. Run `hai state init` to enable "
+            f"DB dual-write.",
+            file=sys.stderr,
+        )
+        return
+
+    conn = open_connection(db_path)
+    try:
+        project_fn(conn)
+    except Exception as exc:  # noqa: BLE001 — any DB failure becomes a warning
+        print(
+            f"warning: {label} projection into state DB failed: {exc}. "
+            f"JSONL record is durable; run `hai state reproject --base-dir "
+            f"<writeback-root>` to recover.",
+            file=sys.stderr,
+        )
+    finally:
+        conn.close()
+
+
 def cmd_writeback(args: argparse.Namespace) -> int:
+    from health_agent_infra.state import project_recommendation
+
     data = json.loads(Path(args.recommendation_json).read_text(encoding="utf-8"))
     try:
         recommendation = _recommendation_from_dict(data)
@@ -206,7 +243,17 @@ def cmd_writeback(args: argparse.Namespace) -> int:
     except (ValueError, KeyError) as exc:
         print(f"writeback rejected: {exc}", file=sys.stderr)
         return 2
+
+    # JSONL is the audit boundary. Always happens first.
     record = perform_writeback(recommendation, base_dir=Path(args.base_dir))
+
+    # DB projection is best-effort. Failure => stderr warning + exit 0.
+    _dual_write_project(
+        args.db_path,
+        lambda conn: project_recommendation(conn, recommendation),
+        "recommendation",
+    )
+
     _emit_json(record.to_dict())
     return 0
 
@@ -216,14 +263,25 @@ def cmd_writeback(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 
 def cmd_review_schedule(args: argparse.Namespace) -> int:
+    from health_agent_infra.state import project_review_event
+
     data = json.loads(Path(args.recommendation_json).read_text(encoding="utf-8"))
     recommendation = _recommendation_from_dict(data)
     event = schedule_review(recommendation, base_dir=Path(args.base_dir))
+
+    _dual_write_project(
+        args.db_path,
+        lambda conn: project_review_event(conn, event),
+        "review event",
+    )
+
     _emit_json(event.to_dict())
     return 0
 
 
 def cmd_review_record(args: argparse.Namespace) -> int:
+    from health_agent_infra.state import project_review_outcome
+
     data = json.loads(Path(args.outcome_json).read_text(encoding="utf-8"))
     event = ReviewEvent(
         review_event_id=data["review_event_id"],
@@ -240,6 +298,13 @@ def cmd_review_record(args: argparse.Namespace) -> int:
         free_text=data.get("free_text"),
         now=_coerce_dt(data.get("recorded_at")),
     )
+
+    _dual_write_project(
+        args.db_path,
+        lambda conn: project_review_outcome(conn, outcome),
+        "review outcome",
+    )
+
     _emit_json(outcome.to_dict())
     return 0
 
@@ -315,6 +380,47 @@ def cmd_state_init(args: argparse.Namespace) -> int:
     _emit_json({
         "db_path": str(resolved),
         "created": applied,  # empty list if nothing was applied in this call
+    })
+    return 0
+
+
+def cmd_state_reproject(args: argparse.Namespace) -> int:
+    """Rebuild recommendation_log / review_event / review_outcome from JSONL.
+
+    The JSONL files under ``--base-dir`` are the durable source of truth;
+    the DB is a queryable projection. This command truncates the three
+    projected tables and re-reads every line in dependency order
+    (recommendations -> events -> outcomes). Idempotent.
+    """
+
+    from health_agent_infra.state import (
+        open_connection,
+        reproject_from_jsonl,
+        resolve_db_path,
+    )
+
+    db_path = resolve_db_path(args.db_path)
+    if not db_path.exists():
+        print(
+            f"state DB not found at {db_path}. Run `hai state init` first.",
+            file=sys.stderr,
+        )
+        return 2
+
+    base_dir = Path(args.base_dir)
+    if not base_dir.exists():
+        print(f"base-dir not found at {base_dir}", file=sys.stderr)
+        return 2
+
+    conn = open_connection(db_path)
+    try:
+        counts = reproject_from_jsonl(conn, base_dir)
+    finally:
+        conn.close()
+    _emit_json({
+        "db_path": str(db_path),
+        "base_dir": str(base_dir),
+        "reprojected": counts,
     })
     return 0
 
@@ -411,6 +517,9 @@ def build_parser() -> argparse.ArgumentParser:
                       help="Path to a JSON file matching TrainingRecommendation")
     p_wb.add_argument("--base-dir", required=True,
                       help="Writeback root (must contain 'recovery_readiness_v1')")
+    p_wb.add_argument("--db-path", default=None,
+                      help="State DB path (default: $HAI_STATE_DB or ~/.local/share/health_agent_infra/state.db). "
+                           "If the DB is absent, projection is skipped with a stderr note.")
     p_wb.set_defaults(func=cmd_writeback)
 
     p_review = sub.add_parser("review", help="Review scheduling + outcome persistence")
@@ -419,11 +528,15 @@ def build_parser() -> argparse.ArgumentParser:
     p_rs = review_sub.add_parser("schedule", help="Persist a pending review event for a recommendation")
     p_rs.add_argument("--recommendation-json", required=True)
     p_rs.add_argument("--base-dir", required=True)
+    p_rs.add_argument("--db-path", default=None,
+                      help="State DB path (same semantics as `hai writeback --db-path`)")
     p_rs.set_defaults(func=cmd_review_schedule)
 
     p_rr = review_sub.add_parser("record", help="Record a review outcome")
     p_rr.add_argument("--outcome-json", required=True)
     p_rr.add_argument("--base-dir", required=True)
+    p_rr.add_argument("--db-path", default=None,
+                      help="State DB path (same semantics as `hai writeback --db-path`)")
     p_rr.set_defaults(func=cmd_review_record)
 
     p_rsum = review_sub.add_parser("summary", help="Summarize outcome history counts")
@@ -459,6 +572,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_sm.add_argument("--db-path", default=None,
                       help="Path to state.db (default: $HAI_STATE_DB or ~/.local/share/health_agent_infra/state.db)")
     p_sm.set_defaults(func=cmd_state_migrate)
+
+    p_sr = state_sub.add_parser(
+        "reproject",
+        help="Rebuild recommendation_log / review_event / review_outcome from JSONL audit logs",
+    )
+    p_sr.add_argument("--base-dir", required=True,
+                      help="Writeback root containing recommendation_log.jsonl etc.")
+    p_sr.add_argument("--db-path", default=None,
+                      help="State DB path (default: $HAI_STATE_DB or platform default)")
+    p_sr.set_defaults(func=cmd_state_reproject)
 
     p_setup = sub.add_parser("setup-skills", help="Copy packaged skills/ into ~/.claude/skills/")
     p_setup.add_argument("--dest", default=str(DEFAULT_CLAUDE_SKILLS_DIR))

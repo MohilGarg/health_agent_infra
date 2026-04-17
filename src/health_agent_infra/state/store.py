@@ -108,9 +108,16 @@ def _split_sql_statements(sql: str) -> list[str]:
     """Split a SQL script into individual statements on statement-terminating ``;``.
 
     Handles ``--`` line comments and single-quoted string literals (including
-    the SQL ``''`` escape). Does not handle ``/* */`` block comments —
-    migrations in this project don't use them, and relying on that keeps the
-    splitter small.
+    the SQL ``''`` escape).
+
+    **Migration-authoring constraint:** this splitter is intentionally narrow.
+    It does **not** handle ``/* */`` block comments, trigger bodies with
+    internal semicolons, ``BEGIN ... END;`` compound statements, or any SQL
+    shape that places ``;`` inside a parsed construct other than a string
+    literal. Migration authors must keep each statement terminated by a
+    single ``;`` followed by whitespace/newline and use ``--`` for inline
+    commentary. If a future migration needs triggers or block comments, this
+    splitter must be upgraded first.
     """
 
     statements: list[str] = []

@@ -5,6 +5,12 @@ arrive in later phases. This module is not imported by any subcommand beyond
 ``hai state init`` and ``hai state migrate`` until 7A.2.
 """
 
+from health_agent_infra.state.projector import (
+    project_recommendation,
+    project_review_event,
+    project_review_outcome,
+    reproject_from_jsonl,
+)
 from health_agent_infra.state.store import (
     DEFAULT_DB_PATH,
     apply_pending_migrations,
@@ -20,5 +26,9 @@ __all__ = [
     "current_schema_version",
     "initialize_database",
     "open_connection",
+    "project_recommendation",
+    "project_review_event",
+    "project_review_outcome",
+    "reproject_from_jsonl",
     "resolve_db_path",
 ]
