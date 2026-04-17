@@ -37,19 +37,9 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["safety/tests"]
-# Legacy tests scheduled for deletion in commits 4a/4b. Ignored here so the
-# full suite runs green during the reshape.
+# Legacy data-layer tests scheduled for deletion in commit 4b. Ignored here
+# so the full suite runs green during the reshape.
 addopts = [
-    "--ignore=safety/tests/test_agent_bundle_cli.py",
-    "--ignore=safety/tests/test_agent_context_cli.py",
-    "--ignore=safety/tests/test_agent_contract_cli.py",
-    "--ignore=safety/tests/test_agent_interface.py",
-    "--ignore=safety/tests/test_agent_memory_write_cli.py",
-    "--ignore=safety/tests/test_agent_readable_daily_context.py",
-    "--ignore=safety/tests/test_agent_recommendation_cli.py",
-    "--ignore=safety/tests/test_agent_retrieval_cli.py",
-    "--ignore=safety/tests/test_agent_submit_cli.py",
-    "--ignore=safety/tests/test_agent_voice_note_cli.py",
     "--ignore=safety/tests/test_build_daily_context_artifact.py",
     "--ignore=safety/tests/test_daily_snapshot_nutrition_scoping.py",
     "--ignore=safety/tests/test_day_nutrition_brief.py",
