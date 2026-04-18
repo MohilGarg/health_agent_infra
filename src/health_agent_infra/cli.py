@@ -1902,6 +1902,289 @@ def cmd_exercise_search(args: argparse.Namespace) -> int:
     return 0
 
 
+# ---------------------------------------------------------------------------
+# hai daily — one-shot morning orchestration of the real runtime
+# ---------------------------------------------------------------------------
+
+# Six v1 domains. Kept in lockstep with
+# ``core.writeback.proposal.SUPPORTED_DOMAINS``; duplicated here only so the
+# CLI can validate the ``--domains`` flag without importing proposal.py at
+# module import time (other subcommands resolve validator state lazily).
+_DAILY_SUPPORTED_DOMAINS: frozenset[str] = frozenset({
+    "recovery", "running", "sleep", "stress", "strength", "nutrition",
+})
+
+
+def _parse_daily_domains(domains_arg: Optional[str]) -> tuple[frozenset[str], Optional[str]]:
+    """Parse ``--domains d1,d2,...`` → (valid_set, error_message).
+
+    Empty / missing input resolves to the full v1 domain set so the default
+    run covers all six. Unknown tokens return an error message for the
+    caller to surface on stderr; no exception so cmd_daily can emit its own
+    structured failure report.
+    """
+
+    if not domains_arg:
+        return frozenset(_DAILY_SUPPORTED_DOMAINS), None
+    raw = [v.strip() for v in domains_arg.split(",") if v.strip()]
+    if not raw:
+        return frozenset(), "empty --domains value"
+    unknown = sorted(set(raw) - _DAILY_SUPPORTED_DOMAINS)
+    if unknown:
+        return frozenset(), (
+            f"unsupported --domains value(s): {unknown}. "
+            f"Valid: {sorted(_DAILY_SUPPORTED_DOMAINS)}"
+        )
+    return frozenset(raw), None
+
+
+def _daily_pull_and_project(
+    args: argparse.Namespace,
+    *,
+    as_of: date,
+    user_id: str,
+    db_path: Path,
+) -> tuple[str, bool]:
+    """Run the pull + state projection path ``hai pull`` + ``hai clean`` run.
+
+    Reuses the adapters + ``_project_clean_into_state`` already shipped so
+    ``hai daily`` does not duplicate acquisition or cleaning logic. No
+    stdout emission (the outer command emits a single orchestration
+    report). Returns ``(source_name, projected_raw_daily)``. Raises
+    :class:`GarminLiveError` on failure so the caller can classify.
+    """
+
+    if getattr(args, "live", False):
+        adapter = _build_live_adapter(args)
+    else:
+        adapter = GarminRecoveryReadinessAdapter()
+
+    pull = adapter.load(as_of)
+    raw_row = pull.get("raw_daily_row")
+    if raw_row is not None:
+        _project_clean_into_state(
+            db_path,
+            as_of_date=as_of,
+            user_id=user_id,
+            raw_row=raw_row,
+        )
+    return adapter.source_name, raw_row is not None
+
+
+def _schedule_reviews_for_daily_plan(
+    conn: sqlite3.Connection,
+    *,
+    daily_plan_id: str,
+    base_dir: Path,
+) -> list[str]:
+    """Schedule a ``ReviewEvent`` for each recommendation in ``daily_plan``.
+
+    Reads the recommendation payloads the synthesis transaction just
+    committed, rebuilds a ``ReviewEvent`` from each payload's ``follow_up``
+    block, appends JSONL, and projects into ``review_event``. Both writes
+    are idempotent on ``review_event_id`` so reruns of ``hai daily`` stay
+    safe. Returns the list of scheduled ids in stable order.
+
+    DB projection is best-effort: a failure becomes a stderr warning and
+    the JSONL audit line is kept — parallel to how ``hai review schedule``
+    uses ``_dual_write_project``.
+    """
+
+    from health_agent_infra.core.state import project_review_event
+
+    rows = conn.execute(
+        "SELECT payload_json FROM recommendation_log "
+        "WHERE json_extract(payload_json, '$.daily_plan_id') = ? "
+        "ORDER BY recommendation_id",
+        (daily_plan_id,),
+    ).fetchall()
+
+    scheduled: list[str] = []
+    for row in rows:
+        payload = json.loads(row["payload_json"])
+        follow_up = payload["follow_up"]
+        event = ReviewEvent(
+            review_event_id=follow_up["review_event_id"],
+            recommendation_id=payload["recommendation_id"],
+            user_id=payload["user_id"],
+            review_at=_coerce_dt(follow_up["review_at"]),
+            review_question=follow_up["review_question"],
+            domain=payload.get("domain", "recovery"),
+        )
+        persist_review_event(event, base_dir=base_dir)
+        try:
+            project_review_event(conn, event)
+        except Exception as exc:  # noqa: BLE001
+            print(
+                f"warning: review event projection failed for "
+                f"{event.review_event_id}: {exc}. JSONL record is durable.",
+                file=sys.stderr,
+            )
+        scheduled.append(event.review_event_id)
+    return scheduled
+
+
+def cmd_daily(args: argparse.Namespace) -> int:
+    """Orchestrate the morning sequence over the existing runtime surfaces.
+
+    Stages: pull → clean → snapshot → proposal-gate → synthesize →
+    schedule reviews. The proposal gate is the agent seam: skills are
+    judgment-only, so when ``proposal_log`` has no rows for
+    ``(for_date, user_id)`` the command exits 0 with
+    ``overall_status=awaiting_proposals`` rather than faking proposals or
+    escalating to a hard error. After the agent posts proposals via
+    ``hai propose``, rerunning ``hai daily`` completes the remaining
+    stages (synthesize is idempotent on the canonical key; review
+    scheduling is idempotent on ``review_event_id``).
+    """
+
+    from health_agent_infra.core.state import (
+        open_connection,
+        read_proposals_for_plan_key,
+        resolve_db_path,
+    )
+    from health_agent_infra.core.state.snapshot import build_snapshot
+    from health_agent_infra.core.synthesis import (
+        SynthesisError,
+        run_synthesis,
+    )
+    from health_agent_infra.core.synthesis_policy import (
+        XRuleWriteSurfaceViolation,
+    )
+
+    expected_domains, domains_err = _parse_daily_domains(args.domains)
+    if domains_err is not None:
+        print(f"hai daily rejected: {domains_err}", file=sys.stderr)
+        return 2
+
+    as_of = _coerce_date(args.as_of)
+    user_id = args.user_id
+    base_dir = Path(args.base_dir).resolve()
+    base_dir.mkdir(parents=True, exist_ok=True)
+
+    db_path = resolve_db_path(args.db_path)
+    if not db_path.exists():
+        print(
+            f"hai daily requires an initialized state DB; not found at "
+            f"{db_path}. Run `hai state init` first.",
+            file=sys.stderr,
+        )
+        return 2
+
+    report: dict[str, Any] = {
+        "as_of_date": as_of.isoformat(),
+        "user_id": user_id,
+        "base_dir": str(base_dir),
+        "db_path": str(db_path),
+        "expected_domains": sorted(expected_domains),
+        "stages": {},
+    }
+
+    # Stage 1 + 2: pull + clean (skippable for offline / already-populated runs)
+    if args.skip_pull:
+        report["stages"]["pull"] = {"status": "skipped"}
+        report["stages"]["clean"] = {"status": "skipped"}
+    else:
+        try:
+            source_name, projected = _daily_pull_and_project(
+                args, as_of=as_of, user_id=user_id, db_path=db_path,
+            )
+        except GarminLiveError as exc:
+            report["stages"]["pull"] = {"status": "failed", "error": str(exc)}
+            report["overall_status"] = "failed"
+            _emit_json(report)
+            return 2
+        report["stages"]["pull"] = {"status": "ran", "source": source_name}
+        report["stages"]["clean"] = {
+            "status": "ran" if projected else "no_raw_daily_row",
+        }
+
+    conn = open_connection(db_path)
+    try:
+        # Stage 3: snapshot — the cross-domain bundle the agent reads
+        snapshot = build_snapshot(
+            conn, as_of_date=as_of, user_id=user_id, lookback_days=14,
+        )
+        report["stages"]["snapshot"] = {
+            "status": "ran",
+            "domains_in_bundle": sorted(
+                k for k in snapshot.keys() if k in _DAILY_SUPPORTED_DOMAINS
+            ),
+        }
+
+        # Stage 4: proposal gate — honest check, no faking
+        proposals = read_proposals_for_plan_key(
+            conn, for_date=as_of.isoformat(), user_id=user_id,
+        )
+        present_domains = sorted({p["domain"] for p in proposals})
+        missing_expected = sorted(set(expected_domains) - set(present_domains))
+        gate_ok = bool(proposals)
+        report["stages"]["proposal_gate"] = {
+            "status": "complete" if gate_ok else "awaiting_proposals",
+            "expected": sorted(expected_domains),
+            "present": present_domains,
+            "missing": missing_expected,
+        }
+        if not gate_ok:
+            report["stages"]["synthesize"] = {
+                "status": "skipped_awaiting_proposals",
+                "hint": (
+                    "Agent must post DomainProposal rows via `hai propose` "
+                    "for the expected domains, then rerun `hai daily`."
+                ),
+            }
+            report["stages"]["reviews"] = {"status": "skipped"}
+            report["overall_status"] = "awaiting_proposals"
+            _emit_json(report)
+            return 0
+
+        # Stage 5: synthesize — atomic Phase A + Phase B commit
+        try:
+            result = run_synthesis(
+                conn,
+                for_date=as_of,
+                user_id=user_id,
+                snapshot=snapshot,
+                agent_version=args.agent_version,
+                supersede=args.supersede,
+            )
+        except (SynthesisError, XRuleWriteSurfaceViolation) as exc:
+            report["stages"]["synthesize"] = {
+                "status": "failed",
+                "error": str(exc),
+            }
+            report["overall_status"] = "failed"
+            _emit_json(report)
+            return 2
+        report["stages"]["synthesize"] = {
+            "status": "ran",
+            "daily_plan_id": result.daily_plan_id,
+            "recommendation_ids": list(result.recommendation_ids),
+            "proposal_ids": list(result.proposal_ids),
+            "phase_a_count": len(result.phase_a_firings),
+            "phase_b_count": len(result.phase_b_firings),
+            "superseded_prior": result.superseded_prior,
+        }
+
+        # Stage 6: schedule reviews
+        if args.skip_reviews:
+            report["stages"]["reviews"] = {"status": "skipped"}
+        else:
+            scheduled = _schedule_reviews_for_daily_plan(
+                conn, daily_plan_id=result.daily_plan_id, base_dir=base_dir,
+            )
+            report["stages"]["reviews"] = {
+                "status": "ran",
+                "scheduled_event_ids": scheduled,
+            }
+    finally:
+        conn.close()
+
+    report["overall_status"] = "complete"
+    _emit_json(report)
+    return 0
+
+
 def cmd_setup_skills(args: argparse.Namespace) -> int:
     dest = Path(args.dest).expanduser()
     dest.mkdir(parents=True, exist_ok=True)
@@ -2316,6 +2599,54 @@ def build_parser() -> argparse.ArgumentParser:
                            "the base-dir contains none of the expected JSONL audit logs. "
                            "Refuses by default to guard against typo-driven data loss.")
     p_sr.set_defaults(func=cmd_state_reproject)
+
+    p_daily = sub.add_parser(
+        "daily",
+        help=(
+            "One-shot morning orchestration over the existing runtime "
+            "(pull → clean → snapshot → proposal-gate → synthesize → "
+            "schedule reviews). Stops honestly at the agent seam when "
+            "proposals are not yet in proposal_log."
+        ),
+    )
+    p_daily.add_argument("--base-dir", required=True,
+                         help="Writeback/intake root. review_events.jsonl "
+                              "is appended here after synthesis.")
+    p_daily.add_argument("--as-of", default=None,
+                         help="Civil date to orchestrate for, ISO-8601. "
+                              "Default: today UTC.")
+    p_daily.add_argument("--user-id", default="u_local_1",
+                         help="User whose plan to generate.")
+    p_daily.add_argument("--db-path", default=None,
+                         help="State DB path (same semantics as "
+                              "`hai writeback --db-path`).")
+    p_daily.add_argument("--live", action="store_true",
+                         help="Fetch evidence via `python-garminconnect` "
+                              "(requires `hai auth garmin`). Default uses "
+                              "the committed CSV adapter.")
+    p_daily.add_argument("--history-days", type=int, default=14,
+                         help="Trailing window for live pull series "
+                              "(matches `hai pull --history-days`).")
+    p_daily.add_argument("--skip-pull", action="store_true",
+                         help="Skip the pull + clean stages. Assumes "
+                              "state already populated for --as-of.")
+    p_daily.add_argument("--domains", default=None,
+                         help="Optional CSV subset of expected domains "
+                              "(recovery, running, sleep, stress, "
+                              "strength, nutrition). Filters the "
+                              "proposal-gate expected-vs-present report "
+                              "only; synthesis still runs over whatever "
+                              "proposals are present in proposal_log.")
+    p_daily.add_argument("--agent-version", default="claude_agent_v1",
+                         help="Agent version string stamped on "
+                              "committed rows.")
+    p_daily.add_argument("--supersede", action="store_true",
+                         help="Keep prior canonical plan and write a "
+                              "fresh _v<N> id. Default is atomic replace.")
+    p_daily.add_argument("--skip-reviews", action="store_true",
+                         help="Skip review-event scheduling after "
+                              "synthesis.")
+    p_daily.set_defaults(func=cmd_daily)
 
     p_setup = sub.add_parser("setup-skills", help="Copy packaged skills/ into ~/.claude/skills/")
     p_setup.add_argument("--dest", default=str(DEFAULT_CLAUDE_SKILLS_DIR))
