@@ -110,9 +110,12 @@ domains + synthesis: 28 scenarios, all green.
 Pre-rebuild artifacts live under
 ``reporting/artifacts/archive/`` and no longer reflect the runtime.
 
-``safety/evals/scenarios/<d>/*.json`` are the authored scenarios;
-``safety/evals/runner.py`` executes + scores them; ``hai eval run``
-is the CLI entry point.
+The eval framework is **packaged inside the wheel** at
+``src/health_agent_infra/evals/``: ``scenarios/<d>/*.json`` are the
+authored scenarios, ``runner.py`` executes + scores them, and
+``hai eval run`` is the CLI entry point. The dev-reference docs
+(``README.md``, ``skill_harness_blocker.md``) still live under
+``safety/evals/``.
 
 Deterministic runtime coverage is full. Skill-narration coverage is
 explicitly NOT scored — see

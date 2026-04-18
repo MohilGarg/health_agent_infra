@@ -1,7 +1,7 @@
 ---
 name: daily-plan-synthesis
 description: Reconcile per-domain proposals into a coherent daily plan by composing rationale and uncertainty across domains. The runtime already applied every Phase A X-rule mutation mechanically; this skill adds the human-legible joint narration on top. It never computes bands, evaluates R-rules, or applies X-rule mutations — those are runtime-owned.
-allowed-tools: Read, Bash(hai state snapshot *), Bash(hai synthesize *)
+allowed-tools: Read, Bash(hai state snapshot *), Bash(hai synthesize --bundle-only *), Bash(hai synthesize --drafts-json *)
 disable-model-invocation: false
 ---
 
@@ -17,7 +17,7 @@ You do not pick actions. You do not re-evaluate X-rules. You do not change confi
 hai synthesize --as-of <today> --user-id <u> --bundle-only
 ```
 
-(or the upstream agent invokes `build_synthesis_bundle` directly.)
+`--bundle-only` is read-only: it emits the bundle as JSON on stdout and does not commit. The orchestration layer uses your `--drafts-json` overlay in a second call to finish the commit.
 
 The bundle is three blocks:
 

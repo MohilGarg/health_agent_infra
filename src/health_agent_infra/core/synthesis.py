@@ -6,7 +6,9 @@ side. One function — :func:`run_synthesis` — is called by
 
   1. Read snapshot for ``(for_date, user_id)`` from the DB.
   2. Read every proposal in ``proposal_log`` for ``(for_date, user_id)``.
-  3. Run Phase A — X1a, X1b, X3a, X3b, X6a, X6b, X7.
+  3. Run Phase A — X1a, X1b, X2, X3a, X3b, X4, X5, X6a, X6b, X7
+     (the full ``PHASE_A_EVALUATORS`` tuple in
+     :mod:`core.synthesis_policy`).
   4. Apply Phase A mutations mechanically → draft BoundedRecommendations.
   5. Overlay skill-authored rationale + uncertainty if ``drafts_json``
      was provided (the skill's judgment layer). Skill cannot change

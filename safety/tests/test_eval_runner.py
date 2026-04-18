@@ -1,4 +1,4 @@
-"""Tests for the safety/evals/ runner.
+"""Tests for the packaged eval runner.
 
 Exercises the domain and synthesis runners against a minimal hand-built
 scenario for each kind, then the load + dispatch path from
@@ -10,16 +10,11 @@ here.
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
-
-from safety.evals.runner import (  # noqa: E402
+from health_agent_infra.evals.runner import (
     EvalRunError,
     load_scenario,
     load_scenarios,

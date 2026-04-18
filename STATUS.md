@@ -31,11 +31,14 @@ See [`reporting/docs/architecture.md`](reporting/docs/architecture.md).
 - **Live Garmin pull** — ``hai auth garmin`` stores credentials in
   the OS keyring; ``hai pull --live`` fetches a day's evidence via
   ``python-garminconnect``.
-- **Eval framework** — ``safety/evals/`` ships 28 scenarios (18
-  domain + 10 synthesis) scored against frozen rubrics. All 28
-  pass on the Phase 6 checkpoint. Skill-narration axis marked
-  ``skipped_requires_agent_harness`` pending the Phase 2.5
-  Condition 3 follow-up.
+- **Eval framework** — packaged at
+  ``src/health_agent_infra/evals/`` (runner + CLI + scenarios +
+  rubrics ship inside the wheel; ``hai eval run`` works from any
+  cwd in any install). 28 scenarios total (18 domain + 10
+  synthesis) scored against frozen rubrics. All deterministic
+  axes pass on the Phase 6 checkpoint; the skill-narration axis is
+  marked ``skipped_requires_agent_harness`` per scenario, pending
+  the Phase 2.5 Condition 3 follow-up.
 - **Test suite** — 1247 passing, 0 failing across `safety/tests`
   covering schemas, classify, policy, projectors, migrations, CLI
   surfaces, atomic-transaction semantics, skill-boundary contracts,

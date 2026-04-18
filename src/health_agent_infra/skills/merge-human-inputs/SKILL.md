@@ -51,9 +51,13 @@ The daily flow expects readiness before a `hai pull`. Walk the user through the 
 hai intake readiness --soreness moderate --energy moderate \
                      --planned-session-type hard --active-goal 5k_pr_build \
                      > /tmp/mr.json
-hai pull --date 2026-04-17 --manual-readiness-json /tmp/mr.json --db-path … \
+hai pull --date 2026-04-17 --manual-readiness-json /tmp/mr.json \
          > /tmp/evidence.json
+hai clean --evidence-json /tmp/evidence.json --db-path … \
+          > /tmp/cleaned.json
 ```
+
+Note: state-DB projection is owned by `hai clean`, not `hai pull`. `hai pull` only emits Garmin evidence on stdout; `hai clean` reads that JSON, normalises it, and projects into the local SQLite store via the optional `--db-path`.
 
 Field mapping discipline:
 

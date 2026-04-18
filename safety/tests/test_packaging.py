@@ -22,6 +22,7 @@ step 4 (actual release).
 
 from __future__ import annotations
 
+import json
 import tomllib
 from importlib import metadata, resources
 from pathlib import Path
@@ -115,6 +116,10 @@ def test_package_version_is_non_empty_and_well_formed():
         "skills/nutrition-alignment/SKILL.md",
         "domains/strength/taxonomy_seed.csv",
         "data/garmin/export/daily_summary_export.csv",
+        "evals/scenarios/recovery/rec_001_rested_baseline.json",
+        "evals/scenarios/synthesis/syn_001_no_firings_baseline.json",
+        "evals/rubrics/domain.md",
+        "evals/rubrics/synthesis.md",
     ],
 )
 def test_packaged_resource_is_resolvable(relpath: str):
@@ -164,3 +169,87 @@ def test_pyproject_package_data_globs_cover_all_non_python_files():
         "not matched by any [tool.setuptools.package-data] glob — these "
         f"will be silently dropped from the wheel:\n  " + "\n  ".join(missing)
     )
+
+
+# ---------------------------------------------------------------------------
+# Wheel-installed surface — `hai eval run` works outside the repo root
+# ---------------------------------------------------------------------------
+#
+# The v0.1.0 release registered `hai eval` conditionally by walking for a
+# repo-local `safety/evals/` tree. In a wheel install outside a checkout,
+# the subcommand was silently missing — a concrete shipped-truth gap
+# between docs and the installed package. The framework now lives inside
+# the wheel at `health_agent_infra.evals`, and these tests lock that
+# behaviour so it cannot regress.
+#
+# The `cli.py` surface and argparse registration are identical in source
+# and wheel installs, so an in-process invocation from a working
+# directory outside the repo is a faithful stand-in for the wheel-only
+# surface. Running an actual `subprocess` against a throw-away venv
+# would exercise the same path at much higher cost.
+
+
+def _run_hai_cli(argv, *, cwd=None):
+    """In-process `hai` invocation with a scoped sys.argv + cwd.
+
+    Matches the shell entry point at `health_agent_infra.cli:main` so the
+    registered subparsers are the same ones a wheel install exposes.
+    Captures stdout via capsys-compatible redirection by the caller;
+    this helper only changes cwd + argv.
+    """
+
+    import os
+    from health_agent_infra.cli import main as cli_main
+
+    prev_cwd = os.getcwd()
+    if cwd is not None:
+        os.chdir(cwd)
+    try:
+        return cli_main(argv)
+    finally:
+        os.chdir(prev_cwd)
+
+
+def test_hai_eval_subcommand_is_registered_unconditionally(capsys):
+    """`hai eval --help` must succeed with no repo-relative lookup path.
+
+    Acceptance criterion from post_v0_1_roadmap Phase A: installed
+    package behavior and public docs agree on `hai eval`. If this test
+    fails, someone reverted `_register_eval_subparser` to a conditional
+    lookup and the CLI-vs-docs gap is back.
+    """
+    with pytest.raises(SystemExit) as excinfo:
+        _run_hai_cli(["eval", "--help"])
+    assert excinfo.value.code == 0
+    out = capsys.readouterr().out
+    assert "run" in out  # `hai eval run` subcommand must be listed
+
+
+def test_hai_eval_run_works_from_outside_repo_root(tmp_path, capsys):
+    """`hai eval run --domain recovery` must succeed when cwd is not the
+    repo root. This is the direct repro for the v0.1.0 shipped-truth gap
+    that drove Phase A of the post-release roadmap."""
+    rc = _run_hai_cli(
+        ["eval", "run", "--domain", "recovery", "--json"],
+        cwd=tmp_path,
+    )
+    assert rc == 0
+    out = capsys.readouterr().out
+    payload = json.loads(out)
+    assert payload["kind"] == "domain"
+    assert payload["domain"] == "recovery"
+    assert payload["total"] >= 3
+    assert payload["failed"] == 0
+
+
+def test_hai_eval_run_synthesis_works_from_outside_repo_root(tmp_path, capsys):
+    """Same guard as above, for the synthesis-kind path."""
+    rc = _run_hai_cli(
+        ["eval", "run", "--synthesis", "--json"],
+        cwd=tmp_path,
+    )
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "synthesis"
+    assert payload["total"] >= 10
+    assert payload["failed"] == 0

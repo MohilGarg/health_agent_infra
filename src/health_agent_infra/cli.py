@@ -575,6 +575,7 @@ def cmd_synthesize(args: argparse.Namespace) -> int:
     from health_agent_infra.core.state import open_connection, resolve_db_path
     from health_agent_infra.core.synthesis import (
         SynthesisError,
+        build_synthesis_bundle,
         run_synthesis,
     )
     from health_agent_infra.core.synthesis_policy import XRuleWriteSurfaceViolation
@@ -590,6 +591,28 @@ def cmd_synthesize(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 2
+
+    # --bundle-only is the skill seam: read-only emission of
+    # (snapshot, proposals, phase_a_firings) so the daily-plan-synthesis
+    # skill can compose a rationale overlay and return via `hai synthesize
+    # --drafts-json`. It never mutates state.
+    if args.bundle_only:
+        if args.drafts_json or args.supersede:
+            print(
+                "hai synthesize rejected: --bundle-only is read-only and "
+                "cannot be combined with --drafts-json or --supersede.",
+                file=sys.stderr,
+            )
+            return 2
+        conn = open_connection(db_path)
+        try:
+            bundle = build_synthesis_bundle(
+                conn, for_date=for_date, user_id=user_id,
+            )
+        finally:
+            conn.close()
+        _emit_json(bundle)
+        return 0
 
     skill_drafts: Optional[list[dict]] = None
     if args.drafts_json:
@@ -2530,36 +2553,18 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 
 
-def _try_register_eval_subparser(sub: argparse._SubParsersAction) -> bool:
-    """Register ``hai eval`` if a ``safety/evals/`` tree is reachable.
+def _register_eval_subparser(sub: argparse._SubParsersAction) -> None:
+    """Register ``hai eval`` against the packaged eval framework.
 
-    The eval framework lives alongside the package (``safety/evals/``)
-    rather than inside the wheel. In a source checkout this path is
-    reachable by walking one level up from ``src/``; in a wheel-only
-    install the tree is absent and the subcommand is silently skipped.
+    The framework lives inside the wheel at
+    ``health_agent_infra.evals`` (runner + cli + scenarios + rubrics
+    as package data). Registration is unconditional — the same surface
+    is available in source checkouts and wheel installs.
     """
 
-    import health_agent_infra as _pkg
+    from health_agent_infra.evals.cli import register_eval_subparser
 
-    candidates: list[Path] = []
-    pkg_root = Path(_pkg.__file__).resolve().parent
-    # src/health_agent_infra → src/ → repo root
-    candidates.append(pkg_root.parent.parent)
-    candidates.append(Path.cwd())
-
-    for root in candidates:
-        evals_cli = root / "safety" / "evals" / "cli.py"
-        if evals_cli.exists():
-            root_str = str(root)
-            if root_str not in sys.path:
-                sys.path.insert(0, root_str)
-            try:
-                from safety.evals.cli import register_eval_subparser
-            except ImportError:
-                continue
-            register_eval_subparser(sub)
-            return True
-    return False
+    register_eval_subparser(sub)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -2621,9 +2626,20 @@ def build_parser() -> argparse.ArgumentParser:
                               "stdout is unchanged.")
     p_clean.set_defaults(func=cmd_clean)
 
-    p_wb = sub.add_parser("writeback", help="Schema-validate and persist a recommendation")
+    p_wb = sub.add_parser(
+        "writeback",
+        help=(
+            "Recovery-only standalone recommendation writeback. The "
+            "canonical commit path for all six domains is `hai "
+            "synthesize`, which atomically persists daily_plan + "
+            "x_rule_firings + per-domain recommendations in one "
+            "transaction. `hai writeback` is the legacy single-domain "
+            "path that predates synthesis; it only accepts "
+            "TrainingRecommendation payloads (recovery)."
+        ),
+    )
     p_wb.add_argument("--recommendation-json", required=True,
-                      help="Path to a JSON file matching TrainingRecommendation")
+                      help="Path to a JSON file matching TrainingRecommendation (recovery-only).")
     p_wb.add_argument("--base-dir", required=True,
                       help="Writeback root (must contain 'recovery_readiness_v1')")
     p_wb.add_argument("--db-path", default=None,
@@ -2668,6 +2684,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_syn.add_argument("--supersede", action="store_true",
                        help="Keep the prior canonical plan and write a fresh suffixed "
                             "plan id. Default is atomic replacement.")
+    p_syn.add_argument("--bundle-only", action="store_true",
+                       help="Emit the synthesis bundle (snapshot + proposals + "
+                            "Phase A firings) as JSON and exit. Read-only — "
+                            "does not commit. This is the skill seam: the "
+                            "daily-plan-synthesis skill reads the bundle, "
+                            "composes a rationale overlay, and feeds it back "
+                            "via a second call with --drafts-json.")
     p_syn.add_argument("--agent-version", default="claude_agent_v1",
                        help="Agent version string to record on every row "
                             "(not part of the canonical plan idempotency key)")
@@ -3080,7 +3103,7 @@ def build_parser() -> argparse.ArgumentParser:
                            help="Path to state DB (default: platformdirs user_data_dir)")
     p_esearch.set_defaults(func=cmd_exercise_search)
 
-    _try_register_eval_subparser(sub)
+    _register_eval_subparser(sub)
 
     return parser
 

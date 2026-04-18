@@ -1051,3 +1051,74 @@ def test_synthesize_emits_strength_recommendation_with_correct_schema(tmp_path):
         assert prop_row["daily_plan_id"] == result.daily_plan_id
     finally:
         conn.close()
+
+
+# ---------------------------------------------------------------------------
+# --bundle-only — read-only skill seam
+# ---------------------------------------------------------------------------
+
+
+def test_cli_synthesize_bundle_only_emits_bundle_without_committing(
+    tmp_path, capsys,
+):
+    """``hai synthesize --bundle-only`` returns (snapshot, proposals,
+    phase_a_firings) and writes no daily_plan / recommendation rows.
+
+    The flag is the contract the daily-plan-synthesis skill relies on:
+    read the bundle, compose a rationale overlay, call back with
+    --drafts-json. Verifying the read-only path stays truthful is the
+    guard against regressing back into the --bundle-only-missing state
+    that shipped in v0.1.0.
+    """
+
+    from health_agent_infra.cli import main as cli_main
+
+    db_path = _fresh_db(tmp_path)
+    _insert_proposal(db_path, _running_proposal())
+
+    rc = cli_main([
+        "synthesize",
+        "--as-of", "2026-04-17",
+        "--user-id", "u_local_1",
+        "--db-path", str(db_path),
+        "--bundle-only",
+    ])
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert set(payload.keys()) == {"snapshot", "proposals", "phase_a_firings"}
+    assert len(payload["proposals"]) == 1
+    assert payload["proposals"][0]["domain"] == "running"
+
+    # Read-only: no daily_plan row persisted.
+    conn = open_connection(db_path)
+    try:
+        row = conn.execute("SELECT COUNT(*) AS n FROM daily_plan").fetchone()
+        assert row["n"] == 0
+    finally:
+        conn.close()
+
+
+def test_cli_synthesize_bundle_only_rejects_conflicting_flags(
+    tmp_path, capsys,
+):
+    """--bundle-only is mutually exclusive with --drafts-json and
+    --supersede because those mutate state. Reject loudly rather than
+    silently ignoring."""
+
+    from health_agent_infra.cli import main as cli_main
+
+    db_path = _fresh_db(tmp_path)
+    drafts_path = tmp_path / "drafts.json"
+    drafts_path.write_text("[]")
+
+    rc = cli_main([
+        "synthesize",
+        "--as-of", "2026-04-17",
+        "--user-id", "u_local_1",
+        "--db-path", str(db_path),
+        "--bundle-only",
+        "--drafts-json", str(drafts_path),
+    ])
+    assert rc == 2
+    err = capsys.readouterr().err
+    assert "bundle-only" in err.lower()

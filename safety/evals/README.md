@@ -1,19 +1,44 @@
 # Evaluation framework — v1
 
-Scores the deterministic runtime layers of health_agent_infra against
-frozen scenario bundles with expected outputs.
+The eval framework ships **inside the package** at
+`src/health_agent_infra/evals/` (runner + CLI + scenarios + rubrics). A
+wheel install of `health_agent_infra` therefore carries the full eval
+surface, and `hai eval run` works from any working directory without
+requiring a repo checkout.
+
+This directory retains only the dev-reference docs:
+
+- `README.md` — this file.
+- `skill_harness_blocker.md` — the deferred-follow-up record for the
+  skill-narration axis.
+
+## Where everything now lives
+
+    src/health_agent_infra/evals/
+        __init__.py
+        runner.py            # scenario loader + scorer
+        cli.py               # `hai eval run` argparse entry point
+        scenarios/
+            recovery/        # domain scenarios
+            running/
+            sleep/
+            stress/
+            strength/
+            nutrition/
+            synthesis/       # X-rule + run_synthesis scenarios
+        rubrics/
+            domain.md
+            synthesis.md
 
 ## What this evaluates
-
-The v1 eval framework exercises two runtime layers:
 
 - **Domain layer** — `classify.py` + `policy.py` per domain. Scored
   against expected classified bands, forced actions, capped
   confidences, and rule-id firings.
 - **Synthesis layer** — `core/synthesis.py` + `core/synthesis_policy.py`.
-  Scored against expected X-rule firings (by rule id), final per-
-  domain actions, final confidences, and any authored
-  validation-error or synthesis-error invariants.
+  Scored against expected X-rule firings (by rule id), final per-domain
+  actions, final confidences, and any authored validation-error or
+  synthesis-error invariants.
 
 ## What this deliberately does NOT evaluate
 
@@ -29,57 +54,7 @@ The v1 eval framework exercises two runtime layers:
   pull path is covered by `safety/tests/test_pull_garmin_live.py`
   with a mocked client.
 
-See `rubrics/` for per-layer scoring definitions.
-
-## Layout
-
-    safety/evals/
-        scenarios/
-            recovery/       # domain scenarios
-            running/
-            sleep/
-            stress/
-            strength/       # classify + policy only; no writeback surface in v1
-            nutrition/      # macros-only per Phase 2.5 retrieval-gate outcome
-            synthesis/      # X-rule + synthesis.run_synthesis scenarios
-        rubrics/
-            domain.md
-            synthesis.md
-        runner.py           # scenario loader + scorer
-        cli.py              # `hai eval run` argparse entry point
-
-## Scenario schema
-
-Every scenario is a JSON file with a shared envelope:
-
-```json
-{
-  "scenario_id": "rec_001_rested_and_fresh",
-  "kind": "domain",                          // "domain" | "synthesis"
-  "domain": "recovery",                       // only for kind=domain
-  "description": "Well-rested baseline; expect maintain + no policy firings.",
-  "input": { "evidence": {...}, "raw_summary": {...} },   // domain scenarios
-  "as_of_date": "2026-04-18",                              // synthesis only
-  "user_id": "u_eval",                                     // synthesis only
-  "snapshot": {...},                                        // synthesis only
-  "proposals": [...],                                       // synthesis only
-  "expected": {
-    "classified": {"sleep_debt_band": "none", ...},
-    "policy": {"forced_action": null, "capped_confidence": null,
-               "fired_rule_ids": []}
-    // For synthesis:
-    // "x_rules_fired": ["X1a"],
-    // "final_actions": {"recovery": "downgrade_hard_session_to_zone_2"},
-    // "final_confidences": {"recovery": "moderate"},
-    // "validation_errors": [{"proposal_id": "...", "accepted": false, ...}],
-    // "synthesis_error": "expected" | "none"
-  }
-}
-```
-
-`expected.classified` only needs to assert on the keys you care about;
-unasserted keys are ignored. Same for `expected.policy` and the
-synthesis equivalents.
+See `skill_harness_blocker.md` for the deferred skill-harness work.
 
 ## CLI
 
@@ -88,22 +63,5 @@ synthesis equivalents.
     hai eval run --domain recovery --json   # machine-readable output
 
 Exit code is 0 when all loaded scenarios pass, 1 when any fails, 2 on
-usage error.
-
-## Skill-harness follow-up
-
-Phase 2.5 Track B recorded that the runtime runner does not invoke the
-daily-plan-synthesis skill and cannot score rationale quality. The
-runner here inherits that gap. A skill-harness follow-up would:
-
-1. Spawn `claude` (or equivalent) with the `--print` / `--json-output`
-   flag and the synthesis bundle on stdin.
-2. Capture the emitted `skill_drafts` list and pass it to
-   `run_synthesis(..., skill_drafts=...)`.
-3. Extend `score_synthesis_result` to grade the overlay's rationale
-   prose against the scenario's rubric cues.
-
-This is a substantial external-process integration with its own
-auth/permission/cost surface and is not in scope for Phase 6. The
-skipped axis in each scenario's score documents the exact invariant
-that remains unverified.
+usage error. The command is registered unconditionally on every install
+of the package.

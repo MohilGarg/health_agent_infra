@@ -8,21 +8,13 @@ content is mocked via a temporary scenarios dir.
 from __future__ import annotations
 
 import json
-import os
-import shutil
-import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from health_agent_infra.cli import main as cli_main
-
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
-
-from safety.evals.runner import SCENARIOS_ROOT  # noqa: E402
+from health_agent_infra.evals.runner import SCENARIOS_ROOT  # noqa: F401
 
 
 @pytest.fixture()
@@ -37,9 +29,7 @@ def isolated_scenarios_dir(tmp_path, monkeypatch):
                    "nutrition", "synthesis"):
         (scratch / domain).mkdir(parents=True, exist_ok=True)
 
-    # Redirect both the scenarios root and the _scenario_dir helper's
-    # lookup path.
-    import safety.evals.runner as runner_mod
+    import health_agent_infra.evals.runner as runner_mod
     monkeypatch.setattr(runner_mod, "SCENARIOS_ROOT", scratch)
 
     return scratch

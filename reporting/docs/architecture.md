@@ -249,13 +249,17 @@ hai intake readiness --soreness low|moderate|high --energy low|moderate|high
 
 hai state init | migrate | read | snapshot | reproject
 
-hai classify --domain <d> --evidence-json <p>  # debug: dump classified state
-hai policy   --domain <d> --evidence-json <p>  # debug: dump policy result
+hai classify --domain recovery --evidence-json <p>  # debug: dump classified state (recovery only)
+hai policy   --domain recovery --evidence-json <p>  # debug: dump policy result (recovery only)
+# For the other five domains use the eval runner, which exercises every
+# classify + policy: `hai eval run --domain <d>`.
 
 hai propose  --domain <d> --proposal-json <p> --base-dir <root>
-hai synthesize --base-dir <root> --as-of <d> --user-id <u>
+hai synthesize --as-of <d> --user-id <u>                        # six-domain atomic commit
+hai synthesize --as-of <d> --user-id <u> --bundle-only          # read-only skill seam
+hai synthesize --as-of <d> --user-id <u> --drafts-json <p>      # skill overlay pass
 
-hai writeback --recommendation-json <p> --base-dir <root>
+hai writeback --recommendation-json <p> --base-dir <root>        # recovery-only legacy path
 
 hai review schedule | record | summary [--domain <d>] --base-dir <root>
 
@@ -281,9 +285,16 @@ Three places the runtime refuses to proceed without a valid contract:
    Phase B firings are guarded against writing anything other than
    ``action_detail`` on a registered target domain.
 
-3. **``hai writeback``** — every BoundedRecommendation validated
-   against the per-domain schema before it reaches
-   recommendation_log.
+3. **``hai writeback``** — validates a ``TrainingRecommendation``
+   (recovery-only BoundedRecommendation schema) before appending to
+   the recovery JSONL audit. This is the legacy single-domain direct
+   path; for the five other domains, ``hai synthesize`` is the
+   canonical writer and atomically projects every recommendation
+   alongside the daily_plan + firings. Per-domain
+   BoundedRecommendation validation for running / sleep / stress /
+   strength / nutrition happens inside ``run_synthesis`` via
+   ``project_bounded_recommendation``, not through a direct CLI
+   surface.
 
 All three points reject-loudly with ``exit=2`` and named
 ``invariant`` ids for programmatic recovery.
@@ -293,10 +304,30 @@ All three points reject-loudly with ``exit=2`` and named
 One Claude agent reads the bundle from ``hai state snapshot`` and
 the domain skills from ``~/.claude/skills/``. Per-domain, it emits a
 proposal via ``hai propose``. Once all proposals for a (for_date,
-user_id) are in, the agent invokes ``hai synthesize`` — the runtime
-runs Phase A, then invokes the daily-plan-synthesis skill to overlay
-rationale, then runs Phase B, then atomically commits the final
-plan. ``hai review`` captures outcomes for the next morning.
+user_id) are in, the agent has two paths:
+
+- **Runtime-only path (`hai daily` or a single `hai synthesize`
+  call without `--drafts-json`).** The runtime evaluates Phase A,
+  applies mutations mechanically to drafts, runs Phase B, and
+  atomically commits. Rationale is the per-proposal text the
+  domain skills already wrote — the synthesis skill is NOT
+  invoked.
+- **Skill-overlay path (two-pass `hai synthesize`).** The agent
+  first calls `hai synthesize ... --bundle-only` (read-only) to
+  emit `(snapshot, proposals, phase_a_firings)`. The
+  daily-plan-synthesis skill composes a rationale overlay and the
+  agent then calls `hai synthesize ... --drafts-json <path>` to
+  finish the commit. The runtime applies the overlay onto the
+  mechanical drafts (rationale + uncertainty + review_question
+  only), then runs Phase B, then atomically commits.
+
+`hai daily` ships the runtime-only path today: it stops cleanly at
+the proposal gate (`overall_status=awaiting_proposals`) when no
+proposals are present, but it does not orchestrate the two-pass
+skill overlay. The two-pass path is opt-in for an agent that wants
+to drive the synthesis skill explicitly.
+
+``hai review`` captures outcomes for the next morning.
 
 See [``agent_integration.md``](agent_integration.md) for the
 concrete Claude Code / Agent SDK wiring.

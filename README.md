@@ -112,7 +112,7 @@ hai propose  --domain <d> --proposal-json <p>
 hai synthesize --as-of <d> --user-id <u>
 
 # Persistence + review
-hai writeback --recommendation-json <p>
+hai writeback --recommendation-json <p>  # recovery-only legacy direct path
 hai review schedule | record | summary [--domain <d>]
 
 # Auth + config + helpers
@@ -174,7 +174,9 @@ safety/
 - Garmin live pull via keyring (``hai auth garmin`` + ``hai pull
   --live``).
 - Idempotent synthesis with optional ``--supersede`` versioning.
-- 28 eval scenarios (18 domain + 10 synthesis) all green.
+- 28 eval scenarios (18 domain + 10 synthesis) — all deterministic
+  axes green; skill-narration axis explicitly deferred (see
+  `safety/evals/skill_harness_blocker.md`).
 - 1200+ tests covering every band, every R-rule, every X-rule,
   atomic transaction semantics, writeback invariants, skill-boundary
   contracts.

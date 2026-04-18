@@ -49,9 +49,12 @@ skills should sit:
   resolve, and ask clarifying questions during user narration.
   Skills never change an action and never run arithmetic the
   runtime already ran.
-- **The boundary is a typed schema.** Three reject-loudly contracts
-  (`hai propose`, `hai synthesize`, `hai writeback`) validate every
-  payload at the seam.
+- **The boundary is a typed schema.** Two reject-loudly contracts
+  (`hai propose`, `hai synthesize`) validate every payload at the
+  seam, plus a legacy recovery-only direct-commit contract
+  (`hai writeback`). Non-recovery domains reach
+  `recommendation_log` only via `hai synthesize`, which validates
+  each `BoundedRecommendation` inside the atomic transaction.
 - **Synthesis is auditable.** Every X-rule firing is persisted with
   its tier, its target domain, the inputs it read, and the mutation
   it applied. The whole transaction (daily_plan + firings + N
@@ -84,10 +87,13 @@ X-rule catalogue in [`reporting/docs/x_rules.md`](../docs/x_rules.md).
   X-rules over `(snapshot, proposals)`, invokes the
   `daily-plan-synthesis` skill for rationale overlay, runs Phase B
   X-rules under a write-surface guard, and atomically commits.
-- **Writeback + review.** `hai writeback` validates a
-  `BoundedRecommendation` payload and persists it. `hai review
-  schedule | record | summary [--domain <d>]` captures outcomes per
-  domain.
+- **Writeback + review.** `hai writeback` is the recovery-only
+  legacy direct path that validates a `TrainingRecommendation`
+  payload and appends to the recovery JSONL audit. For the five
+  other domains the canonical commit is inside `hai synthesize`'s
+  atomic transaction (see above). `hai review
+  schedule | record | summary [--domain <d>]` captures outcomes
+  per domain.
 - **Six judgment-only skills**, plus `daily-plan-synthesis`,
   `strength-intake`, `merge-human-inputs`, `writeback-protocol`,
   `safety`, `reporting`. Packaged with the wheel; copied to
@@ -116,9 +122,12 @@ X-rule catalogue in [`reporting/docs/x_rules.md`](../docs/x_rules.md).
 
 ### Eval harness
 
-`safety/evals/` ships 28 frozen-rubric scenarios (18 domain + 10
-synthesis) and a runner. `hai eval run --domain <d>` and `hai eval
-run --synthesis` execute them. All 28 deterministic axes pass at
+The eval framework ships **inside the wheel** at
+`src/health_agent_infra/evals/` (runner + CLI + scenarios +
+rubrics). 28 frozen-rubric scenarios (18 domain + 10 synthesis)
+plus a runner. `hai eval run --domain <d>` and `hai eval run
+--synthesis` execute them and work in every install (source or
+wheel) from any working directory. All deterministic axes pass at
 this checkpoint. The skill-narration axis (`rationale_quality`) is
 explicitly marked `skipped_requires_agent_harness` per scenario —
 see [Limitations](#limitations-and-open-follow-ups).
@@ -140,10 +149,13 @@ see [Limitations](#limitations-and-open-follow-ups).
 
 ## Why the architecture is credible
 
-- **Frozen contracts.** Schema validation at three reject-loud
-  points (`hai propose`, `hai synthesize`, `hai writeback`) — every
-  failure carries a named `invariant` id and exits 2. See
-  `core/writeback/proposal.py` and `core/writeback/recommendation.py`.
+- **Frozen contracts.** Schema validation at two public reject-loud
+  points (`hai propose`, `hai synthesize`) plus a legacy recovery-
+  only direct path (`hai writeback`) — every failure carries a
+  named `invariant` id and exits 2. See `core/writeback/proposal.py`
+  and `core/writeback/recommendation.py`. Non-recovery
+  `BoundedRecommendation` validation runs inside the
+  `hai synthesize` transaction.
 - **X-rules as data + tier precedence.** Ten evaluators
   (X1a/b, X2, X3a/b, X4, X5, X6a/b, X7, X9) implemented in
   `core/synthesis_policy.py` with a fixed precedence

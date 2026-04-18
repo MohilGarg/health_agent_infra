@@ -1,9 +1,17 @@
-"""ACTION layer.
+"""ACTION layer — recovery-only standalone writeback.
 
-Performs the bounded local writeback for a TrainingRecommendation.
-Per policy rule R6 (writeback_locality), this only appends to local
-recommendation-log JSONL files. No external writes. Idempotent on
-recommendation_id.
+Performs the bounded local writeback for a ``TrainingRecommendation``
+(the recovery-domain BoundedRecommendation schema). Per policy rule R6
+(writeback_locality), this only appends to local recommendation-log
+JSONL files. No external writes. Idempotent on ``recommendation_id``.
+
+**Scope.** This module is the legacy single-domain direct-commit path
+that predates synthesis. The canonical six-domain commit path is
+``core/synthesis.py :: run_synthesis``, which atomically persists
+``daily_plan + x_rule_firing + N recommendation_log`` rows in one
+SQLite transaction for recovery / running / sleep / stress / strength
+/ nutrition. The ``hai writeback`` CLI maps onto this module and
+therefore only accepts recovery payloads.
 """
 
 from __future__ import annotations

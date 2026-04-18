@@ -9,6 +9,10 @@ disable-model-invocation: false
 
 You don't persist anything yourself. The `hai` CLI owns all local state mutation. Your job is to call the right subcommand with validated input.
 
+## Scope — recovery only
+
+`hai writeback` is the **legacy single-domain direct-commit path** for a recovery `TrainingRecommendation`. It predates synthesis and is kept as the standalone recovery writeback surface. For **any other domain** (running, sleep, stress, strength, nutrition), do NOT use `hai writeback` — those recommendations reach `recommendation_log` exclusively via `hai synthesize`, which commits the whole daily plan atomically. This skill applies only when a recovery-only flow is driving a single `TrainingRecommendation`.
+
 ## Recommendation writeback
 
 Once the recovery-readiness skill has produced a `TrainingRecommendation` JSON, write it to a temp file and invoke:

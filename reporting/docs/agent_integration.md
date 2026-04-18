@@ -14,8 +14,9 @@ The package ships two things the agent consumes:
 
 The agent reads skills, makes judgment calls, and invokes CLI
 subcommands to move structured state. The CLI validates the
-agent's output at three determinism boundaries (``hai propose``,
-``hai synthesize``, ``hai writeback``).
+agent's output at two determinism boundaries (``hai propose`` and
+``hai synthesize``), plus a legacy recovery-only direct-commit
+boundary (``hai writeback``).
 
 ## Install
 
@@ -59,10 +60,15 @@ Typical daily loop:
    invokes ``hai propose --domain <d> --proposal-json <p>``.
 6. With all six proposals in proposal_log, agent invokes ``hai
    synthesize --as-of <date> --user-id <u>``. The runtime applies
-   Phase A mutations, passes the bundle + firings to the
-   daily-plan-synthesis skill for rationale overlay, then runs
-   Phase B, then commits the daily_plan + x_rule_firings + N
-   recommendations in one SQLite transaction.
+   Phase A mutations to drafts, runs Phase B, and atomically commits
+   the daily_plan + x_rule_firings + N recommendations in one SQLite
+   transaction. To overlay the daily-plan-synthesis skill's
+   rationale prose on top, the agent uses the two-pass form:
+   ``hai synthesize ... --bundle-only`` reads the bundle (read-only,
+   no commit), the skill returns a drafts overlay, and a second call
+   to ``hai synthesize ... --drafts-json <path>`` finishes the
+   commit. ``hai daily`` ships the runtime-only path; the skill-
+   overlay path is opt-in.
 7. Agent uses the ``reporting`` skill to narrate the synthesised
    plan back to the user.
 8. Next morning: agent records outcomes via ``hai review record
@@ -112,9 +118,14 @@ determinism boundaries.
    to mutate ``action`` or touch a domain not registered in
    ``PHASE_B_TARGETS``.
 
-3. **``hai writeback``** — validates a BoundedRecommendation
-   against the same schema family. Same exit-code + invariant-id
-   contract.
+3. **``hai writeback``** — validates a ``TrainingRecommendation``
+   (recovery-only BoundedRecommendation schema) against the same
+   invariant family and appends to the recovery audit log. Same
+   exit-code + invariant-id contract. **Scope:** this surface is the
+   legacy single-domain direct path; running / sleep / stress /
+   strength / nutrition recommendations are validated + persisted by
+   ``hai synthesize`` inside the atomic transaction and never flow
+   through ``hai writeback``.
 
 Nothing persists until its determinism check passes. Callers can
 pattern-match on the ``invariant`` id without parsing prose.

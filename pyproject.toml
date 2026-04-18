@@ -55,6 +55,8 @@ where = ["src"]
   "data/**/*.csv",
   "core/state/migrations/*.sql",
   "domains/strength/*.csv",
+  "evals/scenarios/**/*.json",
+  "evals/rubrics/*.md",
 ]
 
 [tool.pytest.ini_options]

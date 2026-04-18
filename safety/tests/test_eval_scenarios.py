@@ -1,4 +1,4 @@
-"""Test that every committed scenario under safety/evals/scenarios/ passes.
+"""Test that every committed scenario under the packaged evals tree passes.
 
 These tests are the integration regression for the Phase 6 eval
 content: changes to classifier / policy / synthesis that silently
@@ -10,16 +10,9 @@ must be fixed before merge.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
 import pytest
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
-
-from safety.evals.runner import (  # noqa: E402
+from health_agent_infra.evals.runner import (
     SUPPORTED_DOMAINS,
     load_scenarios,
     run_scenarios,
