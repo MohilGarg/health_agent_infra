@@ -1,0 +1,29 @@
+-- Migration 006 — nutrition domain: macros-only derivation_path marker.
+--
+-- Phase 5 step 1 under the Phase 2.5 retrieval-gate outcome.
+--
+-- The Phase 2.5 retrieval prototype landed at 5/20 strict top-1, below the
+-- 60% bucket, so meal-level intake + the USDA food taxonomy defer to a
+-- post-v1 point release. Nutrition in v1 stays macros-only and this
+-- migration accordingly adds exactly ONE column to the accepted canonical
+-- table:
+--
+--   derivation_path TEXT NOT NULL DEFAULT 'daily_macros'
+--
+-- The column marks the source of a given accepted row so a future meal-
+-- level release can expand the enum to {'daily_macros', 'meal_log'}
+-- (plus re-gate the precedence rule from the plan's original §2.3).
+-- v1 only ever writes 'daily_macros'; the nutrition domain code
+-- (classify + policy) treats any other value as meal_log-territory data
+-- that is unavailable at this release. The CHECK constraint lives in the
+-- projector, not at DDL — enforcing it in SQL would require a full table
+-- recreate to tighten later when meal_log returns, and that cost isn't
+-- worth it for a v1 invariant that the writer already guarantees.
+--
+-- Micronutrient columns are NOT added in this migration. v1 doesn't
+-- carry the data, so a wall of always-NULL columns would misrepresent
+-- source capability. When meal-level intake re-gates successfully, its
+-- own migration will add both the micro columns and expand the
+-- derivation_path enum in one coherent shape.
+
+ALTER TABLE accepted_nutrition_state_daily ADD COLUMN derivation_path TEXT NOT NULL DEFAULT 'daily_macros';

@@ -797,6 +797,11 @@ def project_accepted_nutrition_state_daily(
     now_iso = _now_iso()
     derived_from_json = json.dumps([latest["submission_id"]], sort_keys=True)
 
+    # Phase 5 step 1: v1 is macros-only. derivation_path is the marker
+    # that separates today's pass-through aggregate from a future meal-log
+    # derivation. Writer-side invariant: v1 only ever writes 'daily_macros'.
+    derivation_path = "daily_macros"
+
     values = (
         latest["calories"], latest["protein_g"],
         latest["carbs_g"], latest["fat_g"],
@@ -804,6 +809,7 @@ def project_accepted_nutrition_state_daily(
         derived_from_json, source, ingest_actor,
         now_iso,
         None if is_insert else now_iso,
+        derivation_path,
         as_of_date.isoformat(), user_id,
     )
 
@@ -815,8 +821,9 @@ def project_accepted_nutrition_state_daily(
                 hydration_l, meals_count,
                 derived_from, source, ingest_actor,
                 projected_at, corrected_at,
+                derivation_path,
                 as_of_date, user_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             values,
         )
@@ -827,7 +834,8 @@ def project_accepted_nutrition_state_daily(
                 calories = ?, protein_g = ?, carbs_g = ?, fat_g = ?,
                 hydration_l = ?, meals_count = ?,
                 derived_from = ?, source = ?, ingest_actor = ?,
-                projected_at = ?, corrected_at = ?
+                projected_at = ?, corrected_at = ?,
+                derivation_path = ?
             WHERE as_of_date = ? AND user_id = ?
             """,
             values,

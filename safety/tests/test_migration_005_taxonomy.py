@@ -76,11 +76,14 @@ def _init_db(tmp_path: Path) -> Path:
 # Table presence + row count
 # ---------------------------------------------------------------------------
 
-def test_head_schema_version_is_five(tmp_path: Path):
+def test_head_schema_version_is_at_least_five(tmp_path: Path):
+    # After Phase 5 step 1 landed migration 006, head is 6; this test
+    # locks that every migration up to and including 005 has applied,
+    # not the exact head version.
     db = _init_db(tmp_path)
     conn = open_connection(db)
     try:
-        assert current_schema_version(conn) == 5
+        assert current_schema_version(conn) >= 5
     finally:
         conn.close()
 
