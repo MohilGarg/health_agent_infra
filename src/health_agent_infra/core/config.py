@@ -174,6 +174,48 @@ DEFAULT_THRESHOLDS: dict[str, Any] = {
                 "consistency_highly_variable": 0.08,
             },
         },
+        "strength": {
+            # recent_volume_band fires on
+            # volume_ratio = last_7d_kg_reps / week_mean(last_28d_kg_reps).
+            # A value AT a boundary lands in the higher band. Aligned with
+            # the running weekly_mileage_trend_band naming for cross-domain
+            # reasoning clarity. very_high is 1.5× baseline — this is the
+            # volume-spike threshold R-rule escalates on, mirroring the
+            # running R-acwr-spike 1.5 threshold.
+            "recent_volume_band": {
+                "very_low_max_ratio": 0.5,
+                "low_max_ratio": 0.8,
+                "moderate_max_ratio": 1.2,
+                "high_max_ratio": 1.5,
+            },
+            # Per-muscle-group freshness based on days_since_heavy_per_group.
+            # X4 (yesterday's heavy lower body caps running) and X5
+            # (yesterday's long run caps lower-body strength) read this
+            # directly. "fatigued" fires on 0 days (hit yesterday or today);
+            # "recent" on 1-2 days; "fresh" on ≥3 days. None history → unknown.
+            "freshness_band": {
+                "fresh_min_days_since_heavy": 3,
+                "recent_max_days_since_heavy": 2,
+            },
+            # Coverage on sessions_last_28d. Below insufficient_max = block.
+            # Between insufficient_max and sparse_max = sparse (cap confidence).
+            # Between sparse_max and partial_max = partial (allow).
+            # >= partial_max = full (allow).
+            "coverage_band": {
+                "insufficient_max_sessions_28d": 2,
+                "sparse_max_sessions_28d": 4,
+                "partial_max_sessions_28d": 8,
+            },
+            # Additive penalties on the strength_score composite; negative
+            # values are bonuses (raise the score).
+            "strength_score_penalty": {
+                "recent_volume_very_high": 0.20,
+                "recent_volume_very_low": 0.10,
+                "coverage_sparse": 0.15,
+                "coverage_partial": 0.05,
+                "unmatched_exercise_present": 0.05,
+            },
+        },
         "recovery": {
             "sleep_debt_band": {
                 "none_min_hours": 7.5,
@@ -243,6 +285,14 @@ DEFAULT_THRESHOLDS: dict[str, Any] = {
             # running domain has its own forced action even when synthesis
             # is not run.
             "r_acwr_spike_min_ratio": 1.5,
+        },
+        "strength": {
+            # R-volume-spike: escalate when the 7d-vs-28d-week-mean
+            # volume ratio crosses this threshold. Forces
+            # ``escalate_for_user_review`` as the remedial action; mirrors
+            # the running R-acwr-spike threshold so cross-domain
+            # escalations coincide at the same volume signal.
+            "r_volume_spike_min_ratio": 1.5,
         },
     },
     "synthesis": {
