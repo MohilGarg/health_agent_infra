@@ -1,6 +1,6 @@
 # Status
 
-## Architecture (v1 rebuild, Phase 6 complete — 2026-04-18)
+## Architecture (v1 rebuild, Phase 7 steps 1–4 complete; release ops pending — 2026-04-18)
 
 Health Agent Infra is a multi-domain runtime for a personal health
 agent. Six domains (recovery, running, sleep, stress, strength,
