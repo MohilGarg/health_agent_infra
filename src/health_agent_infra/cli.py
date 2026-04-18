@@ -26,6 +26,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+from health_agent_infra import __version__ as _PACKAGE_VERSION
 from health_agent_infra.core.clean import build_raw_summary, clean_inputs
 from health_agent_infra.core.config import (
     ConfigError,
@@ -2209,6 +2210,322 @@ def cmd_setup_skills(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
+# hai init — first-run setup wizard (idempotent, non-interactive)
+# ---------------------------------------------------------------------------
+
+
+def cmd_init(args: argparse.Namespace) -> int:
+    """First-run setup for the actual v1 product. Idempotent and safe to
+    rerun.
+
+    Three pieces of real v1 setup happen here, each re-using the same
+    underlying surface the single-purpose subcommands call:
+
+        1. Thresholds TOML (``hai config init`` path + scaffolder).
+        2. State DB + migrations (``hai state init`` — creates file,
+           applies any pending migration, no-op at head).
+        3. Skills copied to the Claude skills directory (``hai
+           setup-skills`` — skips existing unless ``--force``).
+
+    Garmin credentials are reported as a status only. ``hai init`` stays
+    non-interactive so agents and tests can drive it; the existing
+    ``hai auth garmin`` command owns interactive credential entry.
+
+    No nutrition / meal-level setup — v1 nutrition is macros-only and
+    nothing here needs scaffolding per the Phase 2.5 retrieval gate.
+    """
+
+    from health_agent_infra.core.state import (
+        current_schema_version,
+        initialize_database,
+        open_connection,
+        resolve_db_path,
+    )
+
+    report: dict[str, Any] = {
+        "version": _PACKAGE_VERSION,
+        "steps": {},
+    }
+
+    # 1. thresholds TOML
+    thresholds_path = (
+        Path(args.thresholds_path).expanduser()
+        if args.thresholds_path
+        else user_config_path()
+    )
+    if thresholds_path.exists() and not args.force:
+        report["steps"]["config"] = {
+            "status": "already_present",
+            "path": str(thresholds_path),
+        }
+    else:
+        thresholds_path.parent.mkdir(parents=True, exist_ok=True)
+        overwrote = thresholds_path.exists()
+        thresholds_path.write_text(scaffold_thresholds_toml(), encoding="utf-8")
+        report["steps"]["config"] = {
+            "status": "overwrote" if overwrote else "created",
+            "path": str(thresholds_path),
+        }
+
+    # 2. state DB + migrations
+    db_path = resolve_db_path(args.db_path)
+    db_existed_before = db_path.exists()
+    version_before = 0
+    if db_existed_before:
+        conn = open_connection(db_path)
+        try:
+            version_before = current_schema_version(conn)
+        finally:
+            conn.close()
+    resolved, applied = initialize_database(db_path)
+    if not db_existed_before:
+        db_status = "created"
+    elif applied:
+        db_status = "migrated"
+    else:
+        db_status = "already_at_head"
+    report["steps"]["state_db"] = {
+        "status": db_status,
+        "path": str(resolved),
+        "schema_version_before": version_before,
+        "applied_migrations": [
+            {"version": v, "filename": f} for v, f in applied
+        ],
+    }
+
+    # 3. skills copy (idempotent unless --force)
+    if args.skip_skills:
+        report["steps"]["skills"] = {"status": "skipped"}
+    else:
+        dest = Path(args.skills_dest).expanduser()
+        dest.mkdir(parents=True, exist_ok=True)
+        copied: list[str] = []
+        already: list[str] = []
+        with _skills_source() as skills_source:
+            if not skills_source.exists():
+                report["steps"]["skills"] = {
+                    "status": "failed",
+                    "dest": str(dest),
+                    "error": f"skills/ not found at {skills_source}",
+                }
+            else:
+                for skill_dir in skills_source.iterdir():
+                    if not skill_dir.is_dir():
+                        continue
+                    target = dest / skill_dir.name
+                    if target.exists():
+                        if not args.force:
+                            already.append(str(target))
+                            continue
+                        shutil.rmtree(target)
+                    shutil.copytree(skill_dir, target)
+                    copied.append(str(target))
+                report["steps"]["skills"] = {
+                    "status": "ran",
+                    "dest": str(dest),
+                    "copied": copied,
+                    "already_present": already,
+                }
+
+    # 4. Garmin auth — report presence only, never prompt. The operator
+    # runs `hai auth garmin` separately for credential entry.
+    store = _credential_store_for(args)
+    auth_status = store.garmin_status()
+    configured = bool(auth_status["credentials_available"])
+    report["steps"]["auth_garmin"] = {
+        "status": "configured" if configured else "missing",
+        "credentials_available": configured,
+        "hint": (
+            None
+            if configured
+            else (
+                "run `hai auth garmin` to store credentials in the OS "
+                "keyring, or set HAI_GARMIN_EMAIL + HAI_GARMIN_PASSWORD "
+                "for non-interactive use"
+            )
+        ),
+    }
+
+    _emit_json(report)
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# hai doctor — read-only runtime diagnostics
+# ---------------------------------------------------------------------------
+
+
+def _worst_status(statuses: list[str]) -> str:
+    order = {"ok": 0, "warn": 1, "fail": 2}
+    if not statuses:
+        return "ok"
+    worst = max(order[s] for s in statuses)
+    return {0: "ok", 1: "warn", 2: "fail"}[worst]
+
+
+def cmd_doctor(args: argparse.Namespace) -> int:
+    """Read-only diagnostics against the actual v1 runtime surfaces.
+
+    Reports what is present vs missing for each first-run piece — config,
+    state DB + schema version, Garmin credentials, skills install — plus
+    the package version. Does not mutate anything; every state-changing
+    step belongs to ``hai init`` or a targeted subcommand.
+
+    Exit code 0 for ``ok`` or ``warn`` overall; 2 for ``fail`` (malformed
+    config on disk). ``warn`` is the normal pre-setup state so the check
+    stays agent-friendly — an agent or shell script can run ``hai doctor
+    && hai daily`` without getting blocked by a missing-auth warning.
+    """
+
+    from health_agent_infra.core.state import (
+        current_schema_version,
+        open_connection,
+        resolve_db_path,
+    )
+    from health_agent_infra.core.state.store import discover_migrations
+
+    report: dict[str, Any] = {
+        "version": _PACKAGE_VERSION,
+        "checks": {},
+    }
+
+    # ---- config ----
+    thresholds_path = (
+        Path(args.thresholds_path).expanduser()
+        if args.thresholds_path
+        else user_config_path()
+    )
+    if not thresholds_path.exists():
+        report["checks"]["config"] = {
+            "status": "warn",
+            "path": str(thresholds_path),
+            "reason": "thresholds file not present; defaults in effect",
+            "hint": "run `hai init` or `hai config init`",
+        }
+    else:
+        try:
+            load_thresholds(path=thresholds_path)
+            report["checks"]["config"] = {
+                "status": "ok",
+                "path": str(thresholds_path),
+            }
+        except ConfigError as exc:
+            report["checks"]["config"] = {
+                "status": "fail",
+                "path": str(thresholds_path),
+                "reason": str(exc),
+                "hint": "repair the TOML or regenerate with `hai config init --force`",
+            }
+
+    # ---- state DB + migration state ----
+    db_path = resolve_db_path(args.db_path)
+    if not db_path.exists():
+        report["checks"]["state_db"] = {
+            "status": "warn",
+            "path": str(db_path),
+            "reason": "state DB file not present",
+            "hint": "run `hai init` or `hai state init`",
+        }
+    else:
+        conn = open_connection(db_path)
+        try:
+            current = current_schema_version(conn)
+        finally:
+            conn.close()
+        packaged = discover_migrations()
+        head = max((v for v, _, _ in packaged), default=0)
+        if current < head:
+            report["checks"]["state_db"] = {
+                "status": "warn",
+                "path": str(db_path),
+                "schema_version": current,
+                "head_version": head,
+                "pending_migrations": head - current,
+                "reason": f"{head - current} pending migration(s)",
+                "hint": "run `hai state migrate`",
+            }
+        else:
+            report["checks"]["state_db"] = {
+                "status": "ok",
+                "path": str(db_path),
+                "schema_version": current,
+                "head_version": head,
+            }
+
+    # ---- Garmin auth ----
+    store = _credential_store_for(args)
+    auth_status = store.garmin_status()
+    if auth_status["credentials_available"]:
+        if auth_status["keyring"]["password_present"]:
+            source = "keyring"
+        else:
+            source = "env"
+        report["checks"]["auth_garmin"] = {
+            "status": "ok",
+            "credentials_source": source,
+        }
+    else:
+        report["checks"]["auth_garmin"] = {
+            "status": "warn",
+            "reason": "no Garmin credentials stored",
+            "hint": (
+                "run `hai auth garmin` (interactive) or set "
+                "HAI_GARMIN_EMAIL + HAI_GARMIN_PASSWORD in the environment"
+            ),
+        }
+
+    # ---- skills ----
+    dest = Path(args.skills_dest).expanduser()
+    with _skills_source() as skills_source:
+        packaged_names = (
+            sorted(p.name for p in skills_source.iterdir() if p.is_dir())
+            if skills_source.exists()
+            else []
+        )
+    if not dest.exists():
+        report["checks"]["skills"] = {
+            "status": "warn",
+            "dest": str(dest),
+            "packaged_count": len(packaged_names),
+            "installed_count": 0,
+            "reason": "skills destination does not exist",
+            "hint": "run `hai init` or `hai setup-skills`",
+        }
+    else:
+        installed = sorted(p.name for p in dest.iterdir() if p.is_dir())
+        missing = sorted(set(packaged_names) - set(installed))
+        if missing:
+            report["checks"]["skills"] = {
+                "status": "warn",
+                "dest": str(dest),
+                "installed_count": len(installed),
+                "packaged_count": len(packaged_names),
+                "missing": missing,
+                "hint": "run `hai setup-skills` to install missing skills",
+            }
+        else:
+            report["checks"]["skills"] = {
+                "status": "ok",
+                "dest": str(dest),
+                "installed_count": len(installed),
+                "packaged_count": len(packaged_names),
+            }
+
+    # ---- domains (static — the six v1 domains ship with the wheel) ----
+    report["checks"]["domains"] = {
+        "status": "ok",
+        "domains": sorted(_DAILY_SUPPORTED_DOMAINS),
+    }
+
+    overall = _worst_status(
+        [c["status"] for c in report["checks"].values()]
+    )
+    report["overall_status"] = overall
+    _emit_json(report)
+    return 2 if overall == "fail" else 0
+
+
+# ---------------------------------------------------------------------------
 # argparse wiring
 # ---------------------------------------------------------------------------
 
@@ -2247,6 +2564,12 @@ def _try_register_eval_subparser(sub: argparse._SubParsersAction) -> bool:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="hai", description="Health Agent Infra CLI")
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"hai {_PACKAGE_VERSION}",
+        help="Print the installed package version and exit",
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_pull = sub.add_parser("pull", help="Pull Garmin evidence for a date")
@@ -2653,6 +2976,48 @@ def build_parser() -> argparse.ArgumentParser:
     p_setup.add_argument("--force", action="store_true",
                          help="Overwrite existing skill directories of the same name")
     p_setup.set_defaults(func=cmd_setup_skills)
+
+    p_init = sub.add_parser(
+        "init",
+        help=(
+            "First-run setup: scaffold thresholds, init state DB + apply "
+            "migrations, copy skills, report Garmin auth status. "
+            "Idempotent; safe to rerun."
+        ),
+    )
+    p_init.add_argument("--thresholds-path", default=None,
+                        help="Override thresholds TOML destination "
+                             "(default: platformdirs user_config_dir).")
+    p_init.add_argument("--db-path", default=None,
+                        help="Override state DB path (default: "
+                             "$HAI_STATE_DB or platform default).")
+    p_init.add_argument("--skills-dest", default=str(DEFAULT_CLAUDE_SKILLS_DIR),
+                        help="Destination for skills/ (default: ~/.claude/skills/).")
+    p_init.add_argument("--skip-skills", action="store_true",
+                        help="Skip copying skills (useful when the agent "
+                             "harness is not Claude Code).")
+    p_init.add_argument("--force", action="store_true",
+                        help="Overwrite an existing thresholds TOML and "
+                             "existing skills directories of the same name.")
+    p_init.set_defaults(func=cmd_init)
+
+    p_doctor = sub.add_parser(
+        "doctor",
+        help=(
+            "Read-only runtime diagnostics: config, state DB, Garmin "
+            "auth, and skills install. Exits 0 for ok/warn, 2 for fail."
+        ),
+    )
+    p_doctor.add_argument("--thresholds-path", default=None,
+                          help="Override thresholds TOML path (default: "
+                               "platformdirs user_config_dir).")
+    p_doctor.add_argument("--db-path", default=None,
+                          help="Override state DB path (default: "
+                               "$HAI_STATE_DB or platform default).")
+    p_doctor.add_argument("--skills-dest", default=str(DEFAULT_CLAUDE_SKILLS_DIR),
+                          help="Skills destination to inspect (default: "
+                               "~/.claude/skills/).")
+    p_doctor.set_defaults(func=cmd_doctor)
 
     p_classify = sub.add_parser(
         "classify",
