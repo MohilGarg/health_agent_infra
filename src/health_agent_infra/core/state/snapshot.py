@@ -248,7 +248,26 @@ def build_snapshot(
                 classified_state, policy_result,
             }
 
-    When the bundle is absent, both blocks keep their v1.0 shape so
+      - The **sleep** and **stress** blocks are expanded with derived
+        signals + classify + policy (Phase 3 step 5)::
+
+            sleep = {
+                today, history, missingness,
+                signals,
+                classified_state, policy_result,
+            }
+            stress = {
+                today, history, missingness,
+                today_garmin, today_manual, today_body_battery,
+                signals,
+                classified_state, policy_result,
+            }
+
+        X1a / X1b read ``sleep.classified_state.sleep_debt_band``; X7
+        reads ``stress.classified_state.garmin_stress_band``; X6 reads
+        body-battery off ``stress.today_body_battery``.
+
+    When the bundle is absent, these blocks keep their v1.0 shape so
     existing callers are unaffected. Other domains keep v1.0 shape until
     their own classify/policy lands.
 
@@ -420,6 +439,25 @@ def build_snapshot(
         "history": running_history,
         "missingness": running_mx,
     }
+    sleep_block: dict[str, Any] = {
+        "today": sleep_today,
+        "history": sleep_history,
+        "missingness": sleep_mx,
+    }
+    stress_block: dict[str, Any] = {
+        "today": stress_today,
+        "history": stress_history,
+        "missingness": stress_mx,
+        # Convenience accessors so synthesis_policy and skills can read
+        # the day's stress signals without unpacking `today`. These
+        # mirror the pre-Phase-3 `today_garmin` / `today_manual` shape
+        # and add `today_body_battery` which moved onto the stress
+        # block with migration 004.
+        "today_garmin": today_garmin_stress,
+        "today_manual": today_manual_stress,
+        "today_body_battery": today_body_battery,
+    }
+
     if evidence_bundle is not None:
         # Full-bundle shape: per-domain expansion with classify + policy.
         # Imports happen here (not at module top) so `core.schemas` /
@@ -433,6 +471,16 @@ def build_snapshot(
             classify_running_state,
             derive_running_signals,
             evaluate_running_policy,
+        )
+        from health_agent_infra.domains.sleep import (
+            classify_sleep_state,
+            derive_sleep_signals,
+            evaluate_sleep_policy,
+        )
+        from health_agent_infra.domains.stress import (
+            classify_stress_state,
+            derive_stress_signals,
+            evaluate_stress_policy,
         )
 
         cleaned = evidence_bundle.get("cleaned_evidence") or {}
@@ -461,6 +509,35 @@ def build_snapshot(
         running_block["classified_state"] = _running_classified_to_dict(running_classified)
         running_block["policy_result"] = _policy_to_dict(running_policy)
 
+        # Sleep (Phase 3 step 5). Source of truth for sleep_debt_band is
+        # now the sleep domain; X1a / X1b in synthesis_policy prefer
+        # this block's classified_state.sleep_debt_band over the
+        # recovery cross-domain echo.
+        sleep_signals = derive_sleep_signals(
+            sleep_today=sleep_today,
+            sleep_history=sleep_history,
+            evidence=cleaned,
+        )
+        sleep_classified = classify_sleep_state(sleep_signals)
+        sleep_policy = evaluate_sleep_policy(sleep_classified, sleep_signals)
+        sleep_block["signals"] = sleep_signals
+        sleep_block["classified_state"] = _sleep_classified_to_dict(sleep_classified)
+        sleep_block["policy_result"] = _policy_to_dict(sleep_policy)
+
+        # Stress (Phase 3 step 5). Source of truth for garmin_stress_band
+        # is the stress domain; X7 in synthesis_policy prefers this
+        # block's classified_state.garmin_stress_band over the local
+        # fallback banding. X6 reads body-battery from stress.today_*.
+        stress_signals = derive_stress_signals(
+            stress_today=stress_today,
+            stress_history=stress_history,
+        )
+        stress_classified = classify_stress_state(stress_signals)
+        stress_policy = evaluate_stress_policy(stress_classified, stress_signals)
+        stress_block["signals"] = stress_signals
+        stress_block["classified_state"] = _stress_classified_to_dict(stress_classified)
+        stress_block["policy_result"] = _policy_to_dict(stress_policy)
+
     return {
         "schema_version": "state_snapshot.v1",
         "as_of_date": as_of_date.isoformat(),
@@ -469,24 +546,8 @@ def build_snapshot(
         "history_range": [lookback_start.isoformat(), (as_of_date - timedelta(days=1)).isoformat()],
         "recovery": recovery_block,
         "running": running_block,
-        "sleep": {
-            "today": sleep_today,
-            "history": sleep_history,
-            "missingness": sleep_mx,
-        },
-        "stress": {
-            "today": stress_today,
-            "history": stress_history,
-            "missingness": stress_mx,
-            # Convenience accessors so synthesis_policy and skills can read
-            # the day's stress signals without unpacking `today`. These
-            # mirror the pre-Phase-3 `today_garmin` / `today_manual` shape
-            # and add `today_body_battery` which moved onto the stress
-            # block with migration 004.
-            "today_garmin": today_garmin_stress,
-            "today_manual": today_manual_stress,
-            "today_body_battery": today_body_battery,
-        },
+        "sleep": sleep_block,
+        "stress": stress_block,
         "gym": {
             "today": gym_today,
             "history": _history("gym"),
@@ -550,6 +611,47 @@ def _running_classified_to_dict(classified: Any) -> dict[str, Any]:
         "coverage_band": classified.coverage_band,
         "running_readiness_status": classified.running_readiness_status,
         "readiness_score": classified.readiness_score,
+        "uncertainty": list(classified.uncertainty),
+    }
+
+
+def _sleep_classified_to_dict(classified: Any) -> dict[str, Any]:
+    """Convert a ClassifiedSleepState frozen dataclass to a plain dict.
+
+    Field names are the sleep-quality skill's contract; do not rename
+    here without updating the skill. ``sleep_debt_band`` is the field
+    X1a / X1b read via ``sleep.classified_state.sleep_debt_band``.
+    """
+
+    return {
+        "sleep_debt_band": classified.sleep_debt_band,
+        "sleep_quality_band": classified.sleep_quality_band,
+        "sleep_timing_consistency_band": classified.sleep_timing_consistency_band,
+        "sleep_efficiency_band": classified.sleep_efficiency_band,
+        "coverage_band": classified.coverage_band,
+        "sleep_status": classified.sleep_status,
+        "sleep_score": classified.sleep_score,
+        "sleep_efficiency_pct": classified.sleep_efficiency_pct,
+        "uncertainty": list(classified.uncertainty),
+    }
+
+
+def _stress_classified_to_dict(classified: Any) -> dict[str, Any]:
+    """Convert a ClassifiedStressState frozen dataclass to a plain dict.
+
+    Field names are the stress-regulation skill's contract; do not
+    rename here without updating the skill. ``garmin_stress_band`` is
+    the field X7 reads via ``stress.classified_state.garmin_stress_band``.
+    """
+
+    return {
+        "garmin_stress_band": classified.garmin_stress_band,
+        "manual_stress_band": classified.manual_stress_band,
+        "body_battery_trend_band": classified.body_battery_trend_band,
+        "coverage_band": classified.coverage_band,
+        "stress_state": classified.stress_state,
+        "stress_score": classified.stress_score,
+        "body_battery_delta": classified.body_battery_delta,
         "uncertainty": list(classified.uncertainty),
     }
 

@@ -530,3 +530,249 @@ def test_snapshot_evidence_json_missing_required_keys_fails_clean(tmp_path: Path
     assert rc == 2
     err = capsys.readouterr().err
     assert "cleaned_evidence" in err or "raw_summary" in err
+
+
+# ---------------------------------------------------------------------------
+# Sleep + stress block — additive expansion under --evidence-json
+# (Phase 3 step 5)
+# ---------------------------------------------------------------------------
+
+def test_snapshot_sleep_block_v1_0_keys_without_evidence_json(
+    tmp_path: Path, capsys,
+):
+    """Additive expansion guarantee: today/history/missingness still
+    present when no evidence bundle is supplied."""
+
+    db = _init_db(tmp_path)
+    cli_main([
+        "state", "snapshot",
+        "--as-of", "2026-04-17", "--user-id", "u_local_1",
+        "--db-path", str(db),
+    ])
+    payload = json.loads(capsys.readouterr().out)
+    assert set(payload["sleep"].keys()) == {"today", "history", "missingness"}
+
+
+def test_snapshot_stress_block_v1_0_keys_without_evidence_json(
+    tmp_path: Path, capsys,
+):
+    """Stress block v1.0 carries convenience keys today_garmin /
+    today_manual / today_body_battery in addition to the standard
+    three, regardless of evidence_bundle presence."""
+
+    db = _init_db(tmp_path)
+    cli_main([
+        "state", "snapshot",
+        "--as-of", "2026-04-17", "--user-id", "u_local_1",
+        "--db-path", str(db),
+    ])
+    payload = json.loads(capsys.readouterr().out)
+    assert set(payload["stress"].keys()) == {
+        "today", "history", "missingness",
+        "today_garmin", "today_manual", "today_body_battery",
+    }
+
+
+def test_snapshot_sleep_block_adds_signals_classified_policy_with_evidence_json(
+    tmp_path: Path, capsys,
+):
+    """Phase 3 step 5: sleep block gains signals / classified_state /
+    policy_result under --evidence-json, matching running's shape."""
+
+    db = _init_db(tmp_path)
+    bundle_path = _write_clean_bundle(tmp_path)
+    cli_main([
+        "state", "snapshot",
+        "--as-of", "2026-04-17", "--user-id", "u_local_1",
+        "--db-path", str(db),
+        "--evidence-json", str(bundle_path),
+    ])
+    payload = json.loads(capsys.readouterr().out)
+    assert set(payload["sleep"].keys()) == {
+        "today", "history", "missingness",
+        "signals", "classified_state", "policy_result",
+    }
+
+
+def test_snapshot_stress_block_adds_signals_classified_policy_with_evidence_json(
+    tmp_path: Path, capsys,
+):
+    """Phase 3 step 5: stress block gains signals / classified_state /
+    policy_result under --evidence-json. Convenience keys stay put."""
+
+    db = _init_db(tmp_path)
+    bundle_path = _write_clean_bundle(tmp_path)
+    cli_main([
+        "state", "snapshot",
+        "--as-of", "2026-04-17", "--user-id", "u_local_1",
+        "--db-path", str(db),
+        "--evidence-json", str(bundle_path),
+    ])
+    payload = json.loads(capsys.readouterr().out)
+    assert set(payload["stress"].keys()) == {
+        "today", "history", "missingness",
+        "today_garmin", "today_manual", "today_body_battery",
+        "signals", "classified_state", "policy_result",
+    }
+
+
+def test_snapshot_sleep_signals_carry_expected_keys(tmp_path: Path, capsys):
+    """signals dict contract matches classify_sleep_state input shape so
+    a rename there surfaces here as a contract violation rather than at
+    skill-prompt time."""
+
+    db = _init_db(tmp_path)
+    bundle_path = _write_clean_bundle(tmp_path)
+    cli_main([
+        "state", "snapshot",
+        "--as-of", "2026-04-17", "--user-id", "u_local_1",
+        "--db-path", str(db),
+        "--evidence-json", str(bundle_path),
+    ])
+    payload = json.loads(capsys.readouterr().out)
+    signals = payload["sleep"]["signals"]
+    assert set(signals.keys()) == {
+        "sleep_hours",
+        "sleep_score_overall",
+        "sleep_awake_min",
+        "sleep_start_variance_minutes",
+        "sleep_history_hours_last_7",
+    }
+
+
+def test_snapshot_sleep_signals_fall_back_to_evidence_sleep_hours(
+    tmp_path: Path, capsys,
+):
+    """No accepted-sleep row yet (empty DB) → sleep_hours pulled from
+    the evidence bundle so the classifier stays lit."""
+
+    db = _init_db(tmp_path)
+    bundle_path = _write_clean_bundle(tmp_path, sleep_hours=6.5)
+    cli_main([
+        "state", "snapshot",
+        "--as-of", "2026-04-17", "--user-id", "u_local_1",
+        "--db-path", str(db),
+        "--evidence-json", str(bundle_path),
+    ])
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["sleep"]["signals"]["sleep_hours"] == 6.5
+    # 6.5h is below the "mild" cutoff of 7h → moderate debt band.
+    assert payload["sleep"]["classified_state"]["sleep_debt_band"] == "moderate"
+
+
+def test_snapshot_stress_signals_carry_expected_keys(tmp_path: Path, capsys):
+    db = _init_db(tmp_path)
+    bundle_path = _write_clean_bundle(tmp_path)
+    cli_main([
+        "state", "snapshot",
+        "--as-of", "2026-04-17", "--user-id", "u_local_1",
+        "--db-path", str(db),
+        "--evidence-json", str(bundle_path),
+    ])
+    payload = json.loads(capsys.readouterr().out)
+    signals = payload["stress"]["signals"]
+    assert set(signals.keys()) == {
+        "garmin_all_day_stress",
+        "manual_stress_score",
+        "body_battery_end_of_day",
+        "body_battery_prev_day",
+        "stress_history_garmin_last_7",
+    }
+
+
+def test_snapshot_sleep_classified_state_has_all_sleep_band_keys(
+    tmp_path: Path, capsys,
+):
+    db = _init_db(tmp_path)
+    bundle_path = _write_clean_bundle(tmp_path)
+    cli_main([
+        "state", "snapshot",
+        "--as-of", "2026-04-17", "--user-id", "u_local_1",
+        "--db-path", str(db),
+        "--evidence-json", str(bundle_path),
+    ])
+    payload = json.loads(capsys.readouterr().out)
+    classified = payload["sleep"]["classified_state"]
+    assert set(classified.keys()) == {
+        "sleep_debt_band",
+        "sleep_quality_band",
+        "sleep_timing_consistency_band",
+        "sleep_efficiency_band",
+        "coverage_band",
+        "sleep_status",
+        "sleep_score",
+        "sleep_efficiency_pct",
+        "uncertainty",
+    }
+
+
+def test_snapshot_stress_classified_state_has_all_stress_band_keys(
+    tmp_path: Path, capsys,
+):
+    db = _init_db(tmp_path)
+    bundle_path = _write_clean_bundle(tmp_path)
+    cli_main([
+        "state", "snapshot",
+        "--as-of", "2026-04-17", "--user-id", "u_local_1",
+        "--db-path", str(db),
+        "--evidence-json", str(bundle_path),
+    ])
+    payload = json.loads(capsys.readouterr().out)
+    classified = payload["stress"]["classified_state"]
+    assert set(classified.keys()) == {
+        "garmin_stress_band",
+        "manual_stress_band",
+        "body_battery_trend_band",
+        "coverage_band",
+        "stress_state",
+        "stress_score",
+        "body_battery_delta",
+        "uncertainty",
+    }
+
+
+def test_snapshot_sleep_and_stress_policy_result_four_keys(
+    tmp_path: Path, capsys,
+):
+    """Every policy_result block carries the four canonical fields —
+    policy_decisions / forced_action / forced_action_detail /
+    capped_confidence. Shape is shared with recovery / running."""
+
+    db = _init_db(tmp_path)
+    bundle_path = _write_clean_bundle(tmp_path)
+    cli_main([
+        "state", "snapshot",
+        "--as-of", "2026-04-17", "--user-id", "u_local_1",
+        "--db-path", str(db),
+        "--evidence-json", str(bundle_path),
+    ])
+    payload = json.loads(capsys.readouterr().out)
+    for block in ("sleep", "stress"):
+        policy = payload[block]["policy_result"]
+        assert set(policy.keys()) == {
+            "policy_decisions",
+            "forced_action",
+            "forced_action_detail",
+            "capped_confidence",
+        }
+
+
+def test_snapshot_sleep_stress_expansion_does_not_modify_recovery_keys(
+    tmp_path: Path, capsys,
+):
+    """Adding sleep + stress expansion must leave recovery's full-bundle
+    key set exactly as Phase 1 froze it."""
+
+    db = _init_db(tmp_path)
+    bundle_path = _write_clean_bundle(tmp_path)
+    cli_main([
+        "state", "snapshot",
+        "--as-of", "2026-04-17", "--user-id", "u_local_1",
+        "--db-path", str(db),
+        "--evidence-json", str(bundle_path),
+    ])
+    payload = json.loads(capsys.readouterr().out)
+    assert set(payload["recovery"].keys()) == {
+        "today", "history", "missingness",
+        "evidence", "raw_summary", "classified_state", "policy_result",
+    }

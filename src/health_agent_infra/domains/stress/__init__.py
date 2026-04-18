@@ -26,6 +26,7 @@ from health_agent_infra.domains.stress.schemas import (
     StressProposal,
     StressRecommendation,
 )
+from health_agent_infra.domains.stress.signals import derive_stress_signals
 
 __all__ = [
     "ClassifiedStressState",
@@ -38,5 +39,6 @@ __all__ = [
     "StressProposal",
     "StressRecommendation",
     "classify_stress_state",
+    "derive_stress_signals",
     "evaluate_stress_policy",
 ]

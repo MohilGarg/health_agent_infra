@@ -154,6 +154,21 @@ def _get(d: Optional[dict[str, Any]], *path: str) -> Any:
 
 
 def _sleep_debt_band(snapshot: dict[str, Any]) -> Optional[str]:
+    """Read the canonical sleep_debt_band for X1a / X1b.
+
+    Phase 3 step 5 rewire: the sleep domain is now the source of truth.
+    Prefer ``sleep.classified_state.sleep_debt_band``; fall back to the
+    recovery block's echo when the sleep block wasn't expanded (e.g. a
+    snapshot built without ``evidence_bundle``). Both derive from the
+    same underlying ``sleep_hours`` signal, so the fallback preserves
+    X1's behavior on pre-step-5 snapshots and test fixtures while the
+    new primary path lights up under ``hai state snapshot
+    --evidence-json`` + the sleep classifier.
+    """
+
+    sleep_band = _get(snapshot, "sleep", "classified_state", "sleep_debt_band")
+    if sleep_band is not None:
+        return sleep_band
     return _get(snapshot, "recovery", "classified_state", "sleep_debt_band")
 
 
@@ -262,9 +277,11 @@ def evaluate_x1a(
 ) -> list[XRuleFiring]:
     """X1a (soften): sleep_debt at configured trigger → downgrade hard sessions.
 
-    Trigger: ``recovery.classified_state.sleep_debt_band`` equals the
-    config-keyed band (default ``"moderate"``). Affects every hard
-    proposal in the bundle.
+    Trigger: ``sleep.classified_state.sleep_debt_band`` equals the
+    config-keyed band (default ``"moderate"``). Falls back to
+    ``recovery.classified_state.sleep_debt_band`` on snapshots built
+    without the sleep-domain expansion. Affects every hard proposal in
+    the bundle.
     """
 
     trigger_band = _get(thresholds, "synthesis", "x_rules", "x1a", "sleep_debt_trigger_band")
@@ -312,8 +329,10 @@ def evaluate_x1b(
 ) -> list[XRuleFiring]:
     """X1b (block): elevated sleep debt → escalate hard sessions.
 
-    Trigger: ``sleep_debt_band`` equals the config-keyed band (default
-    ``"elevated"``). Forces escalate on every hard proposal.
+    Trigger: ``sleep.classified_state.sleep_debt_band`` equals the
+    config-keyed band (default ``"elevated"``). Falls back to
+    ``recovery.classified_state.sleep_debt_band`` when the sleep block
+    wasn't expanded. Forces escalate on every hard proposal.
     """
 
     trigger_band = _get(thresholds, "synthesis", "x_rules", "x1b", "sleep_debt_trigger_band")

@@ -76,6 +76,8 @@ from health_agent_infra.core.synthesis_policy import (
 RECOMMENDATION_SCHEMA_BY_DOMAIN: dict[str, str] = {
     "recovery": "training_recommendation.v1",
     "running": "running_recommendation.v1",
+    "sleep": "sleep_recommendation.v1",
+    "stress": "stress_recommendation.v1",
 }
 
 
@@ -172,6 +174,15 @@ _DEFAULT_REVIEW_QUESTIONS: dict[str, str] = {
     "rest_day_recommended": "Did yesterday's rest day help your recovery?",
     "defer_decision_insufficient_signal": "Did you decide on a session yesterday? How did it go?",
     "escalate_for_user_review": "You had a persistent signal we flagged. Did you take any action?",
+    # Sleep (Phase 3 step 5)
+    "maintain_schedule": "Did sticking with your usual sleep schedule feel right last night?",
+    "prioritize_wind_down": "Did the earlier wind-down help last night's sleep?",
+    "sleep_debt_repayment_day": "Were you able to log extra sleep to repay the debt?",
+    "earlier_bedtime_target": "Were you able to hit the earlier bedtime target?",
+    # Stress (Phase 3 step 5)
+    "maintain_routine": "Did your usual routine feel right given yesterday's stress signals?",
+    "add_low_intensity_recovery": "Did the low-intensity recovery block help yesterday?",
+    "schedule_decompression_time": "Were you able to take the decompression time you planned?",
 }
 
 
@@ -388,12 +399,22 @@ def run_synthesis(
             conn, plan_dict, commit_after=False,
         )
 
+        # Phase 2.5 Condition 1 — orphan defensive check. A firing whose
+        # affected_domain is not in the committing plan's proposal domains
+        # is stamped orphan=1 so future regressions (e.g. a rule that
+        # emits firings from snapshot-only signals without iterating
+        # proposals) surface in the audit table rather than silently
+        # leaving dead rows. Current rules cannot emit orphans by
+        # construction, so this is a monitor, not a gate.
+        proposal_domains = {p["domain"] for p in proposals}
         for firing in all_firings:
+            is_orphan = firing.affected_domain not in proposal_domains
             project_x_rule_firing(
                 conn,
                 firing.to_dict(),
                 daily_plan_id=daily_plan_id,
                 user_id=user_id,
+                orphan=is_orphan,
                 commit_after=False,
             )
 

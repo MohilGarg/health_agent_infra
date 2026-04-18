@@ -515,3 +515,460 @@ def test_synthesize_ignores_skill_attempt_to_change_action(tmp_path):
         assert payload["rationale"] == ["skill_overlay"]
     finally:
         conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Phase 3 step 5 — 4-domain end-to-end synthesis
+# ---------------------------------------------------------------------------
+
+def _recovery_proposal(**overrides):
+    base = {
+        "schema_version": PROPOSAL_SCHEMA_VERSIONS["recovery"],
+        "proposal_id": "prop_2026-04-17_u_local_1_recovery_01",
+        "user_id": "u_local_1",
+        "for_date": "2026-04-17",
+        "domain": "recovery",
+        "action": "proceed_with_planned_session",
+        "action_detail": None,
+        "rationale": ["readiness=recovered"],
+        "confidence": "high",
+        "uncertainty": [],
+        "policy_decisions": [{"rule_id": "r1", "decision": "allow", "note": "full"}],
+        "bounded": True,
+    }
+    base.update(overrides)
+    return base
+
+
+def _sleep_proposal(**overrides):
+    base = {
+        "schema_version": PROPOSAL_SCHEMA_VERSIONS["sleep"],
+        "proposal_id": "prop_2026-04-17_u_local_1_sleep_01",
+        "user_id": "u_local_1",
+        "for_date": "2026-04-17",
+        "domain": "sleep",
+        "action": "maintain_schedule",
+        "action_detail": None,
+        "rationale": ["sleep_status=optimal"],
+        "confidence": "high",
+        "uncertainty": [],
+        "policy_decisions": [{"rule_id": "r1", "decision": "allow", "note": "full"}],
+        "bounded": True,
+    }
+    base.update(overrides)
+    return base
+
+
+def _stress_proposal(**overrides):
+    base = {
+        "schema_version": PROPOSAL_SCHEMA_VERSIONS["stress"],
+        "proposal_id": "prop_2026-04-17_u_local_1_stress_01",
+        "user_id": "u_local_1",
+        "for_date": "2026-04-17",
+        "domain": "stress",
+        "action": "maintain_routine",
+        "action_detail": None,
+        "rationale": ["stress_state=calm"],
+        "confidence": "high",
+        "uncertainty": [],
+        "policy_decisions": [{"rule_id": "r1", "decision": "allow", "note": "full"}],
+        "bounded": True,
+    }
+    base.update(overrides)
+    return base
+
+
+def _four_domain_snapshot_calm():
+    """Snapshot where no X-rule fires — all 4 proposals pass through."""
+
+    return {
+        "recovery": {
+            "classified_state": {"sleep_debt_band": "none"},
+            "today": {"acwr_ratio": 1.0},
+        },
+        "sleep": {
+            "classified_state": {"sleep_debt_band": "none"},
+            "today": {"sleep_hours": 8.0},
+        },
+        "stress": {
+            "classified_state": {"garmin_stress_band": "low"},
+            "today": {
+                "garmin_all_day_stress": 25,
+                "body_battery_end_of_day": 75,
+            },
+            "today_garmin": 25,
+            "today_body_battery": 75,
+        },
+        "running": {},
+    }
+
+
+def _four_domain_snapshot_stressful():
+    """Snapshot where X1a (sleep moderate) + X7 (stress high) fire.
+
+    Drives the plan's "X1 and X6 fire correctly" acceptance by showing
+    that X1 reads from the sleep block (not recovery) and X7 reads from
+    stress.classified_state.garmin_stress_band.
+    """
+
+    return {
+        "recovery": {
+            # Deliberate contradiction with sleep block to prove which
+            # one X1 reads from.
+            "classified_state": {"sleep_debt_band": "none"},
+            "today": {"acwr_ratio": 1.0},
+        },
+        "sleep": {
+            "classified_state": {"sleep_debt_band": "moderate"},
+            "today": {"sleep_hours": 6.5},
+        },
+        "stress": {
+            "classified_state": {"garmin_stress_band": "high"},
+            "today": {
+                "garmin_all_day_stress": 65,
+                "body_battery_end_of_day": 45,
+            },
+            "today_garmin": 65,
+            "today_body_battery": 45,
+        },
+        "running": {},
+    }
+
+
+def test_synthesize_four_domain_scenario_commits_four_recommendations(tmp_path):
+    """Plan §4 Phase 3 deliverable 5: end-to-end agent run emits 4
+    proposals and 4 final recommendations linked by daily_plan_id."""
+
+    db_path = _fresh_db(tmp_path)
+    for proposal in [
+        _recovery_proposal(),
+        _running_proposal(),
+        _sleep_proposal(),
+        _stress_proposal(),
+    ]:
+        _insert_proposal(db_path, proposal)
+
+    conn = open_connection(db_path)
+    try:
+        result = run_synthesis(
+            conn,
+            for_date=date(2026, 4, 17),
+            user_id="u_local_1",
+            snapshot=_four_domain_snapshot_calm(),
+        )
+
+        assert len(result.recommendation_ids) == 4
+        assert len(result.proposal_ids) == 4
+
+        rows = conn.execute(
+            "SELECT domain, payload_json FROM recommendation_log "
+            "WHERE json_extract(payload_json, '$.daily_plan_id') = ? "
+            "ORDER BY domain",
+            (result.daily_plan_id,),
+        ).fetchall()
+        domains = [r["domain"] for r in rows]
+        assert sorted(domains) == ["recovery", "running", "sleep", "stress"]
+
+        # Every recommendation carries the same daily_plan_id.
+        for row in rows:
+            payload = json.loads(row["payload_json"])
+            assert payload["daily_plan_id"] == result.daily_plan_id
+    finally:
+        conn.close()
+
+
+def test_synthesize_four_domain_x1a_reads_sleep_block_in_e2e_flow(tmp_path):
+    """End-to-end confirmation that X1a fires from sleep.classified_state,
+    not recovery's echo, during real synthesis. The snapshot sets
+    recovery's band to 'none' and sleep's band to 'moderate'; X1a must
+    fire (sleep is the source of truth) and soften the running proposal."""
+
+    db_path = _fresh_db(tmp_path)
+    for proposal in [
+        _recovery_proposal(),
+        _running_proposal(),
+        _sleep_proposal(),
+        _stress_proposal(),
+    ]:
+        _insert_proposal(db_path, proposal)
+
+    conn = open_connection(db_path)
+    try:
+        result = run_synthesis(
+            conn,
+            for_date=date(2026, 4, 17),
+            user_id="u_local_1",
+            snapshot=_four_domain_snapshot_stressful(),
+        )
+        fired_ids = sorted({f.rule_id for f in result.phase_a_firings})
+        # X1a (sleep=moderate) softens both recovery and running hard
+        # proposals; X7 (stress=high) caps confidence on all four.
+        assert "X1a" in fired_ids
+        assert "X7" in fired_ids
+
+        # Running was softened by X1a.
+        running_row = conn.execute(
+            "SELECT action FROM recommendation_log "
+            "WHERE domain = 'running' "
+            "  AND json_extract(payload_json, '$.daily_plan_id') = ?",
+            (result.daily_plan_id,),
+        ).fetchone()
+        assert running_row["action"] == "downgrade_to_easy_aerobic"
+
+        # Every domain's recommendation had confidence capped by X7.
+        all_rows = conn.execute(
+            "SELECT domain, confidence FROM recommendation_log "
+            "WHERE json_extract(payload_json, '$.daily_plan_id') = ?",
+            (result.daily_plan_id,),
+        ).fetchall()
+        for row in all_rows:
+            assert row["confidence"] == "moderate"
+    finally:
+        conn.close()
+
+
+def test_synthesize_four_domain_x7_caps_sleep_and_stress_proposals(tmp_path):
+    """X7 fires one firing per proposal's domain — including sleep and
+    stress themselves. Persisted firings cover all four domains."""
+
+    db_path = _fresh_db(tmp_path)
+    for proposal in [
+        _recovery_proposal(),
+        _running_proposal(),
+        _sleep_proposal(),
+        _stress_proposal(),
+    ]:
+        _insert_proposal(db_path, proposal)
+
+    conn = open_connection(db_path)
+    try:
+        result = run_synthesis(
+            conn,
+            for_date=date(2026, 4, 17),
+            user_id="u_local_1",
+            snapshot=_four_domain_snapshot_stressful(),
+        )
+
+        x7_rows = conn.execute(
+            "SELECT affected_domain FROM x_rule_firing "
+            "WHERE daily_plan_id = ? AND x_rule_id = 'X7'",
+            (result.daily_plan_id,),
+        ).fetchall()
+        domains = sorted(r["affected_domain"] for r in x7_rows)
+        assert domains == ["recovery", "running", "sleep", "stress"]
+    finally:
+        conn.close()
+
+
+def test_synthesize_firings_are_not_flagged_orphan_when_domains_match(tmp_path):
+    """Phase 2.5 Condition 1: the orphan column defaults to 0 for every
+    firing whose affected_domain matches a committing proposal. Current
+    rules can't emit orphans by construction — this test pins that."""
+
+    db_path = _fresh_db(tmp_path)
+    for proposal in [
+        _recovery_proposal(),
+        _running_proposal(),
+        _sleep_proposal(),
+        _stress_proposal(),
+    ]:
+        _insert_proposal(db_path, proposal)
+
+    conn = open_connection(db_path)
+    try:
+        result = run_synthesis(
+            conn,
+            for_date=date(2026, 4, 17),
+            user_id="u_local_1",
+            snapshot=_four_domain_snapshot_stressful(),
+        )
+
+        rows = conn.execute(
+            "SELECT orphan FROM x_rule_firing WHERE daily_plan_id = ?",
+            (result.daily_plan_id,),
+        ).fetchall()
+        assert rows  # at least one firing committed
+        assert all(r["orphan"] == 0 for r in rows)
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Phase 2.5 Condition 2 — cap + adjust stacking (Phase A X7 + Phase B X9)
+# ---------------------------------------------------------------------------
+# The synthesis runtime supports a cap-then-adjust cycle end-to-end:
+# Phase A X7 caps confidence on every proposal (including a synthetic
+# nutrition proposal); Phase B X9 then adjusts the nutrition
+# recommendation's action_detail upward because the training plan is
+# still hard. Prior to this test, `guard_phase_b_mutation` was exercised
+# at the unit level but the full A→B cycle had no integration coverage
+# because nutrition is not submittable via the validated proposal path
+# yet (that lands in Phase 5).
+#
+# This test inserts a synthetic nutrition proposal directly via
+# `project_proposal` (which does no schema validation) — the plan's
+# test-only shim per the Phase 2.5 Condition 2 follow-up. Once Phase 5
+# lands a full nutrition submission path, this test can be rewritten to
+# drive the shared CLI instead of the direct projector call.
+
+
+def _synthetic_nutrition_proposal(**overrides):
+    base = {
+        # nutrition is NOT in SUPPORTED_DOMAINS yet; this is deliberate —
+        # the shim bypasses validation so the A→B cycle has coverage
+        # before Phase 5 wires up the full submission path.
+        "schema_version": "nutrition_proposal.v1",
+        "proposal_id": "prop_2026-04-17_u_local_1_nutrition_01",
+        "user_id": "u_local_1",
+        "for_date": "2026-04-17",
+        "domain": "nutrition",
+        "action": "maintain_targets",
+        "action_detail": {"protein_target_g": 140},
+        "rationale": ["nutrition=on_track"],
+        "confidence": "high",
+        "uncertainty": [],
+        "policy_decisions": [{"rule_id": "r1", "decision": "allow", "note": "full"}],
+        "bounded": True,
+    }
+    base.update(overrides)
+    return base
+
+
+def _x7_only_snapshot():
+    """Stress=high fires X7 (caps confidence); no sleep/ACWR/body-battery
+    trigger so recovery's training stays hard and X9 can fire Phase B."""
+
+    return {
+        "recovery": {
+            "classified_state": {"sleep_debt_band": "none"},
+            "today": {"acwr_ratio": 1.0},
+        },
+        "sleep": {"classified_state": {"sleep_debt_band": "none"}, "today": {}},
+        "stress": {
+            "classified_state": {"garmin_stress_band": "high"},
+            "today": {
+                "garmin_all_day_stress": 65,
+                "body_battery_end_of_day": 75,
+            },
+            "today_garmin": 65,
+            "today_body_battery": 75,
+        },
+        "running": {},
+    }
+
+
+def test_synthesize_cap_plus_adjust_stacking_nutrition_shim(tmp_path):
+    """Phase A X7 caps confidence → Phase B X9 adjusts nutrition
+    action_detail. Full cycle coverage for the Phase 2.5 Condition 2
+    follow-up."""
+
+    db_path = _fresh_db(tmp_path)
+    # Real recovery proposal (validated, hard action) + synthetic
+    # nutrition proposal (shim, bypasses validation).
+    _insert_proposal(db_path, _recovery_proposal())
+    _insert_proposal(db_path, _synthetic_nutrition_proposal())
+
+    conn = open_connection(db_path)
+    try:
+        result = run_synthesis(
+            conn,
+            for_date=date(2026, 4, 17),
+            user_id="u_local_1",
+            snapshot=_x7_only_snapshot(),
+        )
+
+        phase_a_ids = sorted({f.rule_id for f in result.phase_a_firings})
+        phase_b_ids = sorted({f.rule_id for f in result.phase_b_firings})
+        assert "X7" in phase_a_ids
+        assert phase_b_ids == ["X9"]
+
+        # Recovery's confidence capped to moderate by Phase A X7.
+        recovery_row = conn.execute(
+            "SELECT confidence FROM recommendation_log "
+            "WHERE domain = 'recovery' "
+            "  AND json_extract(payload_json, '$.daily_plan_id') = ?",
+            (result.daily_plan_id,),
+        ).fetchone()
+        assert recovery_row["confidence"] == "moderate"
+
+        # Nutrition's action_detail adjusted by Phase B X9.
+        nutrition_row = conn.execute(
+            "SELECT action, payload_json FROM recommendation_log "
+            "WHERE domain = 'nutrition' "
+            "  AND json_extract(payload_json, '$.daily_plan_id') = ?",
+            (result.daily_plan_id,),
+        ).fetchone()
+        assert nutrition_row is not None
+        # Phase B only touches action_detail — action stays put.
+        assert nutrition_row["action"] == "maintain_targets"
+        payload = json.loads(nutrition_row["payload_json"])
+        detail = payload["action_detail"]
+        # Original key preserved; X9's adjustment merged in.
+        assert detail["protein_target_g"] == 140
+        assert detail["protein_target_multiplier"] == 1.1
+        assert detail["reason_token"] == "x9_training_intensity_bump"
+
+        # Both Phase A and Phase B firings persisted, linked to the plan.
+        firing_rows = conn.execute(
+            "SELECT x_rule_id, tier FROM x_rule_firing "
+            "WHERE daily_plan_id = ? ORDER BY x_rule_id, tier",
+            (result.daily_plan_id,),
+        ).fetchall()
+        fired_ids = [r["x_rule_id"] for r in firing_rows]
+        assert "X7" in fired_ids
+        assert "X9" in fired_ids
+    finally:
+        conn.close()
+
+
+def test_synthesize_stamps_orphan_when_firing_domain_not_in_proposals(tmp_path):
+    """Defensive orphan flag: a firing whose affected_domain is NOT
+    among the committing proposal set is stamped ``orphan=1``. We
+    exercise the code path by injecting a synthetic firing via a
+    monkeypatch; current rules can't produce the case by construction,
+    which is exactly why we want the defensive monitor."""
+
+    db_path = _fresh_db(tmp_path)
+    _insert_proposal(db_path, _recovery_proposal())  # only one proposal
+
+    import health_agent_infra.core.synthesis as synthesis_mod
+    from health_agent_infra.core.synthesis_policy import XRuleFiring
+
+    # Force Phase A to emit a firing against "strength" — a domain NOT
+    # in the committing proposals. The orphan column must capture this.
+    def _fake_phase_a(snapshot, proposals, thresholds):
+        return [
+            XRuleFiring(
+                rule_id="X_FAKE",
+                tier="cap_confidence",
+                affected_domain="strength",
+                trigger_note="synthetic orphan for defensive-monitor test",
+                recommended_mutation=None,
+                source_signals={},
+                phase="A",
+            ),
+        ]
+
+    original = synthesis_mod.evaluate_phase_a
+    synthesis_mod.evaluate_phase_a = _fake_phase_a
+    try:
+        conn = open_connection(db_path)
+        try:
+            result = run_synthesis(
+                conn,
+                for_date=date(2026, 4, 17),
+                user_id="u_local_1",
+                snapshot=_four_domain_snapshot_calm(),
+            )
+            orphan_row = conn.execute(
+                "SELECT affected_domain, orphan FROM x_rule_firing "
+                "WHERE daily_plan_id = ? AND x_rule_id = 'X_FAKE'",
+                (result.daily_plan_id,),
+            ).fetchone()
+            assert orphan_row is not None
+            assert orphan_row["affected_domain"] == "strength"
+            assert orphan_row["orphan"] == 1
+        finally:
+            conn.close()
+    finally:
+        synthesis_mod.evaluate_phase_a = original

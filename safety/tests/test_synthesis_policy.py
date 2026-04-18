@@ -659,3 +659,142 @@ def test_apply_phase_b_rejects_malformed_firing_at_apply_time():
     )
     with pytest.raises(XRuleWriteSurfaceViolation):
         apply_phase_b(draft, [malformed])
+
+
+# ---------------------------------------------------------------------------
+# Phase 3 step 5 — X1 / X6 / X7 source-of-truth rewires
+# ---------------------------------------------------------------------------
+# These tests pin the contract that after Phase 3 step 5:
+#   - X1 reads sleep_debt_band from the **sleep** block first, then falls
+#     back to the recovery block (legacy path for snapshots built without
+#     the sleep-domain expansion).
+#   - X6 reads body_battery from the **stress** block
+#     (``stress.today_body_battery``).
+#   - X7 reads garmin_stress_band from the **stress** classified_state.
+
+
+def _sleep_block(sleep_debt_band=None):
+    block: dict = {"classified_state": {}}
+    if sleep_debt_band is not None:
+        block["classified_state"]["sleep_debt_band"] = sleep_debt_band
+    return block
+
+
+def _stress_block(
+    *,
+    classified_band=None,
+    today_garmin=None,
+    body_battery=None,
+):
+    block: dict = {"classified_state": {}, "today": {}}
+    if classified_band is not None:
+        block["classified_state"]["garmin_stress_band"] = classified_band
+    if today_garmin is not None:
+        block["today_garmin"] = today_garmin
+        block["today"]["garmin_all_day_stress"] = today_garmin
+    if body_battery is not None:
+        block["today_body_battery"] = body_battery
+        block["today"]["body_battery_end_of_day"] = body_battery
+    return block
+
+
+def test_x1a_reads_sleep_classified_state_as_primary_source():
+    """Phase 3 step 5 rewire: when the sleep block carries a
+    classified_state.sleep_debt_band, X1a triggers off that value —
+    NOT off the recovery echo."""
+
+    snapshot = {
+        "sleep": _sleep_block(sleep_debt_band="moderate"),
+        # Recovery block deliberately carries a contradicting value to
+        # prove the sleep block is preferred.
+        "recovery": {"classified_state": {"sleep_debt_band": "none"}, "today": {}},
+    }
+    firings = evaluate_x1a(snapshot, [_running_hard_proposal()], _thresholds())
+    assert len(firings) == 1
+    assert firings[0].rule_id == "X1a"
+
+
+def test_x1a_falls_back_to_recovery_when_sleep_block_absent():
+    """Backward-compat: snapshots built without --evidence-json carry
+    only the recovery cross-domain echo; X1 still fires off it."""
+
+    snapshot = {
+        "recovery": {"classified_state": {"sleep_debt_band": "moderate"}, "today": {}},
+        # No sleep block at all — mimics the v1.0 snapshot shape.
+    }
+    firings = evaluate_x1a(snapshot, [_running_hard_proposal()], _thresholds())
+    assert len(firings) == 1
+
+
+def test_x1a_sleep_block_without_classified_state_falls_back_to_recovery():
+    """Defensive: a sleep block without classified_state (no expansion)
+    doesn't poison the primary read — X1 keeps using recovery's echo."""
+
+    snapshot = {
+        "sleep": {"today": None, "history": [], "missingness": "absent"},
+        "recovery": {"classified_state": {"sleep_debt_band": "moderate"}, "today": {}},
+    }
+    firings = evaluate_x1a(snapshot, [_running_hard_proposal()], _thresholds())
+    assert len(firings) == 1
+
+
+def test_x1b_reads_sleep_classified_state_as_primary_source():
+    snapshot = {
+        "sleep": _sleep_block(sleep_debt_band="elevated"),
+        "recovery": {"classified_state": {"sleep_debt_band": "none"}, "today": {}},
+    }
+    firings = evaluate_x1b(snapshot, [_running_hard_proposal()], _thresholds())
+    assert len(firings) == 1
+    assert firings[0].tier == "block"
+
+
+def test_x6a_reads_body_battery_from_stress_block():
+    """Post-Phase-3: body_battery lives on stress, not recovery. X6a
+    must read from stress.today_body_battery."""
+
+    snapshot = {
+        "stress": _stress_block(body_battery=25),
+        "recovery": {"classified_state": {}, "today": {}},
+    }
+    firings = evaluate_x6a(snapshot, [_running_hard_proposal()], _thresholds())
+    assert len(firings) == 1
+    assert firings[0].source_signals["body_battery_end_of_day"] == 25
+
+
+def test_x6b_reads_body_battery_from_stress_block():
+    snapshot = {
+        "stress": _stress_block(body_battery=10),
+        "recovery": {"classified_state": {}, "today": {}},
+    }
+    firings = evaluate_x6b(snapshot, [_running_hard_proposal()], _thresholds())
+    assert len(firings) == 1
+    assert firings[0].tier == "block"
+
+
+def test_x7_prefers_stress_classified_state_band_over_raw_score():
+    """Phase 3 step 5: X7 reads stress.classified_state.garmin_stress_band
+    as primary source. The raw-score fallback is defensive only — when
+    the band is present, the raw score is NOT re-banded."""
+
+    # Band says "high" (triggers); raw score says 10 (would be "low").
+    # If X7 re-derived from raw, it wouldn't fire; it must honor the band.
+    snapshot = {
+        "stress": _stress_block(classified_band="high", today_garmin=10),
+        "recovery": {"classified_state": {}, "today": {}},
+    }
+    firings = evaluate_x7(snapshot, [_running_hard_proposal()], _thresholds())
+    assert len(firings) == 1
+    assert firings[0].source_signals["stress_band"] == "high"
+
+
+def test_x7_falls_back_to_raw_garmin_score_when_classified_state_missing():
+    """When the stress block has no classified_state (v1.0 snapshot with
+    no evidence bundle), X7 falls back to local banding of
+    stress.today_garmin."""
+
+    snapshot = {
+        "stress": _stress_block(today_garmin=65),  # high band by thresholds
+        "recovery": {"classified_state": {}, "today": {}},
+    }
+    firings = evaluate_x7(snapshot, [_running_hard_proposal()], _thresholds())
+    assert len(firings) == 1

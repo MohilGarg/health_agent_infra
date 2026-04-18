@@ -31,15 +31,20 @@ from typing import Any, Optional
 from health_agent_infra.core.schemas import DOMAIN_PROPOSAL_FIELDS
 
 
-# v1 supports two domains on the proposal surface. The registry is
-# intentionally small; new domains land by adding an entry (plus a
-# classify + policy + skill combo in their own module).
-SUPPORTED_DOMAINS: frozenset[str] = frozenset({"recovery", "running"})
+# v1 supports four domains on the proposal surface after Phase 3 step 5:
+# recovery + running (Phase 1/2) plus sleep + stress (Phase 3). The
+# registry is intentionally small; new domains land by adding an entry
+# (plus a classify + policy + skill combo in their own module).
+SUPPORTED_DOMAINS: frozenset[str] = frozenset({
+    "recovery", "running", "sleep", "stress",
+})
 
 
 PROPOSAL_SCHEMA_VERSIONS: dict[str, str] = {
     "running": "running_proposal.v1",
     "recovery": "recovery_proposal.v1",
+    "sleep": "sleep_proposal.v1",
+    "stress": "stress_proposal.v1",
 }
 
 
@@ -60,6 +65,23 @@ DOMAIN_ACTION_ENUMS: dict[str, frozenset[str]] = {
         "rest_day_recommended",
         "defer_decision_insufficient_signal",
         "escalate_for_user_review",
+    }),
+    # Sleep: no escalate action in v1 enum — R-chronic-deprivation forces
+    # ``sleep_debt_repayment_day`` and records the escalate tier on the
+    # policy decision record instead. See domains/sleep/schemas.py.
+    "sleep": frozenset({
+        "maintain_schedule",
+        "prioritize_wind_down",
+        "sleep_debt_repayment_day",
+        "earlier_bedtime_target",
+        "defer_decision_insufficient_signal",
+    }),
+    "stress": frozenset({
+        "maintain_routine",
+        "add_low_intensity_recovery",
+        "schedule_decompression_time",
+        "escalate_for_user_review",
+        "defer_decision_insufficient_signal",
     }),
 }
 

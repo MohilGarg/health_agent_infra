@@ -25,6 +25,7 @@ from health_agent_infra.domains.sleep.schemas import (
     SleepProposal,
     SleepRecommendation,
 )
+from health_agent_infra.domains.sleep.signals import derive_sleep_signals
 
 __all__ = [
     "ClassifiedSleepState",
@@ -37,5 +38,6 @@ __all__ = [
     "SleepProposal",
     "SleepRecommendation",
     "classify_sleep_state",
+    "derive_sleep_signals",
     "evaluate_sleep_policy",
 ]
