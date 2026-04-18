@@ -36,17 +36,12 @@ See [`reporting/docs/architecture.md`](reporting/docs/architecture.md).
   pass on the Phase 6 checkpoint. Skill-narration axis marked
   ``skipped_requires_agent_harness`` pending the Phase 2.5
   Condition 3 follow-up.
-- **Test suite** — 1200+ tests cover schemas, classify, policy,
-  projectors, migrations, CLI surfaces, atomic-transaction
-  semantics, skill-boundary contracts, eval runner, scenario pack.
-
-## Known failing test
-
-``safety/tests/test_intake_stress_and_note.py ::
-test_reproject_clears_manual_stress_for_days_dropped_from_jsonl`` is a
-date-flaky test tracked across Phases 5–6. It has not been fixed in
-Phase 6. Treat as a known-bad; do not conflate with Phase 6 work
-when diagnosing new failures.
+- **Test suite** — 1247 passing, 0 failing across `safety/tests`
+  covering schemas, classify, policy, projectors, migrations, CLI
+  surfaces, atomic-transaction semantics, skill-boundary contracts,
+  eval runner, and scenario pack. The previously known-flaky
+  ``test_reproject_clears_manual_stress_for_days_dropped_from_jsonl``
+  was fixed in commit ``e52eda3``.
 
 ## Install
 
@@ -88,18 +83,25 @@ the full list with rationale.
 | 3 | Sleep + stress domains | complete |
 | 4 | Strength domain | complete (+ ``hai intake exercise`` follow-up) |
 | 5 | Nutrition domain (macros-only) | complete |
-| 6 | Eval harness + docs | **complete (this checkpoint)** |
-| 7 | Polish + publish | not started |
+| 6 | Eval harness + docs | complete |
+| 7 | Polish + publish | in progress (steps 1–4 done; release ops pending) |
 
-## What's next (Phase 7 scope, not started)
+## What's next (Phase 7 remainder)
 
-- Daily-use ergonomics: ``hai daily`` orchestrator for the morning
-  routine.
-- First-run wizard: ``hai init`` scaffolds thresholds + prompts
-  for Garmin auth.
-- Wheel build + PyPI publish (``0.1.0``).
-- Optional MCP server wrapper (``hai mcp serve``).
-- Launch artifact documenting the runtime thesis + scope.
+Steps 1–4 have shipped on `rebuild`:
+- Step 1 — ``hai daily`` morning orchestrator (commit ``e875bb2``).
+- Step 2 — ``hai init`` first-run wizard, ``hai doctor``, ``hai
+  --version`` (commit ``3afad17``).
+- Step 3 — packaging + CI readiness (wheel/sdist build, install
+  smoke-test, matrix CI; commit ``64961fc``).
+- Step 4 — launch artifact at
+  [`reporting/plans/launch_notes.md`](reporting/plans/launch_notes.md).
+
+Still pending before a real PyPI release:
+- Optional MCP server wrapper (``hai mcp serve``) — deferred,
+  CLI surface is sufficient for initial release.
+- Release operations: tag ``v0.1.0``, upload to TestPyPI, validate
+  install, upload to PyPI.
 
 Open cross-phase questions tracked at ``reporting/plans/comprehensive_rebuild_plan.md`` §8:
 
