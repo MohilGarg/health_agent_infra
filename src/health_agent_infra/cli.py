@@ -2029,8 +2029,14 @@ def build_parser() -> argparse.ArgumentParser:
         "propose",
         help="Validate and persist a DomainProposal JSON to proposal_log",
     )
+    # Source choices from the validator's SUPPORTED_DOMAINS so the
+    # parser and the invariant can never drift — any new supported
+    # domain appears here automatically.
+    from health_agent_infra.core.writeback.proposal import (
+        SUPPORTED_DOMAINS as _PROPOSAL_DOMAINS,
+    )
     p_prop.add_argument("--domain", required=True,
-                        choices=("recovery", "running"),
+                        choices=sorted(_PROPOSAL_DOMAINS),
                         help="Domain whose proposal is being written")
     p_prop.add_argument("--proposal-json", required=True,
                         help="Path to a JSON file matching DomainProposal shape")

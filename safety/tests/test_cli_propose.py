@@ -83,7 +83,10 @@ def test_validate_rejects_domain_mismatch_against_expected():
 
 
 def test_validate_rejects_unsupported_domain():
-    prop = _valid_running_proposal(domain="strength")
+    # ``cycling`` is not in v1 SUPPORTED_DOMAINS; strength was promoted to
+    # a full proposal-submitting domain in the Phase 7 closure commit, so
+    # this test needs a genuinely-never-supported placeholder.
+    prop = _valid_running_proposal(domain="cycling")
     with pytest.raises(ProposalValidationError) as exc:
         validate_proposal_dict(prop)
     assert exc.value.invariant == "domain_supported"
@@ -278,3 +281,89 @@ def test_cli_propose_domain_flag_matches_payload(tmp_path):
     )
     assert result.returncode == 2
     assert "invariant=domain_match" in result.stderr
+
+
+# ---------------------------------------------------------------------------
+# Strength closure — strength is a real proposal-submitting domain.
+# ---------------------------------------------------------------------------
+
+def _valid_strength_proposal(**overrides):
+    base = {
+        "schema_version": PROPOSAL_SCHEMA_VERSIONS["strength"],
+        "proposal_id": "prop_2026-04-17_u_local_1_strength_01",
+        "user_id": "u_local_1",
+        "for_date": "2026-04-17",
+        "domain": "strength",
+        "action": "proceed_with_planned_session",
+        "action_detail": None,
+        "rationale": ["recent_volume_trend=steady"],
+        "confidence": "high",
+        "uncertainty": [],
+        "policy_decisions": [{"rule_id": "r1", "decision": "allow", "note": "full"}],
+        "bounded": True,
+    }
+    base.update(overrides)
+    return base
+
+
+def test_validate_accepts_valid_strength_proposal():
+    validate_proposal_dict(_valid_strength_proposal(), expected_domain="strength")
+
+
+def test_validate_rejects_action_outside_strength_enum():
+    # ``downgrade_intervals_to_tempo`` is a running-only action.
+    prop = _valid_strength_proposal(action="downgrade_intervals_to_tempo")
+    with pytest.raises(ProposalValidationError) as exc:
+        validate_proposal_dict(prop)
+    assert exc.value.invariant == "action_enum"
+
+
+def test_validate_accepts_strength_specific_action_names():
+    # ``downgrade_to_technique_or_accessory`` and
+    # ``downgrade_to_moderate_load`` are strength-only softenings.
+    for action in (
+        "downgrade_to_technique_or_accessory",
+        "downgrade_to_moderate_load",
+    ):
+        validate_proposal_dict(_valid_strength_proposal(action=action))
+
+
+def test_cli_propose_strength_validates_and_persists_end_to_end(tmp_path):
+    db_path = tmp_path / "state.db"
+    initialize_database(db_path)
+
+    proposal_path = tmp_path / "proposal.json"
+    proposal_path.write_text(
+        json.dumps(_valid_strength_proposal()), encoding="utf-8",
+    )
+
+    base_dir = tmp_path / "writeback"
+    base_dir.mkdir()
+
+    result = _run_cli(
+        "propose",
+        "--domain", "strength",
+        "--proposal-json", str(proposal_path),
+        "--base-dir", str(base_dir),
+        "--db-path", str(db_path),
+    )
+    assert result.returncode == 0, result.stderr
+    record = json.loads(result.stdout)
+    assert record["domain"] == "strength"
+
+    assert (base_dir / "strength_proposals.jsonl").exists()
+
+    conn = open_connection(db_path)
+    try:
+        row = conn.execute(
+            "SELECT domain, action, schema_version, daily_plan_id "
+            "FROM proposal_log WHERE proposal_id = ?",
+            ("prop_2026-04-17_u_local_1_strength_01",),
+        ).fetchone()
+        assert row is not None
+        assert row["domain"] == "strength"
+        assert row["action"] == "proceed_with_planned_session"
+        assert row["schema_version"] == "strength_proposal.v1"
+        assert row["daily_plan_id"] is None
+    finally:
+        conn.close()

@@ -966,9 +966,88 @@ def test_synthesize_stamps_orphan_when_firing_domain_not_in_proposals(tmp_path):
                 (result.daily_plan_id,),
             ).fetchone()
             assert orphan_row is not None
+            # Strength is a supported domain as of the Phase 7 closure wire-up,
+            # but orphan status is about "in THIS plan's proposal set" — we
+            # only inserted a recovery proposal, so a firing targeting
+            # strength remains orphan.
             assert orphan_row["affected_domain"] == "strength"
             assert orphan_row["orphan"] == 1
         finally:
             conn.close()
     finally:
         synthesis_mod.evaluate_phase_a = original
+
+
+# ---------------------------------------------------------------------------
+# Phase 7 closure — strength as a real proposal/synthesis-participating domain
+# ---------------------------------------------------------------------------
+
+def _strength_proposal(**overrides):
+    base = {
+        "schema_version": PROPOSAL_SCHEMA_VERSIONS["strength"],
+        "proposal_id": "prop_2026-04-17_u_local_1_strength_01",
+        "user_id": "u_local_1",
+        "for_date": "2026-04-17",
+        "domain": "strength",
+        "action": "proceed_with_planned_session",
+        "action_detail": None,
+        "rationale": ["recent_volume_trend=steady"],
+        "confidence": "high",
+        "uncertainty": [],
+        "policy_decisions": [{"rule_id": "r1", "decision": "allow", "note": "full"}],
+        "bounded": True,
+    }
+    base.update(overrides)
+    return base
+
+
+def test_synthesize_emits_strength_recommendation_with_correct_schema(tmp_path):
+    """A strength proposal on a quiet snapshot yields a committed
+    strength recommendation: correct schema_version, domain, and
+    domain-aware review question."""
+
+    db_path = _fresh_db(tmp_path)
+    _insert_proposal(db_path, _strength_proposal())
+
+    conn = open_connection(db_path)
+    try:
+        result = run_synthesis(
+            conn,
+            for_date=date(2026, 4, 17),
+            user_id="u_local_1",
+            snapshot=_quiet_snapshot(),
+        )
+    finally:
+        conn.close()
+
+    # One recommendation, linked to the canonical plan.
+    assert result.recommendation_ids == ["rec_2026-04-17_u_local_1_strength_01"]
+    assert result.phase_a_firings == []
+    assert result.phase_b_firings == []
+
+    conn = open_connection(db_path)
+    try:
+        rec_row = conn.execute(
+            "SELECT action, domain, payload_json FROM recommendation_log "
+            "WHERE recommendation_id = ?",
+            (result.recommendation_ids[0],),
+        ).fetchone()
+        assert rec_row is not None
+        assert rec_row["domain"] == "strength"
+        assert rec_row["action"] == "proceed_with_planned_session"
+        payload = json.loads(rec_row["payload_json"])
+        assert payload["schema_version"] == "strength_recommendation.v1"
+        # Domain-aware override kicks in for strength's shared
+        # ``proceed_with_planned_session`` action — recovery's recovery-
+        # framed prompt does NOT leak onto the strength recommendation.
+        assert payload["follow_up"]["review_question"] == (
+            "Did today's planned strength session feel appropriate?"
+        )
+        # Proposal was linked to the committed plan.
+        prop_row = conn.execute(
+            "SELECT daily_plan_id FROM proposal_log WHERE proposal_id = ?",
+            ("prop_2026-04-17_u_local_1_strength_01",),
+        ).fetchone()
+        assert prop_row["daily_plan_id"] == result.daily_plan_id
+    finally:
+        conn.close()

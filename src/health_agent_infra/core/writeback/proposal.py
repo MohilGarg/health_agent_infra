@@ -31,14 +31,15 @@ from typing import Any, Optional
 from health_agent_infra.core.schemas import DOMAIN_PROPOSAL_FIELDS
 
 
-# v1 supports five domains on the proposal surface after Phase 5 step 4:
-# recovery + running (Phase 1/2) plus sleep + stress (Phase 3) plus
+# v1 supports six domains on the proposal surface: recovery + running
+# (Phase 1/2) plus sleep + stress (Phase 3) plus strength (Phase 4) plus
 # nutrition (Phase 5, macros-only per the Phase 2.5 retrieval-gate
-# outcome). Strength's classify + policy shipped in Phase 4 but the
-# writeback validator entry for strength proposals lands alongside its
-# CLI surface in a later step — it is not part of Phase 5 scope.
+# outcome). Strength's classify + policy + schemas shipped in Phase 4
+# and its synthesis_policy action registry entry is first-class; this
+# validator entry completes the proposal write surface so `hai daily`
+# can talk to a real 6-domain governed runtime.
 SUPPORTED_DOMAINS: frozenset[str] = frozenset({
-    "recovery", "running", "sleep", "stress", "nutrition",
+    "recovery", "running", "sleep", "stress", "strength", "nutrition",
 })
 
 
@@ -47,6 +48,7 @@ PROPOSAL_SCHEMA_VERSIONS: dict[str, str] = {
     "recovery": "recovery_proposal.v1",
     "sleep": "sleep_proposal.v1",
     "stress": "stress_proposal.v1",
+    "strength": "strength_proposal.v1",
     "nutrition": "nutrition_proposal.v1",
 }
 
@@ -85,6 +87,17 @@ DOMAIN_ACTION_ENUMS: dict[str, frozenset[str]] = {
         "schedule_decompression_time",
         "escalate_for_user_review",
         "defer_decision_insufficient_signal",
+    }),
+    # Strength v1 enum sourced from domains/strength/schemas.py ::
+    # STRENGTH_ACTION_KINDS. Kept in lockstep with that tuple; the
+    # test_cli_propose strength coverage pins this contract.
+    "strength": frozenset({
+        "proceed_with_planned_session",
+        "downgrade_to_technique_or_accessory",
+        "downgrade_to_moderate_load",
+        "rest_day_recommended",
+        "defer_decision_insufficient_signal",
+        "escalate_for_user_review",
     }),
     # Nutrition v1 macros-only collapse — see domains/nutrition/schemas.py
     # for the rationale behind the collapse (Phase 2.5 retrieval gate

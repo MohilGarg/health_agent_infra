@@ -78,6 +78,7 @@ RECOMMENDATION_SCHEMA_BY_DOMAIN: dict[str, str] = {
     "running": "running_recommendation.v1",
     "sleep": "sleep_recommendation.v1",
     "stress": "stress_recommendation.v1",
+    "strength": "strength_recommendation.v1",
     "nutrition": "nutrition_recommendation.v1",
 }
 
@@ -155,7 +156,9 @@ def _mechanical_draft(
         "uncertainty": list(proposal.get("uncertainty") or []),
         "follow_up": {
             "review_at": review_at.isoformat(),
-            "review_question": _default_review_question(proposal["action"]),
+            "review_question": _default_review_question(
+                proposal["action"], proposal["domain"],
+            ),
             "review_event_id": review_event_id,
         },
         "policy_decisions": list(proposal.get("policy_decisions") or []),
@@ -184,6 +187,13 @@ _DEFAULT_REVIEW_QUESTIONS: dict[str, str] = {
     "maintain_routine": "Did your usual routine feel right given yesterday's stress signals?",
     "add_low_intensity_recovery": "Did the low-intensity recovery block help yesterday?",
     "schedule_decompression_time": "Were you able to take the decompression time you planned?",
+    # Strength (Phase 7 closure: strength wired as a real proposal/synthesis
+    # domain). ``proceed_with_planned_session`` is shared with recovery; the
+    # per-domain override below gives strength a domain-appropriate prompt
+    # without touching the recovery wording any existing test / artifact
+    # captures depend on.
+    "downgrade_to_technique_or_accessory": "Did yesterday's technique / accessory work land well?",
+    "downgrade_to_moderate_load": "Did yesterday's moderate-load session feel appropriate?",
     # Nutrition (Phase 5 step 4)
     "maintain_targets": "Did yesterday's macro targets feel sustainable?",
     "increase_protein_intake": "Were you able to hit the higher protein target yesterday?",
@@ -192,7 +202,21 @@ _DEFAULT_REVIEW_QUESTIONS: dict[str, str] = {
 }
 
 
-def _default_review_question(action: str) -> str:
+# Per-(domain, action) overrides for actions whose enum value is shared
+# across domains but whose natural review question differs. Looked up
+# before the action-only map so existing domain wordings stay intact.
+_DOMAIN_REVIEW_QUESTION_OVERRIDES: dict[tuple[str, str], str] = {
+    ("strength", "proceed_with_planned_session"):
+        "Did today's planned strength session feel appropriate?",
+    ("strength", "rest_day_recommended"):
+        "Did yesterday's rest day leave you fresh for the next lift?",
+}
+
+
+def _default_review_question(action: str, domain: str = "recovery") -> str:
+    override = _DOMAIN_REVIEW_QUESTION_OVERRIDES.get((domain, action))
+    if override is not None:
+        return override
     return _DEFAULT_REVIEW_QUESTIONS.get(
         action, "How did yesterday's plan work out?",
     )
