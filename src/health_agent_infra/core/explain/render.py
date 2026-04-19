@@ -24,6 +24,7 @@ from health_agent_infra.core.explain.queries import (
     ExplainProposal,
     ExplainRecommendation,
     ExplainReview,
+    ExplainUserMemory,
     ExplainXRuleFiring,
 )
 
@@ -54,6 +55,7 @@ def bundle_to_dict(bundle: ExplainBundle) -> dict[str, Any]:
             _recommendation_to_dict(r) for r in bundle.recommendations
         ],
         "reviews": [_review_to_dict(r) for r in bundle.reviews],
+        "user_memory": _user_memory_to_dict(bundle.user_memory),
     }
 
 
@@ -91,6 +93,14 @@ def _review_to_dict(review: ExplainReview) -> dict[str, Any]:
         "review_at": review.review_at,
         "review_question": review.review_question,
         "outcomes": [asdict(o) for o in review.outcomes],
+    }
+
+
+def _user_memory_to_dict(memory: ExplainUserMemory) -> dict[str, Any]:
+    return {
+        "as_of": memory.as_of,
+        "counts": dict(memory.counts),
+        "entries": [dict(entry) for entry in memory.entries],
     }
 
 
@@ -154,6 +164,8 @@ def render_bundle_text(bundle: ExplainBundle) -> str:
     )
     lines.append("")
     lines.append(_section("Reviews", bundle.reviews, _format_review))
+    lines.append("")
+    lines.append(_format_user_memory_section(bundle.user_memory))
 
     return "\n".join(lines).rstrip() + "\n"
 
@@ -246,6 +258,25 @@ def _format_review(rv: ExplainReview) -> str:
                 line += f" note={outcome.free_text!r}"
             parts.append(line)
     return "\n".join(parts)
+
+
+def _format_user_memory_section(memory: ExplainUserMemory) -> str:
+    header = "## User memory (active at for_date)"
+    if not memory.entries:
+        return f"{header}\n  (none recorded)"
+    lines: list[str] = [header]
+    counts = memory.counts or {}
+    total = counts.get("total", len(memory.entries))
+    lines.append(f"  active: {total}")
+    for entry in memory.entries:
+        category = entry.get("category", "?")
+        key = entry.get("key")
+        value = entry.get("value", "")
+        domain = entry.get("domain")
+        handle = f" ({key})" if key else ""
+        scope = f" [{domain}]" if domain else ""
+        lines.append(f"  - [{category}]{handle}{scope} {value}")
+    return "\n".join(lines)
 
 
 def _format_list(items: list[Any]) -> str:

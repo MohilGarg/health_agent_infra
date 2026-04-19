@@ -124,6 +124,28 @@ class ExplainPlan:
 
 
 @dataclass(frozen=True)
+class ExplainUserMemory:
+    """User-memory entries active at the plan's ``for_date``.
+
+    A bounded read-only slice of the ``user_memory`` table (migration
+    007). Added in Phase D alongside the existing plan / proposals /
+    firings / recommendations / reviews fields — the explain reader
+    does not retrofit memory into any prior bundle key.
+
+    The memory rows are not written inside the synthesis transaction
+    and are therefore not part of the audit chain proper; they are
+    exposed here as *context* that was active when the plan landed, so
+    a reader can see what durable user context the skills had access
+    to. See ``reporting/docs/explainability.md`` §3 + ``memory_model.md``
+    §2.1 for framing.
+    """
+
+    as_of: Optional[str]
+    entries: list[dict[str, Any]] = field(default_factory=list)
+    counts: dict[str, int] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class ExplainBundle:
     plan: ExplainPlan
     proposals: list[ExplainProposal]
@@ -131,6 +153,9 @@ class ExplainBundle:
     phase_b_firings: list[ExplainXRuleFiring]
     recommendations: list[ExplainRecommendation]
     reviews: list[ExplainReview]
+    user_memory: ExplainUserMemory = field(
+        default_factory=lambda: ExplainUserMemory(as_of=None)
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -186,6 +211,11 @@ def load_bundle_by_daily_plan_id(
         conn,
         recommendation_ids=[r.recommendation_id for r in recommendations],
     )
+    user_memory = _load_user_memory_for_plan(
+        conn,
+        user_id=plan.user_id,
+        for_date=plan.for_date,
+    )
 
     return ExplainBundle(
         plan=plan,
@@ -194,6 +224,7 @@ def load_bundle_by_daily_plan_id(
         phase_b_firings=phase_b,
         recommendations=recommendations,
         reviews=reviews,
+        user_memory=user_memory,
     )
 
 
@@ -391,6 +422,44 @@ def _load_reviews_for_recommendations(
         )
         for row in event_rows
     ]
+
+
+def _load_user_memory_for_plan(
+    conn: sqlite3.Connection,
+    *,
+    user_id: str,
+    for_date: str,
+) -> ExplainUserMemory:
+    """Return the user-memory bundle active at the plan's ``for_date``.
+
+    Degrades to an empty bundle when the ``user_memory`` table is
+    absent (DB predates migration 007). Does not raise — the existing
+    explain surfaces must keep working on a pre-007 DB; the empty
+    bundle is an honest signal that no memory was recorded here.
+    """
+
+    from datetime import date as _date
+
+    from health_agent_infra.core.memory import (
+        build_user_memory_bundle,
+        bundle_to_dict,
+    )
+
+    try:
+        as_of = _date.fromisoformat(for_date)
+        bundle = build_user_memory_bundle(conn, user_id=user_id, as_of=as_of)
+    except sqlite3.OperationalError:
+        return ExplainUserMemory(as_of=None, entries=[], counts={
+            "goal": 0, "preference": 0, "constraint": 0,
+            "context": 0, "total": 0,
+        })
+
+    serialised = bundle_to_dict(bundle)
+    return ExplainUserMemory(
+        as_of=serialised["as_of"],
+        entries=list(serialised["entries"]),
+        counts=dict(serialised["counts"]),
+    )
 
 
 def _loads(blob: Optional[str]) -> Any:

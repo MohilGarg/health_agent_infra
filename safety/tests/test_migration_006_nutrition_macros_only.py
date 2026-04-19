@@ -66,10 +66,15 @@ def _nutrition_columns(conn: sqlite3.Connection) -> dict[str, dict]:
 # ---------------------------------------------------------------------------
 
 def test_head_schema_version_is_six_after_migration_006(tmp_path: Path):
+    # Intent: migration 006 advances schema past 5. Head version moves
+    # forward with each later migration (007 added user memory); this
+    # test pins the lower bound rather than exact head so adding
+    # migrations doesn't require touching every suite. The exact head
+    # version lives in ``test_state_store``.
     db = _init_db(tmp_path)
     conn = open_connection(db)
     try:
-        assert current_schema_version(conn) == 6
+        assert current_schema_version(conn) >= 6
     finally:
         conn.close()
 

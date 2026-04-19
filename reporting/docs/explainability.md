@@ -135,7 +135,29 @@ Field names mirror the dataclass attributes in
         }
       ]
     }
-  ]
+  ],
+  "user_memory": {
+    "as_of": "YYYY-MM-DDTHH:MM:SS+00:00",
+    "counts": {
+      "goal": <int>, "preference": <int>,
+      "constraint": <int>, "context": <int>,
+      "total": <int>
+    },
+    "entries": [
+      {
+        "memory_id": "...",
+        "user_id": "...",
+        "category": "goal|preference|constraint|context",
+        "key": "..." | null,
+        "value": "...",
+        "domain": "recovery|running|sleep|stress|strength|nutrition" | null,
+        "created_at": "ISO-8601",
+        "archived_at": "ISO-8601" | null,
+        "source": "user_manual",
+        "ingest_actor": "hai_cli_direct|claude_agent_v1"
+      }
+    ]
+  }
 }
 ```
 
@@ -174,6 +196,7 @@ for each step.
 | `recommendations` | `recommendation_log` | `WHERE json_extract(payload_json, '$.daily_plan_id') = ?` |
 | `reviews[].review_*` | `review_event` | `WHERE recommendation_id IN (...)` |
 | `reviews[].outcomes[]` | `review_outcome` | `WHERE review_event_id IN (...)` |
+| `user_memory.entries[]` | `user_memory` | `WHERE user_id = ? AND created_at <= <for_date_eod> AND (archived_at IS NULL OR archived_at > <for_date_eod>)` |
 
 The recommendation lookup uses `json_extract` because
 `recommendation_log` carries `daily_plan_id` inside `payload_json`
@@ -201,10 +224,13 @@ that decision is still load-bearing for the read path.
   longitudinal view belongs to `hai review summary` and direct reads
   of `accepted_*_state_daily` (see
   [`query_taxonomy.md`](query_taxonomy.md) §2.4), not here.
-- **Surface user-memory context.** Explicit user memory (goals /
-  preferences / constraints / durable notes) is roadmap Phase D. When
-  it lands, the explain bundle gains a bounded user-memory section per
-  the Phase D acceptance criteria.
+- **Recompute** active user memory. The `user_memory` bundle (Phase D)
+  is surfaced under the new top-level `user_memory` key alongside the
+  plan / proposals / firings / recommendations / reviews layers — see
+  `memory_model.md` §2.1 for the table shape and time-axis semantics.
+  The bundle carries entries that were active at the plan's `for_date`,
+  but explain itself runs no mutations on the memory layer: it only
+  reads and shapes it.
 
 ## 6. Use cases
 

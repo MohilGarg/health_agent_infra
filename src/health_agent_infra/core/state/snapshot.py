@@ -382,6 +382,12 @@ def build_snapshot(
     # whatever's in the lookback.
     recent_notes = _history("notes")
 
+    # User memory (Phase D) — goals / preferences / constraints / durable
+    # context notes that were active at end-of-day UTC on ``as_of_date``.
+    # Exposed as a bounded read-only block; never consumed by policy or
+    # X-rules (see memory_model.md §2.1 + roadmap §3.1 decision 4).
+    user_memory_block = _user_memory_block(conn, as_of_date=as_of_date, user_id=user_id)
+
     # Stress (Phase 3): first-class domain on its own accepted table.
     # Two origins co-own it: Garmin (garmin_all_day_stress +
     # body_battery_end_of_day) and user_manual (manual_stress_score).
@@ -640,6 +646,7 @@ def build_snapshot(
         "reviews": {
             "recent": recent_revs,
         },
+        "user_memory": user_memory_block,
     }
 
 
@@ -781,6 +788,46 @@ def _nutrition_classified_to_dict(classified: Any) -> dict[str, Any]:
         "derivation_path": classified.derivation_path,
         "uncertainty": list(classified.uncertainty),
     }
+
+
+def _user_memory_block(
+    conn: sqlite3.Connection,
+    *,
+    as_of_date: date,
+    user_id: str,
+) -> dict[str, Any]:
+    """Return the snapshot's user-memory block for ``as_of_date``.
+
+    Imported lazily (same pattern as the per-domain classify/policy
+    imports further up) so the memory module stays out of the state
+    package's module-load cycle when the snapshot surface is unused.
+
+    Robust to a DB that predates migration 007: if the ``user_memory``
+    table is missing the block degrades to an empty, honestly-shaped
+    bundle rather than crashing the snapshot. An operator on that DB
+    can fix it with ``hai state migrate``; in the meantime every other
+    snapshot surface stays alive.
+    """
+
+    from health_agent_infra.core.memory import (
+        build_user_memory_bundle,
+        bundle_to_dict,
+    )
+
+    try:
+        bundle = build_user_memory_bundle(
+            conn, user_id=user_id, as_of=as_of_date,
+        )
+    except sqlite3.OperationalError:
+        return {
+            "as_of": None,
+            "counts": {
+                "goal": 0, "preference": 0, "constraint": 0,
+                "context": 0, "total": 0,
+            },
+            "entries": [],
+        }
+    return bundle_to_dict(bundle)
 
 
 def _policy_to_dict(policy: Any) -> dict[str, Any]:

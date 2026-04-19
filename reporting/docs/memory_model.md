@@ -171,24 +171,44 @@ thresholds, classifiers, policy, or X-rules. See §2.2.
 
 ## 2. Memory that is not shipped yet — and memory that will not be
 
-### 2.1 Explicit user memory (planned, roadmap Phase D)
+### 2.1 Explicit user memory (shipped, Phase D)
 
-**What it would hold.** Goals, preferences, constraints, and durable
-context notes as inspectable local SQLite state, written via a `hai
-memory set | list | archive` CLI and exposed as bounded context to
-snapshot and explain.
+**What it holds.** Goals, preferences, constraints, and durable
+context notes as inspectable local SQLite state. Migration 007
+introduces the `user_memory` table keyed on `memory_id`, carrying:
 
-**Why it is a separate phase.** It is an additive layer, not a
-correction. v0.1.0 ships no explicit-user-memory write surface beyond
-`context_note` (free-text) and the `goal` scaffolding table from
-migration 001. Phase D of the roadmap adds a first-class user-memory
-table family, a migration (tentatively 007), core modules under
-`src/health_agent_infra/core/memory/`, and the `hai memory` CLI.
+- `category` — one of `goal | preference | constraint | context`;
+- `value` — the durable content;
+- `key` (optional) — a short handle within the category (e.g.
+  `primary_goal`, `injury_left_knee`);
+- `domain` (optional) — scoping to one of the six domains, or global;
+- `created_at` — when the operator recorded the memory;
+- `archived_at` — soft-delete stamp; NULL while active.
 
-**What it will still not do, even when shipped.** It will not silently
-retune thresholds, classifiers, policy, or X-rules. Explicit user
-memory is bounded read-only context for snapshot / explain / skills —
-it is not an adaptation channel. See §2.2.
+**Who writes it.** `hai memory set` writes one row per invocation; no
+implicit updates happen. To replace a preference the operator
+archives the old row via `hai memory archive --memory-id <id>` and
+`hai memory set`s the replacement — every change lands as a distinct
+row + archive timestamp, visible to `hai memory list
+--include-archived`.
+
+**Who reads it.** The core module
+`src/health_agent_infra/core/memory/` exposes `build_user_memory_bundle`
+which `hai state snapshot` and `hai explain` both call to surface an
+active-at-as_of bundle under their new top-level `user_memory` key.
+Skills may consume the same bundle via the snapshot.
+
+**Time-axis semantics.** The snapshot + explain readers ask for
+entries that were active at the snapshot's `as_of_date` or the plan's
+`for_date`: `created_at <= as_of` AND (`archived_at IS NULL` OR
+`archived_at > as_of`). This is what makes `hai explain` for
+yesterday's plan reflect the memory that was active then, not the
+current state.
+
+**What it still does not do.** It does not silently retune
+thresholds, classifiers, policy, or X-rules. Explicit user memory is
+bounded read-only context for snapshot / explain / skills — it is not
+an adaptation channel. See §2.2.
 
 See
 [`reporting/plans/post_v0_1_roadmap.md`](../plans/post_v0_1_roadmap.md)
@@ -238,11 +258,11 @@ None of those exist today.
 | Accepted state | `accepted_recovery_state_daily`, `accepted_running_state_daily`, `accepted_sleep_state_daily`, `accepted_stress_state_daily`, `accepted_resistance_training_state_daily`, `accepted_nutrition_state_daily` | none |
 | Decision | `proposal_log`, `daily_plan`, `x_rule_firing`, `recommendation_log` | `<base_dir>/<domain>_proposals.jsonl`; recovery-only writeback audit |
 | Outcome | `review_event`, `review_outcome` | none |
-| Explicit user memory *(Phase D)* | *(future; migration 007)* | *(future)* |
+| Explicit user memory | `user_memory` (migration 007) | none |
 | Adaptive memory | *(intentionally none)* | *(intentionally none)* |
 
 The SQLite database itself lives under `platformdirs` user-data path by
-default (overridable via `--db-path`). Migrations 001–006 create the
+default (overridable via `--db-path`). Migrations 001–007 create the
 shipped tables; forward-only migrations are expected for later phases.
 
 ## 4. What this buys a new reader

@@ -742,6 +742,270 @@ def cmd_explain(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
+# hai memory — explicit user-memory CRUD (Phase D)
+# ---------------------------------------------------------------------------
+
+def _memory_id_for(
+    *,
+    user_id: str,
+    category: str,
+    now: datetime,
+) -> str:
+    """Deterministic, sortable memory id: ``umem_<user>_<category>_<ts>``.
+
+    Uses microsecond resolution so rapid reruns from a test or script
+    don't collide. Callers may pass ``--memory-id`` to override for
+    scripted reruns that want replay-idempotency.
+    """
+
+    suffix = now.strftime("%Y%m%dT%H%M%S%f")
+    return f"umem_{user_id}_{category}_{suffix}"
+
+
+def cmd_memory_set(args: argparse.Namespace) -> int:
+    """Append one user-memory entry (goal / preference / constraint / context).
+
+    Always inserts a fresh row — to change a preference the operator
+    runs ``archive`` on the old entry and ``set`` for the replacement.
+    This keeps the write surface honest: every change is visible as a
+    distinct row + archive timestamp, no silent overwrites.
+    """
+
+    from health_agent_infra.core.memory import (
+        UserMemoryEntry,
+        UserMemoryValidationError,
+        insert_memory_entry,
+        validate_category,
+    )
+    from health_agent_infra.core.memory.schemas import (
+        validate_domain,
+        validate_value,
+    )
+    from health_agent_infra.core.state import open_connection, resolve_db_path
+
+    db_path = resolve_db_path(args.db_path)
+    if not db_path.exists():
+        print(
+            f"hai memory set requires an initialized state DB; not found "
+            f"at {db_path}. Run `hai state init` first.",
+            file=sys.stderr,
+        )
+        return 2
+
+    try:
+        category = validate_category(args.category)
+        validate_value(args.value)
+        domain = validate_domain(args.domain)
+    except UserMemoryValidationError as exc:
+        print(
+            f"hai memory set rejected: invariant={exc.invariant}: {exc}",
+            file=sys.stderr,
+        )
+        return 2
+
+    now = datetime.now(timezone.utc)
+    memory_id = args.memory_id or _memory_id_for(
+        user_id=args.user_id, category=category, now=now,
+    )
+    entry = UserMemoryEntry(
+        memory_id=memory_id,
+        user_id=args.user_id,
+        category=category,
+        value=args.value,
+        key=args.key,
+        domain=domain,
+        created_at=now,
+        archived_at=None,
+        source=args.source,
+        ingest_actor=args.ingest_actor,
+    )
+
+    conn = open_connection(db_path)
+    try:
+        inserted = insert_memory_entry(conn, entry)
+    finally:
+        conn.close()
+
+    _emit_json({
+        "inserted": inserted,
+        "memory_id": entry.memory_id,
+        "user_id": entry.user_id,
+        "category": entry.category,
+        "key": entry.key,
+        "value": entry.value,
+        "domain": entry.domain,
+        "created_at": entry.created_at.isoformat(),
+        "archived_at": None,
+        "source": entry.source,
+        "ingest_actor": entry.ingest_actor,
+    })
+    return 0
+
+
+def cmd_memory_list(args: argparse.Namespace) -> int:
+    """List user-memory entries, optionally filtered by user / category.
+
+    Emits a JSON object with ``entries`` (array) + ``counts`` (category
+    totals). The default excludes archived rows; ``--include-archived``
+    returns everything so an operator can audit their own memory
+    history.
+    """
+
+    from health_agent_infra.core.memory import (
+        UserMemoryValidationError,
+        build_user_memory_bundle,
+        list_memory_entries,
+    )
+    from health_agent_infra.core.memory.projector import bundle_to_dict
+    from health_agent_infra.core.state import open_connection, resolve_db_path
+
+    db_path = resolve_db_path(args.db_path)
+    if not db_path.exists():
+        print(
+            f"hai memory list requires an initialized state DB; not found "
+            f"at {db_path}. Run `hai state init` first.",
+            file=sys.stderr,
+        )
+        return 2
+
+    conn = open_connection(db_path)
+    try:
+        try:
+            if args.include_archived or args.category:
+                # Raw list surface — supports category filter + archived.
+                entries = list_memory_entries(
+                    conn,
+                    user_id=args.user_id,
+                    category=args.category,
+                    include_archived=args.include_archived,
+                )
+                payload = {
+                    "user_id": args.user_id,
+                    "category": args.category,
+                    "include_archived": args.include_archived,
+                    "entries": [_memory_entry_to_dict(e) for e in entries],
+                    "counts": _memory_counts(entries),
+                }
+            else:
+                # Default: active-now bundle. Matches the snapshot /
+                # explain shape so the same consumer code can parse
+                # both outputs.
+                if args.user_id is None:
+                    # Bundle surface needs a user_id; without it, fall
+                    # back to the raw list with no filter.
+                    entries = list_memory_entries(
+                        conn, user_id=None, include_archived=False,
+                    )
+                    payload = {
+                        "user_id": None,
+                        "category": None,
+                        "include_archived": False,
+                        "entries": [_memory_entry_to_dict(e) for e in entries],
+                        "counts": _memory_counts(entries),
+                    }
+                else:
+                    bundle = build_user_memory_bundle(
+                        conn, user_id=args.user_id, as_of=None,
+                    )
+                    payload = {
+                        "user_id": args.user_id,
+                        "category": None,
+                        "include_archived": False,
+                        **bundle_to_dict(bundle),
+                    }
+        except UserMemoryValidationError as exc:
+            print(
+                f"hai memory list rejected: invariant={exc.invariant}: {exc}",
+                file=sys.stderr,
+            )
+            return 2
+    finally:
+        conn.close()
+
+    _emit_json(payload)
+    return 0
+
+
+def cmd_memory_archive(args: argparse.Namespace) -> int:
+    """Soft-delete a user-memory entry by stamping ``archived_at``.
+
+    Exits 2 when ``--memory-id`` is unknown. Re-archiving an already-
+    archived entry is a no-op (returns ``archived=False``) — the CLI
+    reports this honestly instead of erroring, since the desired end
+    state is already satisfied.
+    """
+
+    from health_agent_infra.core.memory import (
+        archive_memory_entry,
+        read_memory_entry,
+    )
+    from health_agent_infra.core.state import open_connection, resolve_db_path
+
+    db_path = resolve_db_path(args.db_path)
+    if not db_path.exists():
+        print(
+            f"hai memory archive requires an initialized state DB; not "
+            f"found at {db_path}. Run `hai state init` first.",
+            file=sys.stderr,
+        )
+        return 2
+
+    conn = open_connection(db_path)
+    try:
+        existing = read_memory_entry(conn, memory_id=args.memory_id)
+        if existing is None:
+            print(
+                f"hai memory archive: no entry with memory_id="
+                f"{args.memory_id!r}",
+                file=sys.stderr,
+            )
+            return 2
+        archived = archive_memory_entry(conn, memory_id=args.memory_id)
+        refreshed = read_memory_entry(conn, memory_id=args.memory_id)
+    finally:
+        conn.close()
+
+    payload = {
+        "archived": archived,
+        "memory_id": args.memory_id,
+    }
+    if refreshed is not None:
+        payload["archived_at"] = (
+            refreshed.archived_at.isoformat()
+            if refreshed.archived_at else None
+        )
+    _emit_json(payload)
+    return 0
+
+
+def _memory_entry_to_dict(entry) -> dict[str, Any]:
+    return {
+        "memory_id": entry.memory_id,
+        "user_id": entry.user_id,
+        "category": entry.category,
+        "key": entry.key,
+        "value": entry.value,
+        "domain": entry.domain,
+        "created_at": entry.created_at.isoformat(),
+        "archived_at": (
+            entry.archived_at.isoformat() if entry.archived_at else None
+        ),
+        "source": entry.source,
+        "ingest_actor": entry.ingest_actor,
+    }
+
+
+def _memory_counts(entries) -> dict[str, int]:
+    from health_agent_infra.core.memory.schemas import USER_MEMORY_CATEGORIES
+
+    out = {category: 0 for category in USER_MEMORY_CATEGORIES}
+    for entry in entries:
+        out[entry.category] = out.get(entry.category, 0) + 1
+    out["total"] = len(entries)
+    return out
+
+
+# ---------------------------------------------------------------------------
 # hai review
 # ---------------------------------------------------------------------------
 
@@ -2809,6 +3073,100 @@ def build_parser() -> argparse.ArgumentParser:
     p_explain.add_argument("--db-path", default=None,
                            help="State DB path (same semantics as `hai writeback --db-path`)")
     p_explain.set_defaults(func=cmd_explain)
+
+    # --- hai memory (Phase D) ---
+    from health_agent_infra.core.memory.schemas import USER_MEMORY_CATEGORIES
+
+    p_memory = sub.add_parser(
+        "memory",
+        help=(
+            "Explicit user memory — goals, preferences, constraints, "
+            "and durable context notes. Local SQLite state, read by "
+            "`hai state snapshot` and `hai explain`."
+        ),
+    )
+    memory_sub = p_memory.add_subparsers(dest="memory_command", required=True)
+
+    p_mset = memory_sub.add_parser(
+        "set",
+        help="Append one user-memory entry (append-only; use `archive` "
+             "+ `set` to replace).",
+    )
+    p_mset.add_argument(
+        "--category", required=True,
+        choices=sorted(USER_MEMORY_CATEGORIES),
+        help="Memory kind: goal | preference | constraint | context.",
+    )
+    p_mset.add_argument(
+        "--value", required=True,
+        help="Durable content (e.g. 'build strength through June', "
+             "'no early-morning hard runs'). Non-empty.",
+    )
+    p_mset.add_argument(
+        "--key", default=None,
+        help="Optional short handle within the category "
+             "(e.g. 'primary_goal', 'injury_left_knee').",
+    )
+    p_mset.add_argument(
+        "--domain", default=None,
+        help="Optional scoping domain (recovery | running | sleep | "
+             "stress | strength | nutrition). Global if omitted.",
+    )
+    p_mset.add_argument(
+        "--user-id", default="u_local_1",
+        help="User the memory attaches to (default: u_local_1).",
+    )
+    p_mset.add_argument(
+        "--memory-id", default=None,
+        help="Optional explicit memory_id (default: "
+             "deterministic `umem_<user>_<category>_<timestamp>`).",
+    )
+    p_mset.add_argument(
+        "--source", default="user_manual",
+        help="Fact origin (default: user_manual).",
+    )
+    p_mset.add_argument(
+        "--ingest-actor", default="hai_cli_direct",
+        choices=("hai_cli_direct", "claude_agent_v1"),
+        help="Transport identity (default: hai_cli_direct).",
+    )
+    p_mset.add_argument(
+        "--db-path", default=None,
+        help="State DB path (same semantics as `hai writeback --db-path`).",
+    )
+    p_mset.set_defaults(func=cmd_memory_set)
+
+    p_mlist = memory_sub.add_parser(
+        "list",
+        help="List user-memory entries (active only by default).",
+    )
+    p_mlist.add_argument(
+        "--user-id", default=None,
+        help="Restrict to one user (default: every user).",
+    )
+    p_mlist.add_argument(
+        "--category", default=None,
+        choices=sorted(USER_MEMORY_CATEGORIES),
+        help="Restrict to one category (default: every category).",
+    )
+    p_mlist.add_argument(
+        "--include-archived", action="store_true",
+        help="Also return archived entries (default: exclude).",
+    )
+    p_mlist.add_argument("--db-path", default=None)
+    p_mlist.set_defaults(func=cmd_memory_list)
+
+    p_march = memory_sub.add_parser(
+        "archive",
+        help="Stamp `archived_at` on an active entry. Soft-delete; the "
+             "row stays on disk so `list --include-archived` can audit.",
+    )
+    p_march.add_argument(
+        "--memory-id", required=True,
+        help="Memory id to archive.",
+    )
+    p_march.add_argument("--db-path", default=None)
+    p_march.set_defaults(func=cmd_memory_archive)
 
     p_review = sub.add_parser("review", help="Review scheduling + outcome persistence")
     review_sub = p_review.add_subparsers(dest="review_command", required=True)

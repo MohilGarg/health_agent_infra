@@ -329,7 +329,14 @@ product surface.
 
 ---
 
-### Phase D — Explicit user memory
+### Phase D — Explicit user memory (shipped)
+
+**Status**: shipped. Migration 007 creates the `user_memory` table;
+`src/health_agent_infra/core/memory/` owns the schemas / store /
+projector; `hai memory set|list|archive` is the canonical CLI;
+`hai state snapshot` and `hai explain` each expose a new top-level
+`user_memory` key. Tests live at `safety/tests/test_user_memory.py`
+and `safety/tests/test_cli_memory.py`.
 
 **Goal**: persist goals, preferences, constraints, and durable context as
 explicit local state instead of implicit prompt context.

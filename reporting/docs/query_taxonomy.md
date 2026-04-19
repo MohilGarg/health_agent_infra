@@ -24,7 +24,7 @@ asked.*
 | 3. Explanation / audit | "Why did the system recommend an easy run today?" | `hai explain` (added in Phase C, see [`explainability.md`](explainability.md)); direct reads of `proposal_log`, `x_rule_firing`, `recommendation_log`, `review_*` remain available. |
 | 4. Longitudinal review | "How has the last two weeks gone?" | `hai review schedule / record / summary [--domain <d>]`; direct reads of `accepted_*_state_daily` + `daily_plan` history |
 | 5. Grounded topic explanation | "What does sleep debt mean in this system?" | **Not shipped in v0.1.0.** Read-only grounded-expert prototype is **Phase F**, under explicit source/privacy rules. |
-| 6. Human-input routing | "I did squats today — 3×8 at 225" | `hai intake gym|exercise|nutrition|stress|note|readiness`; `strength-intake` + `merge-human-inputs` skills |
+| 6. Human-input routing | "I did squats today — 3×8 at 225" | `hai intake gym|exercise|nutrition|stress|note|readiness`; `strength-intake` + `merge-human-inputs` skills; `hai memory set|list|archive` for durable goals / preferences / constraints / context |
 
 A question that falls outside all six classes is usually either (a) a
 clinical / diagnostic question the runtime refuses by design (see
