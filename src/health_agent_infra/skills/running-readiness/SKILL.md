@@ -70,6 +70,8 @@ Start with `classified_state.uncertainty` (already sorted + deduped). Append any
 
 Running emits a `RunningProposal`, not a recommendation, so it has no `follow_up` field. The synthesis layer assigns review semantics per finalised plan. Skip this step.
 
+When the action is `defer_decision_insufficient_signal`, synthesis uses the running-domain template `"Did you go for a run yesterday? How did it feel?"` (owned by `core.narration.templates.DEFER_REVIEW_QUESTION_TEMPLATES`) so the question never leaks recovery session-language.
+
 ## Output
 
 Emit a `RunningProposal` JSON and call `hai propose --domain running --proposal-json <path>`. The propose tool validates the shape and appends to `proposal_log`; it is your determinism check.

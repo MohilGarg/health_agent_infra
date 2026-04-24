@@ -82,7 +82,7 @@ def test_snapshot_v1_0_recovery_block_has_three_keys(tmp_path: Path, capsys):
     ])
     assert rc == 0
     payload = json.loads(capsys.readouterr().out)
-    assert set(payload["recovery"].keys()) == {"today", "history", "missingness"}
+    assert set(payload["recovery"].keys()) == {"today", "history", "missingness", "cold_start", "history_days"}
 
 
 def test_snapshot_v1_0_running_block_unchanged(tmp_path: Path, capsys):
@@ -93,7 +93,7 @@ def test_snapshot_v1_0_running_block_unchanged(tmp_path: Path, capsys):
         "--db-path", str(db),
     ])
     payload = json.loads(capsys.readouterr().out)
-    assert set(payload["running"].keys()) == {"today", "history", "missingness"}
+    assert set(payload["running"].keys()) == {"today", "history", "missingness", "cold_start", "history_days"}
 
 
 # ---------------------------------------------------------------------------
@@ -266,7 +266,7 @@ def test_snapshot_nutrition_block_expands_with_evidence_json(
     payload = json.loads(capsys.readouterr().out)
 
     expected = {
-        "today", "history", "missingness",
+        "today", "history", "missingness", "cold_start", "history_days",
         "signals", "classified_state", "policy_result",
     }
     assert set(payload["nutrition"].keys()) == expected
@@ -356,7 +356,7 @@ def test_snapshot_running_block_adds_signals_classified_policy_under_evidence_js
     ])
     payload = json.loads(capsys.readouterr().out)
     assert set(payload["running"].keys()) == {
-        "today", "history", "missingness",
+        "today", "history", "missingness", "cold_start", "history_days",
         "signals", "classified_state", "policy_result",
     }
 
@@ -373,7 +373,7 @@ def test_snapshot_running_block_unchanged_without_evidence_json(
         "--db-path", str(db),
     ])
     payload = json.loads(capsys.readouterr().out)
-    assert set(payload["running"].keys()) == {"today", "history", "missingness"}
+    assert set(payload["running"].keys()) == {"today", "history", "missingness", "cold_start", "history_days"}
 
 
 def test_snapshot_running_signals_keys_match_classify_input_contract(
@@ -535,7 +535,7 @@ def test_snapshot_running_expansion_does_not_modify_recovery_block_keys(
     ])
     payload = json.loads(capsys.readouterr().out)
     assert set(payload["recovery"].keys()) == {
-        "today", "history", "missingness",
+        "today", "history", "missingness", "cold_start", "history_days",
         "evidence", "raw_summary", "classified_state", "policy_result",
     }
 
@@ -590,7 +590,7 @@ def test_snapshot_sleep_block_v1_0_keys_without_evidence_json(
         "--db-path", str(db),
     ])
     payload = json.loads(capsys.readouterr().out)
-    assert set(payload["sleep"].keys()) == {"today", "history", "missingness"}
+    assert set(payload["sleep"].keys()) == {"today", "history", "missingness", "cold_start", "history_days"}
 
 
 def test_snapshot_stress_block_v1_0_keys_without_evidence_json(
@@ -608,7 +608,7 @@ def test_snapshot_stress_block_v1_0_keys_without_evidence_json(
     ])
     payload = json.loads(capsys.readouterr().out)
     assert set(payload["stress"].keys()) == {
-        "today", "history", "missingness",
+        "today", "history", "missingness", "cold_start", "history_days",
         "today_garmin", "today_manual", "today_body_battery",
     }
 
@@ -629,7 +629,7 @@ def test_snapshot_sleep_block_adds_signals_classified_policy_with_evidence_json(
     ])
     payload = json.loads(capsys.readouterr().out)
     assert set(payload["sleep"].keys()) == {
-        "today", "history", "missingness",
+        "today", "history", "missingness", "cold_start", "history_days",
         "signals", "classified_state", "policy_result",
     }
 
@@ -650,7 +650,7 @@ def test_snapshot_stress_block_adds_signals_classified_policy_with_evidence_json
     ])
     payload = json.loads(capsys.readouterr().out)
     assert set(payload["stress"].keys()) == {
-        "today", "history", "missingness",
+        "today", "history", "missingness", "cold_start", "history_days",
         "today_garmin", "today_manual", "today_body_battery",
         "signals", "classified_state", "policy_result",
     }
@@ -813,6 +813,6 @@ def test_snapshot_sleep_stress_expansion_does_not_modify_recovery_keys(
     ])
     payload = json.loads(capsys.readouterr().out)
     assert set(payload["recovery"].keys()) == {
-        "today", "history", "missingness",
+        "today", "history", "missingness", "cold_start", "history_days",
         "evidence", "raw_summary", "classified_state", "policy_result",
     }

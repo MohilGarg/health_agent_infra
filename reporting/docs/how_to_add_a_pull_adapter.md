@@ -190,9 +190,9 @@ Whichever path you pick, preserve these invariants:
   adapter that wants a new column should add a migration, update the
   domain's accepted-state projector, and surface the field through
   `build_snapshot` — not reach into an existing projector.
-- **`hai propose` / `hai synthesize` / `hai writeback`.** These are
-  downstream write surfaces. A pull adapter never calls them; pull
-  ends at `raw_daily_row` + the clean stage.
+- **`hai propose` / `hai synthesize`.** These are downstream write
+  surfaces. A pull adapter never calls them; pull ends at
+  `raw_daily_row` + the clean stage.
 - **Skill files.** Skills under
   [`src/health_agent_infra/skills/`](../../src/health_agent_infra/skills/)
   do not reference adapters. Adding a source does not change

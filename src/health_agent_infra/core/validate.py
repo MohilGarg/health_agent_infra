@@ -65,7 +65,7 @@ class RecommendationValidationError(ValueError):
     """Raised when a recommendation dict violates a code-enforced invariant.
 
     The ``invariant`` attribute carries a stable machine-readable id so tests
-    and `hai writeback` can pattern-match on the specific violation.
+    and `hai synthesize` can pattern-match on the specific violation.
     """
 
     def __init__(self, invariant: str, message: str) -> None:
