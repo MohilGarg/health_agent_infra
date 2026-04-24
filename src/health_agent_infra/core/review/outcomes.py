@@ -94,13 +94,16 @@ def persist_review_event(event: ReviewEvent, *, base_dir: Path) -> ReviewEvent:
     object or re-running recovery-specific validation.
     """
 
+    from health_agent_infra.core.privacy import secure_directory, secure_file
+
     base_dir = base_dir.resolve()
-    base_dir.mkdir(parents=True, exist_ok=True)
+    secure_directory(base_dir, create=True)
     events_path = base_dir / "review_events.jsonl"
 
     if not _event_already_written(events_path, event.review_event_id):
         with events_path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(event.to_dict(), sort_keys=True) + "\n")
+    secure_file(events_path)
     return event
 
 
@@ -140,9 +143,11 @@ def record_review_outcome(
     :func:`resolve_review_relink` so this function stays a thin writer.
     """
 
+    from health_agent_infra.core.privacy import secure_directory, secure_file
+
     now = now or datetime.now(timezone.utc)
     base_dir = base_dir.resolve()
-    base_dir.mkdir(parents=True, exist_ok=True)
+    secure_directory(base_dir, create=True)
     outcomes_path = base_dir / "review_outcomes.jsonl"
 
     resolved_domain = domain if domain is not None else event.domain
@@ -167,6 +172,7 @@ def record_review_outcome(
 
     with outcomes_path.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(outcome.to_dict(), sort_keys=True) + "\n")
+    secure_file(outcomes_path)
     return outcome
 
 

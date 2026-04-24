@@ -338,17 +338,20 @@ def perform_proposal_writeback(
     already; this function trusts its input.
     """
 
+    from health_agent_infra.core.privacy import secure_directory, secure_file
+
     now = now or datetime.now(timezone.utc)
     domain = proposal["domain"]
     proposal_id = proposal["proposal_id"]
 
     base_dir = base_dir.resolve()
-    base_dir.mkdir(parents=True, exist_ok=True)
+    secure_directory(base_dir, create=True)
     log_path = base_dir / proposal_log_filename(domain)
 
     if not _already_written(log_path, proposal_id):
         with log_path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(proposal, sort_keys=True) + "\n")
+    secure_file(log_path)
 
     return ProposalRecord(
         proposal_id=proposal_id,

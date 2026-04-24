@@ -54,6 +54,7 @@ where = ["src"]
 "health_agent_infra" = [
   "skills/**/*.md",
   "data/**/*.csv",
+  "data/**/*.md",
   "core/state/migrations/*.sql",
   "domains/strength/*.csv",
   "evals/scenarios/**/*.json",
