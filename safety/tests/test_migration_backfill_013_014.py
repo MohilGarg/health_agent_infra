@@ -381,8 +381,8 @@ def test_pre_013_seed_followed_by_full_migration_stack_reaches_head(tmp_path: Pa
     conn = open_connection(db_path)
     try:
         head = current_schema_version(conn)
-        # 016_review_outcome_relink is the current head; if a future
-        # migration lands, bump the expectation here deliberately.
-        assert head == 16
+        # 017_running_activity is the current head; if a future migration
+        # lands, bump the expectation here deliberately.
+        assert head == 17
     finally:
         conn.close()

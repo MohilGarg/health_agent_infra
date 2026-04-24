@@ -454,7 +454,10 @@ def _build_intervals_icu_adapter(args: argparse.Namespace) -> IntervalsIcuAdapte
         )
     client = build_intervals_icu_client(credentials)
     history_days = getattr(args, "history_days", 14)
-    return IntervalsIcuAdapter(client=client, history_days=history_days)
+    user_id = getattr(args, "user_id", "u_local_1") or "u_local_1"
+    return IntervalsIcuAdapter(
+        client=client, history_days=history_days, user_id=user_id,
+    )
 
 
 def _resolve_pull_source(args: argparse.Namespace) -> str:
@@ -473,11 +476,29 @@ def _resolve_pull_source(args: argparse.Namespace) -> str:
 # ---------------------------------------------------------------------------
 
 def cmd_clean(args: argparse.Namespace) -> int:
+    from health_agent_infra.core.state import aggregate_activities_to_daily_rollup
+
     pulled = json.loads(Path(args.evidence_json).read_text(encoding="utf-8"))
     as_of = _coerce_date(pulled["as_of_date"])
     user_id = pulled["user_id"]
     pull = pulled["pull"]
     manual = pulled.get("manual_readiness")
+
+    activities = pull.get("activities", []) or []
+
+    # Enrich the daily rollup with structural aggregates from activities.
+    # Before v0.1.4, the intervals.icu adapter only hit /wellness.json, so
+    # distance_m / moderate_intensity_min / vigorous_intensity_min came back
+    # null from the wellness stream — running domain saw no session coverage
+    # and deferred every day. With /activities wired up, we aggregate
+    # today's sessions into the raw_row before clean_inputs reads it, so
+    # the existing Phase 1 classifier receives real numbers.
+    raw_row = pull.get("raw_daily_row")
+    if raw_row is not None and activities:
+        _enrich_raw_row_with_activity_aggregate(
+            raw_row=raw_row,
+            activities=[a for a in activities if a.get("as_of_date") == as_of.isoformat()],
+        )
 
     evidence = clean_inputs(
         user_id=user_id,
@@ -495,16 +516,16 @@ def cmd_clean(args: argparse.Namespace) -> int:
         garmin_resting_hr_recent=pull.get("resting_hr", []),
         garmin_hrv_recent=pull.get("hrv", []),
         garmin_training_load_7d=pull.get("training_load", []),
-        raw_daily_row=pull.get("raw_daily_row"),
+        raw_daily_row=raw_row,
     )
 
-    raw_row = pull.get("raw_daily_row")
     if raw_row is not None:
         _project_clean_into_state(
             args.db_path,
             as_of_date=as_of,
             user_id=user_id,
             raw_row=raw_row,
+            activities=activities,
         )
 
     _emit_json({
@@ -514,16 +535,42 @@ def cmd_clean(args: argparse.Namespace) -> int:
     return exit_codes.OK
 
 
+def _enrich_raw_row_with_activity_aggregate(
+    *, raw_row: dict, activities: list[dict],
+) -> None:
+    """Fill the running fields on ``raw_row`` from today's activities.
+
+    Mutates ``raw_row`` in place. The aggregator returns
+    ``accepted_running_state_daily``-shaped keys (``total_distance_m``,
+    intensity minutes); the raw daily row uses the Garmin-shaped
+    ``distance_m`` key — so we remap that one explicitly. Wellness
+    columns stay authoritative for non-running metrics.
+    """
+
+    from health_agent_infra.core.state import aggregate_activities_to_daily_rollup
+
+    agg = aggregate_activities_to_daily_rollup(activities)
+    mapping = {
+        "distance_m": "total_distance_m",
+        "moderate_intensity_min": "moderate_intensity_min",
+        "vigorous_intensity_min": "vigorous_intensity_min",
+    }
+    for raw_key, agg_key in mapping.items():
+        if agg.get(agg_key) is not None:
+            raw_row[raw_key] = agg[agg_key]
+
+
 def _project_clean_into_state(
     db_path_arg,
     *,
     as_of_date: date,
     user_id: str,
     raw_row: dict,
+    activities: Optional[list[dict]] = None,
 ) -> None:
     """Project Garmin raw row + two accepted-state rows into the state DB.
 
-    **Atomicity contract.** All three INSERT/UPDATE operations land in a
+    **Atomicity contract.** All INSERT/UPDATE operations land in a
     single ``BEGIN IMMEDIATE`` transaction: either every row commits, or
     none do. A failure mid-projection rolls back, leaving the DB in the
     same shape it was before ``hai clean`` started. Without this, a
@@ -531,10 +578,10 @@ def _project_clean_into_state(
     tables stayed empty — and unlike review, `hai clean` has no JSONL
     audit log, so there would be no reproject path.
 
-    **Scope.** Only Garmin-sourced fields land here. Manual stress,
-    nutrition, gym, notes flow through their own ``hai intake`` commands
-    (7C) with their own raw-evidence tables; they never enter accepted
-    state via ``hai clean``.
+    **Scope.** Garmin-sourced daily fields + intervals.icu-sourced
+    per-activity rows land here. Manual stress, nutrition, gym, notes
+    flow through their own ``hai intake`` commands (7C) with their own
+    raw-evidence tables; they never enter accepted state via ``hai clean``.
 
     **Fail-soft at the CLI boundary.** DB absent or transaction rolled back
     ⇒ stderr warning and return. stdout is unaffected. Same pattern as
@@ -547,6 +594,7 @@ def _project_clean_into_state(
         project_accepted_running_state_daily,
         project_accepted_sleep_state_daily,
         project_accepted_stress_state_daily,
+        project_activity,
         project_source_daily_garmin,
         resolve_db_path,
     )
@@ -611,6 +659,11 @@ def _project_clean_into_state(
                 source_row_ids=[source_row_id],
                 commit_after=False,
             )
+            if activities:
+                for a in activities:
+                    project_activity(
+                        conn, activity=a, commit_after=False,
+                    )
             conn.commit()
         except Exception:
             conn.rollback()
@@ -2583,6 +2636,64 @@ def cmd_intake_readiness(args: argparse.Namespace) -> int:
     return exit_codes.OK
 
 
+def cmd_intake_gaps(args: argparse.Namespace) -> int:
+    """Emit the list of user-closeable intake gaps for the snapshot.
+
+    Read-only. Builds a full snapshot (bundled with evidence when
+    --evidence-json is passed), runs it through ``compute_intake_gaps``,
+    and prints the result as JSON. The agent consumes this at session
+    start and composes one consolidated question.
+    """
+
+    from health_agent_infra.core.intake.gaps import compute_intake_gaps
+    from health_agent_infra.core.state import (
+        build_snapshot,
+        open_connection,
+        resolve_db_path,
+    )
+
+    as_of = _coerce_date(args.as_of)
+    user_id = args.user_id
+
+    db_path = resolve_db_path(args.db_path)
+    if not db_path.exists():
+        print(
+            f"hai intake gaps: state DB not found at {db_path}. Run "
+            f"`hai state init` first.",
+            file=sys.stderr,
+        )
+        return exit_codes.USER_INPUT
+
+    evidence_bundle = None
+    if args.evidence_json:
+        evidence, raw_summary, err = _load_cleaned_bundle(args.evidence_json)
+        if err is not None:
+            print(f"hai intake gaps: {err}", file=sys.stderr)
+            return exit_codes.USER_INPUT
+        evidence_bundle = {
+            "cleaned_evidence": evidence, "raw_summary": raw_summary,
+        }
+
+    conn = open_connection(db_path)
+    try:
+        snapshot = build_snapshot(
+            conn, as_of_date=as_of, user_id=user_id,
+            evidence_bundle=evidence_bundle,
+        )
+    finally:
+        conn.close()
+
+    gaps = compute_intake_gaps(snapshot)
+    _emit_json({
+        "as_of_date": as_of.isoformat(),
+        "user_id": user_id,
+        "gaps": [g.to_dict() for g in gaps],
+        "gap_count": len(gaps),
+        "gating_gap_count": sum(1 for g in gaps if g.blocks_coverage),
+    })
+    return exit_codes.OK
+
+
 def _project_readiness_submission_into_state(db_path_arg, submission) -> None:
     """Project a readiness submission into ``manual_readiness_raw``.
 
@@ -3016,14 +3127,18 @@ def _daily_pull_and_project(
     as_of: date,
     user_id: str,
     db_path: Path,
-) -> tuple[str, bool]:
+) -> tuple[str, bool, Optional[dict]]:
     """Run the pull + state projection path ``hai pull`` + ``hai clean`` run.
 
     Reuses the adapters + ``_project_clean_into_state`` already shipped so
     ``hai daily`` does not duplicate acquisition or cleaning logic. No
     stdout emission (the outer command emits a single orchestration
-    report). Returns ``(source_name, projected_raw_daily)``. Raises
-    :class:`GarminLiveError` on failure so the caller can classify.
+    report). Returns ``(source_name, projected_raw_daily, evidence_bundle)``
+    where ``evidence_bundle`` is the ``{cleaned_evidence, raw_summary}``
+    dict — exposed so the orchestrator can feed it into
+    ``build_snapshot(evidence_bundle=...)`` and compute intake gaps
+    without a duplicate clean pass. Raises :class:`GarminLiveError` on
+    failure so the caller can classify.
     """
 
     source = _resolve_pull_source(args)
@@ -3036,14 +3151,56 @@ def _daily_pull_and_project(
 
     pull = adapter.load(as_of)
     raw_row = pull.get("raw_daily_row")
+    activities = pull.get("activities") or []
+    if raw_row is not None and activities:
+        _enrich_raw_row_with_activity_aggregate(
+            raw_row=raw_row,
+            activities=[
+                a for a in activities
+                if a.get("as_of_date") == as_of.isoformat()
+            ],
+        )
     if raw_row is not None:
         _project_clean_into_state(
             db_path,
             as_of_date=as_of,
             user_id=user_id,
             raw_row=raw_row,
+            activities=activities,
         )
-    return adapter.source_name, raw_row is not None
+
+    evidence_bundle: Optional[dict] = None
+    manual = None
+    if raw_row is not None:
+        # Autoread readiness so the cleaned evidence picks up today's
+        # manual checkin when one exists (matches cmd_pull's behaviour).
+        manual = _autoread_manual_readiness(
+            getattr(args, "db_path", None), user_id=user_id, as_of=as_of,
+        )
+        evidence = clean_inputs(
+            user_id=user_id,
+            as_of_date=as_of,
+            garmin_sleep=pull.get("sleep"),
+            garmin_resting_hr_recent=pull.get("resting_hr", []),
+            garmin_hrv_recent=pull.get("hrv", []),
+            garmin_training_load_7d=pull.get("training_load", []),
+            manual_readiness=manual,
+        )
+        summary = build_raw_summary(
+            user_id=user_id,
+            as_of_date=as_of,
+            garmin_sleep=pull.get("sleep"),
+            garmin_resting_hr_recent=pull.get("resting_hr", []),
+            garmin_hrv_recent=pull.get("hrv", []),
+            garmin_training_load_7d=pull.get("training_load", []),
+            raw_daily_row=raw_row,
+        )
+        evidence_bundle = {
+            "cleaned_evidence": evidence.to_dict(),
+            "raw_summary": summary.to_dict(),
+        }
+
+    return adapter.source_name, raw_row is not None, evidence_bundle
 
 
 def _schedule_reviews_for_daily_plan(
@@ -3178,12 +3335,13 @@ def _run_daily(args: argparse.Namespace) -> int:
     }
 
     # Stage 1 + 2: pull + clean (skippable for offline / already-populated runs)
+    evidence_bundle: Optional[dict] = None
     if args.skip_pull:
         report["stages"]["pull"] = {"status": "skipped"}
         report["stages"]["clean"] = {"status": "skipped"}
     else:
         try:
-            source_name, projected = _daily_pull_and_project(
+            source_name, projected, evidence_bundle = _daily_pull_and_project(
                 args, as_of=as_of, user_id=user_id, db_path=db_path,
             )
         except (GarminLiveError, IntervalsIcuError) as exc:
@@ -3198,15 +3356,34 @@ def _run_daily(args: argparse.Namespace) -> int:
 
     conn = open_connection(db_path)
     try:
-        # Stage 3: snapshot — the cross-domain bundle the agent reads
+        # Stage 3: snapshot — the cross-domain bundle the agent reads.
+        # Pass the evidence_bundle when available so per-domain classified_state
+        # + policy_result land in the snapshot — which is what the intake-gaps
+        # stage reads to surface user-closeable prompts.
         snapshot = build_snapshot(
             conn, as_of_date=as_of, user_id=user_id, lookback_days=14,
+            evidence_bundle=evidence_bundle,
         )
         report["stages"]["snapshot"] = {
             "status": "ran",
             "domains_in_bundle": sorted(
                 k for k in snapshot.keys() if k in _DAILY_SUPPORTED_DOMAINS
             ),
+            "full_bundle": evidence_bundle is not None,
+        }
+
+        # Stage 3b: intake gaps — the agent reads this to compose one
+        # consolidated prompt for the user at session start. Empty list
+        # when every gap is closed (the zero-friction case: no question
+        # to ask, just synthesize). Only populated when the snapshot was
+        # built with classified_state (i.e. evidence_bundle was present).
+        from health_agent_infra.core.intake.gaps import compute_intake_gaps
+        gaps = compute_intake_gaps(snapshot)
+        report["stages"]["gaps"] = {
+            "status": "ran" if evidence_bundle is not None else "skipped_no_bundle",
+            "gaps": [g.to_dict() for g in gaps],
+            "gap_count": len(gaps),
+            "gating_gap_count": sum(1 for g in gaps if g.blocks_coverage),
         }
 
         # Stage 4: proposal gate — honest check, no faking
@@ -3618,7 +3795,7 @@ def _run_first_pull_backfill(
         for_date=today,
     )
     try:
-        source_name, projected = _daily_pull_and_project(
+        source_name, projected, _ = _daily_pull_and_project(
             pull_args, as_of=today, user_id=user_id, db_path=db_path,
         )
     except GarminLiveError as exc:
@@ -4868,6 +5045,49 @@ def build_parser() -> argparse.ArgumentParser:
         exit_codes=("OK", "USER_INPUT"),
         agent_safe=True,
         description="Record a manual readiness self-report entry.",
+    )
+
+    p_igaps = intake_sub.add_parser(
+        "gaps",
+        help=(
+            "Enumerate user-closeable intake gaps in the snapshot. "
+            "Structured surface for agent-driven prompting — the agent "
+            "reads this, composes one consolidated question in its own "
+            "voice, and routes the user's answer through the right "
+            "hai intake <X> commands."
+        ),
+    )
+    p_igaps.add_argument(
+        "--as-of", default=None,
+        help="Civil date to inspect, ISO-8601. Default: today UTC.",
+    )
+    p_igaps.add_argument(
+        "--user-id", default="u_local_1",
+        help="User whose snapshot to inspect (default: u_local_1).",
+    )
+    p_igaps.add_argument(
+        "--evidence-json", default=None,
+        help=(
+            "Optional path to `hai clean` output. When present, the "
+            "snapshot is expanded with per-domain classified_state + "
+            "policy_result before gap detection. When absent, gaps "
+            "cannot be computed (snapshots without classified_state "
+            "carry no uncertainty tokens)."
+        ),
+    )
+    p_igaps.add_argument("--db-path", default=None, help="State DB path.")
+    p_igaps.set_defaults(func=cmd_intake_gaps)
+    annotate_contract(
+        p_igaps,
+        mutation="read-only",
+        idempotent="yes",
+        json_output="default",
+        exit_codes=("OK", "USER_INPUT"),
+        agent_safe=True,
+        description=(
+            "Return the list of user-closeable intake gaps in the snapshot. "
+            "Read-only; no side effects."
+        ),
     )
 
     p_state = sub.add_parser("state", help="Local SQLite state store management")

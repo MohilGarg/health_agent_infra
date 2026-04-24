@@ -55,7 +55,7 @@ JSON; this markdown is an at-a-glance overview for humans.
 
 ## Commands
 
-*36 commands; hai 0.1.4; schema agent_cli_contract.v1*
+*37 commands; hai 0.1.4; schema agent_cli_contract.v1*
 
 | Command | Mutation | Idempotent | JSON | Agent-safe | Exit codes | Description |
 |---|---|---|---|---|---|---|
@@ -73,6 +73,7 @@ JSON; this markdown is an at-a-glance overview for humans.
 | ``hai explain`` | ``read-only`` | ``n/a`` | ``opt-out`` | yes | ``OK``, ``USER_INPUT``, ``NOT_FOUND`` | Reconstruct the full audit chain (planned / adapted / firings / performed) for a committed plan. Strictly read-only — never recomputes runtime state. |
 | ``hai init`` | ``interactive`` | ``no`` | ``none`` | no | ``OK``, ``USER_INPUT`` | First-run wizard: state init, config scaffolding, auth setup. |
 | ``hai intake exercise`` | ``writes-state`` | ``yes`` | ``default`` | yes | ``OK``, ``USER_INPUT`` | Upsert an exercise taxonomy entry. |
+| ``hai intake gaps`` | ``read-only`` | ``yes`` | ``default`` | yes | ``OK``, ``USER_INPUT`` | Return the list of user-closeable intake gaps in the snapshot. Read-only; no side effects. |
 | ``hai intake gym`` | ``writes-state`` | ``no`` | ``default`` | yes | ``OK``, ``USER_INPUT`` | Record a gym session (sets + exercises) as typed human-input. |
 | ``hai intake note`` | ``writes-state`` | ``no`` | ``default`` | yes | ``OK``, ``USER_INPUT`` | Attach a free-text context note to a day. |
 | ``hai intake nutrition`` | ``writes-state`` | ``no`` | ``default`` | yes | ``OK``, ``USER_INPUT`` | Record a macros-only nutrition intake entry. |

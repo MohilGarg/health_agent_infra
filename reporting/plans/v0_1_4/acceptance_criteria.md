@@ -22,6 +22,12 @@ Code in workstreams A, B, D does not land until the corresponding D-doc is ratif
 
 ---
 
+## Core-thesis unblock: wearable → running-domain structural data (added 2026-04-24)
+
+- [x] **#16 Running activity pull from intervals.icu `/activities` endpoint.** The adapter previously only hit `/wellness.json` (daily rollups, no per-session detail). Fix: new `IntervalsIcuActivity` typed dataclass, new `fetch_activities_range` on `HttpIntervalsIcuClient`, new migration 017 creating `running_activity` (PK on intervals.icu id, upsert on re-pull). `cmd_clean` aggregates today's activities via `aggregate_activities_to_daily_rollup` so `accepted_running_state_daily.total_distance_m` / `moderate_intensity_min` / `vigorous_intensity_min` populate from HR zone times instead of carrying nulls. Snapshot's `running` block gains `activities_today` + `activities_history`. `derive_running_signals` carries four new structural signals (`z4_plus_seconds_today` / `z4_plus_seconds_7d` / `last_hard_session_days_ago` / `today_interval_summary`) plus `activity_count_14d` which relaxes the coverage gate from `insufficient` when ≥3 activities land in the window. Verified end-to-end against Dom's live account 2026-04-24: 6 intervals.icu activities across the 14-day window, running block flipped from `coverage=insufficient / forced_action=defer / readiness=unknown` to `coverage=full / forced_action=None / readiness=ready`. **This item was the unblocking condition that slipped v0.1.4 from its "all workstreams done" state back to active development on 2026-04-24.**
+
+---
+
 ## Correctness & audit integrity (Workstream A — gated on D1, D2)
 
 - [x] **#1** `project_proposal` re-author: D1 revision model implemented; `hai propose --replace` creates a new revision leaf; old leaf is linked forward. Migrations 013/014/015 landed. E2E tests un-xfailed and passing. Full suite 1533/1533 green. Remaining: D1 §Test coverage items 4 (identical-payload idempotency) and 11 (migration backfill unit tests) still need explicit test coverage beyond the e2e scenario.

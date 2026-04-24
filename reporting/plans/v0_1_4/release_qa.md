@@ -120,6 +120,7 @@ guards each regression.
 | D2 `hai intake readiness` persistence | `safety/tests/test_intake_readiness.py` persistence-round-trip tests |
 | D4 running cold-start relaxation | `safety/tests/test_running_cold_start_policy.py::test_cold_start_green_recovery_with_planned_session_lifts_defer` |
 | Defer review-question per-domain | `safety/tests/test_defer_review_question_per_domain.py` parametrised suite |
+| #16 intervals.icu /activities endpoint wired through pull→clean→snapshot | `safety/tests/e2e/test_running_activity_journey.py::test_window_of_activities_unblocks_coverage_gate` + `safety/tests/test_state_clean_projection.py::test_cli_clean_enriches_daily_rollup_from_activity_hr_zones` |
 
 Update this table whenever a major fix lands — the value comes from
 periodically proving each contract is genuinely tested.

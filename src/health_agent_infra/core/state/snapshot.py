@@ -258,6 +258,47 @@ def available_domains() -> list[str]:
     return sorted(_DOMAIN_TABLES.keys())
 
 
+def _activities_for_running_block(
+    conn: sqlite3.Connection,
+    *,
+    user_id: str,
+    as_of_date: date,
+    lookback_days: int,
+) -> tuple[list[dict], list[dict]]:
+    """Load today's + history-window Run activities for the running block.
+
+    Returns ``(activities_today, activities_history)`` where history is
+    the trailing-``lookback_days`` window EXCLUDING today (matches the
+    history/today split the rest of the snapshot uses). Empty lists when
+    no activities have been projected — cleanly degrades when the
+    intervals.icu adapter hasn't yet been pulled on this profile.
+
+    Filtered to ``activity_type='Run'`` because the running domain
+    signals derive only from running sessions; other activity types are
+    captured in ``running_activity`` for future domain expansion but
+    stay out of this block.
+    """
+
+    from health_agent_infra.core.state.projectors.running_activity import (
+        read_activities_for_date,
+        read_activities_range,
+    )
+
+    today = read_activities_for_date(
+        conn, user_id=user_id, as_of_date=as_of_date, activity_type="Run",
+    )
+    history_since = as_of_date - timedelta(days=lookback_days)
+    history_until = as_of_date - timedelta(days=1)
+    history: list[dict] = []
+    if history_until >= history_since:
+        history = read_activities_range(
+            conn, user_id=user_id,
+            since=history_since, until=history_until,
+            activity_type="Run",
+        )
+    return today, history
+
+
 # ---------------------------------------------------------------------------
 # read_domain — single domain, bounded by civil-date range
 # ---------------------------------------------------------------------------
@@ -569,10 +610,16 @@ def build_snapshot(
         "missingness": recovery_mx,
         **cold_start_flags["recovery"],
     }
+    activities_today, activities_history = _activities_for_running_block(
+        conn, user_id=user_id, as_of_date=as_of_date,
+        lookback_days=lookback_days,
+    )
     running_block: dict[str, Any] = {
         "today": running_today,
         "history": running_history,
         "missingness": running_mx,
+        "activities_today": activities_today,
+        "activities_history": activities_history,
         **cold_start_flags["running"],
     }
     sleep_block: dict[str, Any] = {
@@ -673,11 +720,15 @@ def build_snapshot(
         # Running (Phase 2 step 3). Reuses recovery's classified_state
         # for the cross-domain peek (sleep_debt_band + resting_hr_band)
         # so a single `--evidence-json` invocation lights up both domains.
+        # v0.1.4 adds activity-level structural signals from the
+        # running_activity table (migration 017).
         running_signals = derive_running_signals(
             raw_summary,
             running_today=running_today,
             running_history=running_history,
             recovery_classified=recovery_block["classified_state"],
+            activities_today=running_block.get("activities_today"),
+            activities_history=running_block.get("activities_history"),
         )
         running_classified = classify_running_state(running_signals)
         # D4 cold-start context — lifts the forced defer when the user

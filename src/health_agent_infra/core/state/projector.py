@@ -65,10 +65,17 @@ from health_agent_infra.core.state.projectors.stress import (
 from health_agent_infra.core.state.projectors.strength import (
     project_accepted_resistance_training_state_daily,
 )
+from health_agent_infra.core.state.projectors.running_activity import (
+    aggregate_activities_to_daily_rollup,
+    project_activity,
+    read_activities_for_date,
+    read_activities_range,
+)
 from health_agent_infra.domains.recovery.schemas import TrainingRecommendation
 
 __all__ = [
     "ReprojectBaseDirError",
+    "aggregate_activities_to_daily_rollup",
     "delete_canonical_plan_cascade",
     "latest_nutrition_submission_id",
     "link_proposal_to_plan",
@@ -81,6 +88,7 @@ __all__ = [
     "project_accepted_running_state_daily",
     "project_accepted_sleep_state_daily",
     "project_accepted_stress_state_daily",
+    "project_activity",
     "project_bounded_recommendation",
     "project_context_note",
     "project_daily_plan",
@@ -95,6 +103,8 @@ __all__ = [
     "project_source_daily_garmin",
     "project_stress_manual_raw",
     "project_x_rule_firing",
+    "read_activities_for_date",
+    "read_activities_range",
     "read_canonical_plan",
     "read_latest_manual_readiness",
     "read_proposals_for_plan_key",

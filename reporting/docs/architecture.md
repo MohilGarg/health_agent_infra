@@ -49,10 +49,12 @@ precedence. Synthesis does not privilege one domain over another.
 │              PROJECTORS — per-domain, deterministic                 │
 │                                                                     │
 │  core/state/projectors/{recovery, running, sleep,                   │
-│                          stress, strength, nutrition}.py            │
+│                          stress, strength, nutrition,               │
+│                          running_activity}.py                       │
 └─────────────────────────────┬───────────────────────────────────────┘
                               │
-                              ▼ (canonical accepted_*_state_daily tables)
+                              ▼ (canonical accepted_*_state_daily tables
+                                 + running_activity per-session rows)
 ┌─────────────────────────────────────────────────────────────────────┐
 │                     STATE SNAPSHOT                                  │
 │              hai state snapshot --as-of <date>                      │
@@ -190,6 +192,18 @@ the projector. Migrations 001–011 are live:
 - 011 planned_recommendation ledger (pre-X-rule aggregate, M8
   Phase 1) — closes the audit chain at the aggregate level so
   `planned ⊕ firings = adapted` is verifiable from rows alone
+- 012 runtime_event_log — per-invocation telemetry for `hai stats`
+- 013 proposal_log revision columns (D1 re-author semantics)
+- 014 daily_plan.superseded_by_plan_id forward-link
+- 015 manual_readiness_raw (D2 per-domain intake landing)
+- 016 review_outcome.re_linked_from_recommendation_id (D1 auto-re-link)
+- 017 running_activity — per-session structural data from the
+  intervals.icu `/activities` stream (HR zone times, interval
+  summaries, TRIMP, warmup/cooldown). Distinct from the daily rollup
+  in `accepted_running_state_daily`: activities are the source of
+  truth for session structure; the rollup is an aggregation over
+  today's activities (populated by `aggregate_activities_to_daily_rollup`
+  in `cmd_clean`)
 
 ## Agent-operable surfaces (M8)
 
