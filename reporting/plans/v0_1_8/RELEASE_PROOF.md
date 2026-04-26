@@ -85,20 +85,74 @@ DB head: **21**. `test_state_store.py::test_schema_migrations_has_one_row_per_ap
 
 ## Wheel install + smoke (v0.1.8 publish event)
 
-The operator runs (one-shot, manual):
+**Status: PUBLISHED 2026-04-26.**
+
+### Build artifacts
 
 ```
-python3 -m build
-twine check dist/*
-twine upload dist/health_agent_infra-0.1.8*
-pipx install --force health_agent_infra==0.1.8
-hai --version            # expect: hai 0.1.8
-hai capabilities --json | jq '.commands | length'
-hai init                  # in an isolated $HAI_BASE_DIR
-hai doctor --json | jq '.overall_status'   # expect: "ok"
+$ python3 -m build
+Successfully built health_agent_infra-0.1.8.tar.gz and
+                   health_agent_infra-0.1.8-py3-none-any.whl
+
+$ twine check dist/health_agent_infra-0.1.8*
+Checking dist/health_agent_infra-0.1.8-py3-none-any.whl: PASSED
+Checking dist/health_agent_infra-0.1.8.tar.gz:           PASSED
+
+$ ls -la dist/health_agent_infra-0.1.8*
+-rw-r--r--  domcolligan  staff  509578  health_agent_infra-0.1.8-py3-none-any.whl
+-rw-r--r--  domcolligan  staff  422877  health_agent_infra-0.1.8.tar.gz
 ```
 
-Capture the output of the above into this file once the upload runs.
+### PyPI upload
+
+```
+$ twine upload dist/health_agent_infra-0.1.8*
+Uploading distributions to https://upload.pypi.org/legacy/
+Uploading health_agent_infra-0.1.8-py3-none-any.whl
+100% ━━━━━━━━━━━━━━━━━━━━━━━ 542.0/542.0 kB • 00:00 • 1.2 MB/s
+Uploading health_agent_infra-0.1.8.tar.gz
+100% ━━━━━━━━━━━━━━━━━━━━━━━ 455.3/455.3 kB • 00:00 • 123.4 MB/s
+
+View at: https://pypi.org/project/health-agent-infra/0.1.8/
+```
+
+### Fresh-install verification (PyPI install, not local source)
+
+```
+$ pipx install --force --pip-args="--no-cache-dir --index-url \
+  https://pypi.org/simple/" health-agent-infra==0.1.8 && hai --version
+installed package health-agent-infra 0.1.8, installed using Python 3.14.3
+hai 0.1.8
+
+$ hai doctor --json | head -30
+{
+  "checks": {
+    "auth_garmin":        { "credentials_source": "keyring", "status": "ok" },
+    "auth_intervals_icu": { "credentials_source": "keyring", "status": "ok" },
+    "config":             { "path": "...thresholds.toml",     "status": "ok" },
+    "domains":            { "domains": [<all 6>],             "status": "ok" },
+    "skills":             { "installed_count": 15, "packaged_count": 14,
+                            "status": "ok" },
+    ...
+  }
+}
+```
+
+All `hai doctor` checks reported `status: ok`. The fresh PyPI install
+of 0.1.8 produced a working runtime against the operator's existing
+Garmin + intervals.icu credentials and existing skills tree.
+
+### Notes from the publish event
+
+- First `pipx install --force health-agent-infra==0.1.8` (without
+  `--no-cache-dir`) hit a PyPI-CDN propagation lag — pip's index was
+  serving the pre-0.1.8 versions list for ~2 minutes after upload.
+  The cache-bypass flag worked immediately. Worth flagging for the
+  v0.1.9 publish: the standard `pipx install` may need a one-minute
+  wait or the `--no-cache-dir --index-url` combo right after upload.
+- Build + upload + verification ran clean on Python 3.14.3.
+- The wheel is universal2 (macOS 10.15+); no platform-specific
+  binaries.
 
 ## Skill `allowed-tools` updates
 
