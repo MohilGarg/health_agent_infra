@@ -6350,7 +6350,21 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_pull = sub.add_parser("pull", help="Pull Garmin evidence for a date")
-    p_pull.add_argument("--date", default=None, help="As-of date, ISO-8601 (default today UTC)")
+    # v0.1.11 W-Y (per Codex F-DEMO-03): `--as-of` is the canonical
+    # civil-date flag across `hai daily / today / intake / explain`;
+    # `--date` is the legacy spelling on `hai pull`. Both accepted
+    # this cycle; `--date` deprecated and removed in v0.1.13 per the
+    # tactical plan.
+    p_pull.add_argument(
+        "--date", "--as-of",
+        dest="date",
+        default=None,
+        help=(
+            "Civil date, ISO-8601 (default today UTC). "
+            "`--as-of` is the canonical alias; `--date` retained for "
+            "backwards compatibility (deprecated, removed in v0.1.13)."
+        ),
+    )
     p_pull.add_argument("--user-id", default="u_local_1")
     p_pull.add_argument("--manual-readiness-json", default=None,
                         help="Path to a JSON file with manual readiness fields")
@@ -6653,9 +6667,17 @@ def build_parser() -> argparse.ArgumentParser:
              "with --for-date / --user-id.",
     )
     p_explain.add_argument(
-        "--for-date", default=None,
+        # v0.1.11 W-Y (Codex F-DEMO-03): `--as-of` canonical alias.
+        # `--for-date` retained for backwards compatibility; both
+        # land on the same `for_date` dest. `--for-date` deprecated
+        # and removed in v0.1.13 per the tactical plan.
+        "--for-date", "--as-of",
+        dest="for_date",
+        default=None,
         help="Civil date of the canonical plan to explain, ISO-8601. "
-             "Pair with --user-id.",
+             "Pair with --user-id. `--as-of` is the canonical alias; "
+             "`--for-date` retained for backwards compatibility "
+             "(deprecated, removed in v0.1.13).",
     )
     p_explain.add_argument(
         "--user-id", default=None,
