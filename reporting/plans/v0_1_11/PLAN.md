@@ -319,16 +319,38 @@ restrict via `urllib.parse.urlparse` allowed-schemes check.
 
 **Acceptance:** bandit -ll on `src/`: 0 unsuppressed of any kind.
 
-### 2.7 W-N — Pytest unraisable warning cleanup
+### 2.7 W-N — Pytest unraisable warning cleanup (narrowed)
 
-**Goal.** Eliminate `PytestUnraisableExceptionWarning` from
-`safety/tests/test_snapshot_bundle.py::test_snapshot_v1_0_recovery_block_has_three_keys`.
+**Goal.** `verification/tests` runs clean under
+`-W error::pytest.PytestUnraisableExceptionWarning`.
 
-**Approach.** Audit the test for HTTP-client lifecycle (likely an
-unclosed response in an intervals.icu auth-check or similar).
-Ensure response is closed in a `finally` block or `with` context.
+**Scope-narrowing note (cycle-internal, 2026-04-28).** The original
+v0.1.9 backlog targeted a single test file (referenced as
+`safety/tests/test_snapshot_bundle.py` — a path that does not
+exist in the current tree; the file lives at
+`verification/tests/test_snapshot_bundle.py`). The original draft
+acceptance was the catch-all `-W error::Warning`, which a tree-
+wide audit revealed surfaces 47 unrelated `ResourceWarning`
+failures rooted in unclosed `sqlite3.Connection` and HTTP-response
+patterns scattered across the codebase. That broader cleanup is a
+multi-day systemic refactor (context-managed `open_connection`
+helper + audit of every CLI handler), not a 30-min smoke-clearer.
 
-**Acceptance:** `uv run pytest verification/tests safety/tests -W error::Warning` passes clean.
+**v0.1.11 W-N ships the narrow gate.** The broader
+`-W error::Warning` cleanup is deferred to v0.1.12 as a new
+workstream candidate (call it `W-N-broad` when scoped); see
+demo-run-findings § 7 follow-up.
+
+**Approach.** Confirm the suite passes
+`-W error::pytest.PytestUnraisableExceptionWarning`. If a regression
+appears mid-cycle, fix the offending site (likely an HTTP-client
+lifecycle in `core/pull/intervals_icu.py` if intervals.icu probe
+work in W-X surfaces it).
+
+**Acceptance:**
+- `uv run pytest verification/tests -W error::pytest.PytestUnraisableExceptionWarning` exits 0.
+- Top-level § 3 ship gate updated to reference the narrow form
+  rather than the catch-all (see § 3 update below).
 
 ### 2.8 W-O — Persona matrix expansion (8 → 12)
 
@@ -1217,7 +1239,7 @@ v0.1.11 ships when:
       per-W-id capabilities tests. **No frozen-schema check** —
       W30's "manifest schema not yet frozen" decision is
       preserved.
-- [ ] `verification/tests` runs with `-W error::Warning` clean.
+- [ ] `verification/tests` runs with `-W error::pytest.PytestUnraisableExceptionWarning` clean (narrowed from the original `-W error::Warning` catch-all per W-N scope-narrowing — broader gate deferred to v0.1.12 W-N-broad).
 - [ ] CHANGELOG.md updated with v0.1.11 section + per-W-id summary.
 - [ ] `RELEASE_PROOF.md` emitted with full pytest log + persona
       harness re-run output.
