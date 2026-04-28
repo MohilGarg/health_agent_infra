@@ -3648,7 +3648,11 @@ def cmd_intake_gaps(args: argparse.Namespace) -> int:
     can pattern-match on the field instead of guessing.
     """
 
-    from health_agent_infra.core.intake.gaps import compute_intake_gaps
+    from health_agent_infra.core.intake.gaps import (
+        StalenessRefusal,
+        compute_intake_gaps,
+        compute_intake_gaps_from_state_snapshot,
+    )
     from health_agent_infra.core.state import (
         build_snapshot,
         open_connection,
@@ -3667,15 +3671,51 @@ def cmd_intake_gaps(args: argparse.Namespace) -> int:
         )
         return exit_codes.USER_INPUT
 
+    # v0.1.11 W-W: --from-state-snapshot is the new offline-derivation
+    # path (Codex F-DEMO-04). Mutually exclusive with --evidence-json.
+    if getattr(args, "from_state_snapshot", False):
+        if args.evidence_json:
+            print(
+                "hai intake gaps: --from-state-snapshot is mutually "
+                "exclusive with --evidence-json. Pick one source.",
+                file=sys.stderr,
+            )
+            return exit_codes.USER_INPUT
+        # D12: coerce the staleness threshold from thresholds.toml
+        from health_agent_infra.core.config import (
+            coerce_int,
+            load_thresholds,
+        )
+        thresholds = load_thresholds()
+        max_hours = coerce_int(
+            thresholds.get("gap_detection", {}).get(
+                "snapshot_staleness_max_hours", 48
+            ),
+            name="gap_detection.snapshot_staleness_max_hours",
+        )
+        try:
+            payload = compute_intake_gaps_from_state_snapshot(
+                db_path=db_path,
+                as_of_date=as_of,
+                user_id=user_id,
+                allow_stale=getattr(args, "allow_stale_snapshot", False),
+                staleness_max_hours=max_hours,
+            )
+        except StalenessRefusal as exc:
+            print(f"hai intake gaps: {exc}", file=sys.stderr)
+            return exit_codes.USER_INPUT
+        _emit_json(payload)
+        return exit_codes.OK
+
     if not args.evidence_json:
         print(
             "hai intake gaps: --evidence-json is required for gap "
-            "detection. Without it the snapshot lacks per-domain "
-            "classified_state, so no uncertainty tokens are available "
-            "and the gap detector can only return an empty list — which "
-            "is indistinguishable from a true zero. Run `hai pull` then "
-            "`hai clean --evidence-json <pull output>` and pass the "
-            "cleaned-evidence JSON to this command.",
+            "detection (or pass --from-state-snapshot to derive from "
+            "the latest accepted state offline). Without either flag "
+            "the snapshot lacks per-domain classified_state, so no "
+            "uncertainty tokens are available and the gap detector can "
+            "only return an empty list — which is indistinguishable "
+            "from a true zero.",
             file=sys.stderr,
         )
         return exit_codes.USER_INPUT
@@ -3698,11 +3738,18 @@ def cmd_intake_gaps(args: argparse.Namespace) -> int:
         conn.close()
 
     gaps = compute_intake_gaps(snapshot)
+    # v0.1.11 W-W: distinguish source for audit-trail clarity.
+    gap_dicts = []
+    for g in gaps:
+        d = g.to_dict()
+        d["derived_from"] = "pull_evidence"
+        gap_dicts.append(d)
     _emit_json({
         "as_of_date": as_of.isoformat(),
         "user_id": user_id,
         "computed": True,
-        "gaps": [g.to_dict() for g in gaps],
+        "derived_from": "pull_evidence",
+        "gaps": gap_dicts,
         "gap_count": len(gaps),
         "gating_gap_count": sum(1 for g in gaps if g.blocks_coverage),
     })
@@ -7659,11 +7706,34 @@ def build_parser() -> argparse.ArgumentParser:
     p_igaps.add_argument(
         "--evidence-json", default=None,
         help=(
-            "Required: path to `hai clean` output. The snapshot is "
-            "expanded with per-domain classified_state + policy_result "
-            "before gap detection; without this, the gap detector has "
-            "no uncertainty tokens to read and the command refuses with "
-            "USER_INPUT (rather than returning a misleading zero)."
+            "Path to `hai clean` output. Pull-evidence path. The "
+            "snapshot is expanded with per-domain classified_state + "
+            "policy_result before gap detection. Mutually exclusive "
+            "with --from-state-snapshot."
+        ),
+    )
+    p_igaps.add_argument(
+        "--from-state-snapshot",
+        action="store_true",
+        dest="from_state_snapshot",
+        help=(
+            "v0.1.11 W-W: derive gaps from the latest accepted state "
+            "without fresh evidence. The session-start protocol "
+            "fallback when `hai pull` is broken or skipped. Refuses "
+            "if the latest successful pull is older than the "
+            "staleness threshold (default 48h, configurable via "
+            "thresholds.toml gap_detection.snapshot_staleness_max_hours). "
+            "Pass --allow-stale-snapshot to override. Output gaps "
+            "carry `derived_from: state_snapshot` and `snapshot_read_at`."
+        ),
+    )
+    p_igaps.add_argument(
+        "--allow-stale-snapshot",
+        action="store_true",
+        dest="allow_stale_snapshot",
+        help=(
+            "Override the staleness gate. Each gap then carries a "
+            "`staleness_warning` field for audit-chain clarity."
         ),
     )
     p_igaps.add_argument("--db-path", default=None, help="State DB path.")

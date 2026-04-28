@@ -577,6 +577,19 @@ DEFAULT_THRESHOLDS: dict[str, Any] = {
             "retry_on_rate_limit": True,
         },
     },
+    # v0.1.11 W-W: gap-detection state-snapshot fallback. The
+    # `--from-state-snapshot` flag derives gaps from the latest
+    # accepted state when fresh pull evidence is unavailable. The
+    # staleness gate refuses if the most-recent successful pull is
+    # older than this threshold (per maintainer answer Q-3 on the
+    # F-DEMO-04 scoping pass). 48h covers the realistic broken-sync
+    # window; tighter rejects the feature when most useful, looser
+    # admits questionable inputs. Override via thresholds.toml or
+    # the per-call `--allow-stale-snapshot` flag. Resolved via
+    # `core.config.coerce_int` per D12.
+    "gap_detection": {
+        "snapshot_staleness_max_hours": 48,
+    },
 }
 
 

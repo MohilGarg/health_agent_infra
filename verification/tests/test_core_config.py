@@ -38,10 +38,11 @@ from health_agent_infra.core.config import (
 
 def test_default_thresholds_has_expected_top_level_sections():
     # M6 added "pull" (garmin_live retry knobs); prior PRs cemented
-    # classify / policy / synthesis. This set grows when a new config
-    # surface lands — the test should be updated alongside the section.
+    # classify / policy / synthesis. v0.1.11 W-W added "gap_detection".
+    # This set grows when a new config surface lands — the test should
+    # be updated alongside the section.
     assert set(DEFAULT_THRESHOLDS.keys()) == {
-        "classify", "policy", "synthesis", "pull",
+        "classify", "policy", "synthesis", "pull", "gap_detection",
     }
 
 

@@ -221,6 +221,150 @@ def known_gap_tokens() -> frozenset[str]:
     return frozenset(_TOKEN_TO_GAP.keys())
 
 
+def compute_intake_gaps_from_state_snapshot(
+    *,
+    db_path: Any,
+    as_of_date: Any,
+    user_id: str,
+    allow_stale: bool = False,
+    staleness_max_hours: int = 48,
+) -> dict[str, Any]:
+    """Derive intake gaps from the latest accepted state without fresh evidence.
+
+    v0.1.11 W-W. Used when the live `hai pull` chain is broken or
+    skipped — the snapshot has no fresh cleaned evidence but the
+    accepted_*_state_daily rows still carry enough context for
+    classify + policy to run and emit uncertainty tokens.
+
+    Read-consistency contract (per Codex F-PLAN-06 + F-PLAN-R2-04):
+    the whole derivation runs inside a single SQLite read
+    transaction (``BEGIN IMMEDIATE``) so concurrent writers cannot
+    interleave and produce a mixed-state output. The transaction-
+    start timestamp is captured as ``snapshot_read_at`` and attached
+    to every emitted gap for audit.
+
+    Args:
+        db_path: SQLite DB path (already-resolved via the demo-aware
+            resolver if applicable).
+        as_of_date: civil date for the snapshot.
+        user_id: user whose snapshot to derive.
+        allow_stale: bypass the staleness gate. Default ``False``.
+        staleness_max_hours: refuse-if-no-successful-pull-within
+            threshold. Resolved via D12 coercer at the CLI layer.
+
+    Returns:
+        ``{"computed": True, "derived_from": "state_snapshot",
+           "snapshot_read_at": <ISO-8601>, "as_of_date": ...,
+           "user_id": ..., "gaps": [...], "gap_count": N,
+           "gating_gap_count": M, "staleness_warning": <optional>}``.
+
+    Raises:
+        StalenessRefusal: when the latest successful pull is older
+            than ``staleness_max_hours`` and ``allow_stale=False``.
+    """
+
+    from datetime import datetime, timezone
+    from health_agent_infra.core.state import (
+        build_snapshot,
+        open_connection,
+    )
+
+    conn = open_connection(db_path)
+    try:
+        # BEGIN IMMEDIATE: take a write-acquired read lock so concurrent
+        # writers can't interleave between sync_run_log probe and snapshot.
+        # SQLite WAL mode keeps reads non-blocking; this guarantees a
+        # consistent point-in-time view of the accepted_*_state_daily
+        # tables.
+        conn.execute("BEGIN IMMEDIATE")
+        snapshot_read_at = datetime.now(timezone.utc).isoformat()
+
+        # Staleness check: read the most recent successful pull from
+        # sync_run_log. Refuse with USER_INPUT if older than threshold
+        # and the caller hasn't overridden via --allow-stale-snapshot.
+        staleness_warning = None
+        try:
+            row = conn.execute(
+                "SELECT MAX(completed_at) AS last_ok "
+                "FROM sync_run_log WHERE status = 'ok'"
+            ).fetchone()
+            last_ok = row["last_ok"] if row else None
+        except Exception:  # noqa: BLE001
+            last_ok = None
+
+        if last_ok is not None:
+            try:
+                last_ok_dt = datetime.fromisoformat(str(last_ok))
+                if last_ok_dt.tzinfo is None:
+                    last_ok_dt = last_ok_dt.replace(tzinfo=timezone.utc)
+                age_hours = (
+                    datetime.now(timezone.utc) - last_ok_dt
+                ).total_seconds() / 3600.0
+                if age_hours > staleness_max_hours:
+                    if not allow_stale:
+                        conn.execute("ROLLBACK")
+                        raise StalenessRefusal(
+                            f"latest successful pull is {age_hours:.1f}h "
+                            f"old (threshold={staleness_max_hours}h). "
+                            f"Pass --allow-stale-snapshot to override, "
+                            f"or run `hai pull` if the wearable surface "
+                            f"is reachable."
+                        )
+                    staleness_warning = (
+                        f"latest successful pull is {age_hours:.1f}h old "
+                        f"(>{staleness_max_hours}h threshold)"
+                    )
+            except (ValueError, TypeError):
+                pass
+
+        # Build snapshot with evidence_bundle=None — post-v0.1.9
+        # build_snapshot still runs classify+policy from accepted state.
+        snapshot = build_snapshot(
+            conn,
+            as_of_date=as_of_date,
+            user_id=user_id,
+            evidence_bundle=None,
+        )
+        # End the read transaction now; gap derivation is pure-Python
+        # below and doesn't touch the DB.
+        conn.execute("ROLLBACK")
+    finally:
+        conn.close()
+
+    gaps = compute_intake_gaps(snapshot)
+    gap_dicts = []
+    for g in gaps:
+        d = g.to_dict()
+        d["derived_from"] = "state_snapshot"
+        d["snapshot_read_at"] = snapshot_read_at
+        if staleness_warning is not None:
+            d["staleness_warning"] = staleness_warning
+        gap_dicts.append(d)
+
+    out: dict[str, Any] = {
+        "as_of_date": str(as_of_date),
+        "user_id": user_id,
+        "computed": True,
+        "derived_from": "state_snapshot",
+        "snapshot_read_at": snapshot_read_at,
+        "gaps": gap_dicts,
+        "gap_count": len(gaps),
+        "gating_gap_count": sum(1 for g in gaps if g.blocks_coverage),
+    }
+    if staleness_warning is not None:
+        out["staleness_warning"] = staleness_warning
+    return out
+
+
+class StalenessRefusal(RuntimeError):
+    """Raised when --from-state-snapshot is invoked with a stale-beyond-48h
+    sync_run_log entry and --allow-stale-snapshot was not passed.
+
+    The CLI catches this and exits USER_INPUT with the human-readable
+    message preserved.
+    """
+
+
 def compute_intake_gaps(snapshot: dict[str, Any]) -> list[IntakeGap]:
     """Enumerate user-closeable intake gaps in the snapshot.
 
