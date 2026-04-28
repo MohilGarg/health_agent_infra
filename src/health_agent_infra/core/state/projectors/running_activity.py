@@ -189,7 +189,7 @@ def project_activity(
 
     if is_insert:
         conn.execute(
-            f"INSERT INTO running_activity ({columns}) VALUES ({placeholders})",
+            f"INSERT INTO running_activity ({columns}) VALUES ({placeholders})",  # nosec B608 - columns from _INSERT_COLUMNS constant; placeholders are literal "?" tokens.
             values,
         )
     else:
@@ -200,7 +200,7 @@ def project_activity(
             f"{col} = ?" for col in _INSERT_COLUMNS if col != "activity_id"
         )
         conn.execute(
-            f"UPDATE running_activity SET {set_clause} WHERE activity_id = ?",
+            f"UPDATE running_activity SET {set_clause} WHERE activity_id = ?",  # nosec B608 - set_clause built from _INSERT_COLUMNS constant; user values bind via params.
             (*values[1:], activity_id),
         )
     if commit_after:

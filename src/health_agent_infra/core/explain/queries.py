@@ -449,7 +449,7 @@ def _load_proposals_for_plan(
 
     placeholders = ",".join(["?"] * len(proposal_ids))
     rows = conn.execute(
-        f"SELECT proposal_id, domain, schema_version, action, "
+        f"SELECT proposal_id, domain, schema_version, action, "  # nosec B608 - placeholders are literal "?" tokens; user data flows through bind params only.
         f"  payload_json, confidence, produced_at, validated_at "
         f"FROM proposal_log WHERE proposal_id IN ({placeholders})",
         proposal_ids,
@@ -569,7 +569,7 @@ def _load_reviews_for_recommendations(
 
     placeholders = ",".join(["?"] * len(recommendation_ids))
     event_rows = conn.execute(
-        f"SELECT review_event_id, recommendation_id, domain, "
+        f"SELECT review_event_id, recommendation_id, domain, "  # nosec B608 - placeholders are literal "?" tokens; recommendation_ids bind through params, not f-string.
         f"  review_at, review_question "
         f"FROM review_event "
         f"WHERE recommendation_id IN ({placeholders}) "
@@ -582,7 +582,7 @@ def _load_reviews_for_recommendations(
     event_ids = [r["review_event_id"] for r in event_rows]
     outcome_placeholders = ",".join(["?"] * len(event_ids))
     outcome_rows = conn.execute(
-        f"SELECT outcome_id, review_event_id, recorded_at, "
+        f"SELECT outcome_id, review_event_id, recorded_at, "  # nosec B608 - placeholders are literal "?" tokens; event_ids bind through params, not f-string.
         f"  followed_recommendation, self_reported_improvement, free_text "
         f"FROM review_outcome "
         f"WHERE review_event_id IN ({outcome_placeholders}) "

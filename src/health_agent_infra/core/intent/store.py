@@ -236,7 +236,7 @@ def add_intent(
     cols = ", ".join(_INTENT_COLUMNS)
     placeholders = ", ".join("?" for _ in _INTENT_COLUMNS)
     conn.execute(
-        f"INSERT INTO intent_item ({cols}) VALUES ({placeholders})",
+        f"INSERT INTO intent_item ({cols}) VALUES ({placeholders})",  # nosec B608 - cols is built from the _INTENT_COLUMNS constant tuple; placeholders are literal "?" tokens.
         tuple(row[c] for c in _INTENT_COLUMNS),
     )
     conn.commit()
@@ -399,7 +399,7 @@ def supersede_intent(
     cols = ", ".join(_INTENT_COLUMNS)
     placeholders = ", ".join("?" for _ in _INTENT_COLUMNS)
     conn.execute(
-        f"INSERT INTO intent_item ({cols}) VALUES ({placeholders})",
+        f"INSERT INTO intent_item ({cols}) VALUES ({placeholders})",  # nosec B608 - cols is built from the _INTENT_COLUMNS constant tuple; placeholders are literal "?" tokens.
         tuple(row[c] for c in _INTENT_COLUMNS),
     )
     if new_record.source == "user_authored":

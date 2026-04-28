@@ -216,7 +216,7 @@ def add_target(
     cols = ", ".join(_TARGET_COLUMNS)
     placeholders = ", ".join("?" for _ in _TARGET_COLUMNS)
     conn.execute(
-        f"INSERT INTO target ({cols}) VALUES ({placeholders})",
+        f"INSERT INTO target ({cols}) VALUES ({placeholders})",  # nosec B608 - cols from _TARGET_COLUMNS constant; placeholders are literal "?" tokens.
         tuple(row[c] for c in _TARGET_COLUMNS),
     )
     conn.commit()
@@ -357,7 +357,7 @@ def supersede_target(
     cols = ", ".join(_TARGET_COLUMNS)
     placeholders = ", ".join("?" for _ in _TARGET_COLUMNS)
     conn.execute(
-        f"INSERT INTO target ({cols}) VALUES ({placeholders})",
+        f"INSERT INTO target ({cols}) VALUES ({placeholders})",  # nosec B608 - cols from _TARGET_COLUMNS constant; placeholders are literal "?" tokens.
         tuple(row[c] for c in _TARGET_COLUMNS),
     )
     if new_record.source == "user_authored":

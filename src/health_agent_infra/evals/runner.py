@@ -511,7 +511,7 @@ def run_synthesis_scenario(scenario: dict[str, Any]) -> SynthesisScenarioResult:
             conn = open_connection(db_path)
             try:
                 cursor = conn.execute(
-                    "SELECT recommendation_id, domain, action, payload_json "
+                    "SELECT recommendation_id, domain, action, payload_json "  # nosec B608 - placeholders are literal "?" tokens; recommendation_ids bind via params, not concat.
                     "FROM recommendation_log WHERE recommendation_id IN "
                     "(" + ",".join("?" * len(result.recommendation_ids)) + ")",
                     tuple(result.recommendation_ids),

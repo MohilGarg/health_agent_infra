@@ -96,7 +96,7 @@ def _domain_history_days(
     table, predicate = spec
     try:
         row = conn.execute(
-            f"SELECT COUNT(DISTINCT as_of_date) FROM {table} "  # noqa: S608
+            f"SELECT COUNT(DISTINCT as_of_date) FROM {table} "  # nosec B608 - table + predicate from _COLD_START_PREDICATES constant; user values bind via params.
             f"WHERE user_id = ? AND as_of_date < ? AND ({predicate})",
             (user_id, as_of_date.isoformat()),
         ).fetchone()
@@ -344,14 +344,16 @@ def read_domain(
     table = _DOMAIN_TABLES[domain]
     date_col = _DOMAIN_DATE_COLUMN[domain]
 
+    # nosec B608 (whole block): table from _DOMAIN_TABLES constant;
+    # date_col from _DOMAIN_DATE_COLUMN constant; user values bind via params.
     if domain == "reviews":
         # recorded_at is an ISO-8601 timestamp; compare the date prefix.
         sql = (
-            f"SELECT * FROM {table} "
+            f"SELECT * FROM {table} "  # nosec B608
             f"WHERE substr({date_col}, 1, 10) BETWEEN ? AND ? "
         )
     else:
-        sql = f"SELECT * FROM {table} WHERE {date_col} BETWEEN ? AND ? "
+        sql = f"SELECT * FROM {table} WHERE {date_col} BETWEEN ? AND ? "  # nosec B608
 
     params = [since.isoformat(), until.isoformat()]
     if user_id is not None and _DOMAIN_HAS_USER_ID.get(domain, False):

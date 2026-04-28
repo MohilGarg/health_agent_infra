@@ -384,7 +384,7 @@ def project_source_daily_garmin(
         + ", ".join(_SOURCE_DAILY_GARMIN_COLUMNS)
     )
     conn.execute(
-        f"INSERT INTO source_daily_garmin ({columns_sql}) VALUES ({placeholders})",
+        f"INSERT INTO source_daily_garmin ({columns_sql}) VALUES ({placeholders})",  # nosec B608 - columns_sql is built from the _SOURCE_DAILY_GARMIN_COLUMNS constant tuple; placeholders are literal "?" tokens.
         values,
     )
     if commit_after:
@@ -610,6 +610,8 @@ def project_exercise_taxonomy_entry(
     """
 
     def _fetch_by(field: str, value: str) -> Optional[sqlite3.Row]:
+        # nosec B608 - field is whitelisted by the two literal call sites
+        # below (`exercise_id`, `canonical_name`); user value binds via param.
         return conn.execute(
             f"""
             SELECT exercise_id, canonical_name, aliases,
@@ -617,7 +619,7 @@ def project_exercise_taxonomy_entry(
                    category, equipment, source
             FROM exercise_taxonomy
             WHERE {field} = ?
-            """,
+            """,  # nosec B608
             (value,),
         ).fetchone()
 

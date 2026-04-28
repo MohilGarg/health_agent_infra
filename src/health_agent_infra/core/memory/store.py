@@ -203,7 +203,7 @@ def list_memory_entries(
 
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     sql = (
-        "SELECT memory_id, user_id, category, key, value, domain, "
+        "SELECT memory_id, user_id, category, key, value, domain, "  # nosec B608 - clauses built only from internal predicate strings (no user input concatenated); user values bind through params.
         "       created_at, archived_at, source, ingest_actor "
         f"FROM user_memory {where} "
         "ORDER BY created_at, memory_id"
