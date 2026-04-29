@@ -1217,16 +1217,48 @@ v0.1.11 ships when:
         false-green doctor output, broken gaps, flag mismatch,
         or orphan supersede ids.
 
-      **Isolation-replay mode** (W-Vb deferred) additionally
+      **Isolation-replay mode (boundary-stop demo)** (W-Vb
+      deferred; per Codex F-IR3-01 alignment) additionally
       asserts:
-      - `hai demo start --blank` opens an empty scratch session.
-      - The scripted manual-seed sequence (readiness + gym +
-        nutrition intakes per § B of the demo-flow doc)
-        populates enough state for `hai today` to render.
-      - `hai doctor --deep` against the default 200-OK stub
-        returns OK status (the broken-auth replay defers with
-        W-Vb to v0.1.12).
+      - `hai demo start --blank` opens an empty scratch session
+        with the scratch state.db initialised.
+      - The scripted manual-seed sequence (readiness + nutrition
+        + stress intakes per § B of the demo-flow doc) writes to
+        scratch DB + scratch base_dir.
+      - `hai daily --skip-pull --source csv` returns
+        `overall_status: "awaiting_proposals"` — the canonical
+        boundary signal. Proposal authoring is the runtime/skill
+        boundary; full synthesis defers to v0.1.12 W-Vb.
+      - `hai today` shows "no plan for <date>" (exit 1 with the
+        no-plan stderr signal) — the visible signal that the
+        runtime/skill boundary has not yet been crossed.
       - End-to-end replay of § B without real-state pollution.
+
+      **Independently verified (NOT part of the v0.1.11 isolation-
+      replay sequence)** — covered by their own dedicated tests:
+      - W-X `hai doctor --deep` FixtureProbe in demo mode
+        (`test_doctor_deep_probe.py::test_demo_mode_deep_probe_does_not_open_a_socket`).
+      - W-W `hai intake gaps --from-state-snapshot` derived_from +
+        snapshot_read_at + 47/49h boundary + 100-trial determinism
+        (`test_intake_gaps_from_snapshot.py`).
+      - W-F fresh-day `hai daily --supersede` USER_INPUT refusal
+        with proposals seeded
+        (`test_supersede_on_fresh_day.py`). Note: in the demo
+        flow path (a), `daily --supersede` short-circuits at
+        `awaiting_proposals` BEFORE the W-F gate fires (no
+        proposals to synthesize over). Demonstrating W-F via the
+        demo flow requires path (b) proposal seeding and is
+        forward-compat to v0.1.12 W-Vb.
+
+      **Forward-compat to v0.1.12 W-Vb** (NOT runnable in v0.1.11):
+      - `hai daily` reaching synthesis with proposals seeded by
+        the persona-fixture loader.
+      - `hai today` rendering a populated plan.
+      - Re-run-with-intake-change auto-supersede via `_v2`
+        end-to-end through the demo session (the W-E contract is
+        unit-tested in
+        `test_daily_supersede_on_state_change.py`; the demo
+        flow does not exercise it without proposals).
 - [ ] `verification/tests/` green: ≥ 2200 tests passing (was 2169
       at v0.1.10 ship; +30+ from new tests).
 - [ ] Persona harness re-runs show:

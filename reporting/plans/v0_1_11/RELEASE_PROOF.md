@@ -172,10 +172,15 @@ sequence stops at the boundary.
 **Persona-replay mode** (W-Vb shipped) is forward-compat for
 v0.1.12 — full synthesis through the demo session.
 
-**Isolation-replay transcript (Codex F-IR-05 fix).** The
-following sequence executed against real state pinned via
-`HAI_STATE_DB` + `HAI_BASE_DIR` env vars, with a marker at
-`HAI_DEMO_MARKER_PATH`:
+**Isolation-replay transcript (Codex F-IR-05 fix; expanded per
+F-IR3-01 to match the permanent test).** The following sequence
+executed against real state pinned via `HAI_STATE_DB` +
+`HAI_BASE_DIR` env vars, with a marker at
+`HAI_DEMO_MARKER_PATH`. **This is the complete sequence, not
+an illustrative subset** — it matches the permanent subprocess
+test in
+`test_demo_isolation_surfaces.py::test_subprocess_cli_writes_under_demo_isolate_real_state`
+step-for-step.
 
 ```
 $ shasum $REAL_DB
@@ -193,11 +198,29 @@ $ hai intake nutrition --calories 2400 --protein-g 150 \
     --carbs-g 280 --fat-g 80
 {"submission_id": "m_nut_...", ...}
 
+$ hai intake stress --score 2
+{"submission_id": "m_stress_...", ...}
+
 $ hai daily --skip-pull --source csv
-overall_status: awaiting_proposals
-(canonical (a) stopping point — proposal authoring is the
+overall_status: "awaiting_proposals"
+(canonical boundary signal — proposal authoring is the
 runtime/skill boundary; full synthesis requires hai propose
-calls per the demo flow doc § 5.)
+calls. Forward-compat to v0.1.12 W-Vb.)
+
+$ hai today
+exit 1; stderr: "No plan for <date>. Run `hai daily` first."
+(visible signal that the runtime/skill boundary has not been
+crossed. This is the demo moment — the system tells the viewer
+where the agent's contribution would slot in.)
+
+$ hai daily --supersede --skip-pull --source csv \
+    --as-of 2027-01-01
+overall_status: "awaiting_proposals"
+(short-circuits at awaiting_proposals BEFORE the W-F gate.
+Without proposals to synthesize over, --supersede never
+fires. The W-F USER_INPUT contract is independently verified
+in test_supersede_on_fresh_day.py — not exercised by this
+demo flow.)
 
 $ hai demo end
 {"status": "closed", ...}
@@ -214,7 +237,8 @@ ISOLATION REPLAY: PASS — real state byte-identical
 
 The cardinal isolation contract (§ 2.7) is proven end-to-end via
 real subprocess CLI invocations, not just resolver-level units.
-Codex F-IR-06 added the same assertion as a permanent test:
+Codex F-IR-06 + F-IR3-01 added the same assertion as a permanent
+test: every command in the transcript above is also exercised by
 `test_demo_isolation_surfaces.py::test_subprocess_cli_writes_under_demo_isolate_real_state`.
 
 ### 2.8 Persona harness re-run

@@ -11,10 +11,16 @@ W-Z has two sections:
   shipped): `hai demo start --persona p1` pre-populates 14 days
   of synthetic history; the demo walks through reading + reviewing
   + correcting against that history.
-- **§ B — Blank-demo flow** (canonical when W-Vb has deferred):
-  `hai demo start --blank` opens an empty scratch session; the
-  demo scripts manual-seed sequence to populate enough state for
-  `hai today` to render.
+- **§ B — Blank-demo flow (boundary-stop demo)** (canonical when
+  W-Vb has deferred): `hai demo start --blank` opens an empty
+  scratch session; the demo scripts a manual-seed sequence and
+  stops at the runtime/skill boundary (`hai daily` returns
+  `awaiting_proposals`; `hai today` shows "no plan"). Path (a)
+  narrates the boundary as the demo moment. Path (b) optionally
+  seeds proposals to demonstrate downstream contracts (synthesis,
+  `_v2` auto-supersede, W-F refusal); path (b) requires authoring
+  proposal JSONs by hand and is forward-compat to v0.1.12 W-Vb
+  when the persona fixture loader pre-populates them.
 
 **v0.1.11 ships § B as canonical.** W-Vb (persona fixture loading +
 archive + cleanup polish) is deferred to v0.1.12 per the named-
@@ -109,8 +115,12 @@ hai pull --source intervals_icu
 
 ### 4. Manual seed for "today's" state
 
-Without W-Vb, the scratch root has no history. Seed enough
-state for `hai today` to render:
+Without W-Vb, the scratch root has no proposals. The intakes
+below seed accepted-state rows; **they do NOT trigger a
+populated `hai today`** — the runtime/skill boundary (proposal
+authoring) sits between intake and synthesis. Path (a) narrates
+this stopping at the boundary; path (b) seeds proposals
+afterward.
 
 ```bash
 hai intake readiness \
@@ -239,12 +249,34 @@ plan with `_v2` because the inputs changed. Both rows persist;
 audit chain integrity is preserved (W-F), `hai explain
 --plan-version all` walks the chain.
 
-### 8. Try `hai daily --supersede` on a fresh date
+### 8. `hai daily --supersede` on a fresh date — path (b) only
+
+The W-F fresh-day-supersede USER_INPUT contract requires
+proposals to exist for the date so synthesis is reached and
+the `--supersede` gate can fire. **Without proposals**, daily
+short-circuits at `awaiting_proposals` and the W-F gate never
+runs — so this step demonstrates W-F only when path (b) has
+seeded proposals.
+
+If you took path (a), skip this step. The W-F contract is
+independently verified by
+`verification/tests/test_supersede_on_fresh_day.py` (3 tests).
+The demo flow does not exercise it without proposal seeding.
+
+If you took path (b):
 
 ```bash
+# After seeding proposals + running daily for <today> →
+# canonical plan minted; now try --supersede on a fresh
+# tomorrow's date with no proposals authored for it:
 hai daily --supersede --as-of <tomorrow> --skip-pull --source csv
-# rejected: --supersede requires an existing canonical plan for
-# (<tomorrow>, u_local_1); none found ...
+# Note: short-circuits at awaiting_proposals before the W-F
+# gate. To trigger the actual W-F refusal, seed tomorrow's
+# proposals first; daily then reaches synthesis, the
+# --supersede branch checks for tomorrow's canonical (none
+# exists), and the gate raises USER_INPUT:
+#   --supersede requires an existing canonical plan for
+#   (<tomorrow>, u_local_1); none found ...
 ```
 
 W-F's fresh-day refusal contract: `--supersede` is meaningless
