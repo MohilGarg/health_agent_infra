@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
-from .base import NutritionDay, PersonaSpec, RunSession
+from .base import (
+    NutritionDay,
+    PersonaSpec,
+    RunSession,
+    established_expected_actions,
+    established_forbidden_actions,
+)
 
 
 SPEC = PersonaSpec(
@@ -41,6 +47,10 @@ SPEC = PersonaSpec(
     today_soreness="low",
     today_energy="moderate",
     today_stress_score=2,
+    # W-AK / F-IR-03 inline declaration. Established with year of
+    # history; no scenario-specific override beyond the defaults.
+    expected_actions=established_expected_actions(),
+    forbidden_actions=established_forbidden_actions(),
     recorded_run_history=[
         RunSession(
             date_offset_days=2,

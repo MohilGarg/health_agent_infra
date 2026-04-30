@@ -9,7 +9,14 @@ shape.
 
 from __future__ import annotations
 
-from .base import NutritionDay, PersonaSpec, RunSession, StrengthSession
+from .base import (
+    NutritionDay,
+    PersonaSpec,
+    RunSession,
+    StrengthSession,
+    established_expected_actions,
+    established_forbidden_actions,
+)
 
 
 SPEC = PersonaSpec(
@@ -50,6 +57,11 @@ SPEC = PersonaSpec(
     today_soreness="low",
     today_energy="moderate",
     today_stress_score=2,
+    # W-AK / F-IR-03 inline declaration. Older female endurance —
+    # downgrade actions are common (longer recovery times, lower
+    # HRV baseline), but defaults already cover them.
+    expected_actions=established_expected_actions(),
+    forbidden_actions=established_forbidden_actions(),
     recorded_strength_history=[
         StrengthSession(
             date_offset_days=6,

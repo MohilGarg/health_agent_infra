@@ -12,7 +12,14 @@ maintain_routine.
 
 from __future__ import annotations
 
-from .base import NutritionDay, PersonaSpec, RunSession, StrengthSession
+from .base import (
+    NutritionDay,
+    PersonaSpec,
+    RunSession,
+    StrengthSession,
+    established_expected_actions,
+    established_forbidden_actions,
+)
 
 
 SPEC = PersonaSpec(
@@ -54,6 +61,28 @@ SPEC = PersonaSpec(
     today_soreness="moderate",
     today_energy="low",
     today_stress_score=5,  # Maximum subjective stress
+    # W-AK / F-IR-03 inline declaration. P11 is the elevated-stress
+    # contract test: the stress domain may legitimately escalate
+    # under sustained high subjective + wearable stress per W-O.
+    # Override the established default to allow stress escalation;
+    # remove escalate from the stress forbidden list for the same
+    # reason. Other domains keep the default behaviour.
+    expected_actions={
+        **established_expected_actions(),
+        "stress": [
+            "maintain_routine",
+            "add_low_intensity_recovery",
+            "schedule_decompression_time",
+            "escalate_for_user_review",
+            "defer_decision_insufficient_signal",
+        ],
+    },
+    forbidden_actions={
+        **established_forbidden_actions(),
+        # Stress escalation is the ALLOWED action under elevated load;
+        # remove it from the blacklist this persona inherits.
+        "stress": [],
+    },
     recorded_strength_history=[
         StrengthSession(
             date_offset_days=2,

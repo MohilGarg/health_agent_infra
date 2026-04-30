@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-from .base import NutritionDay, PersonaSpec, RunSession, StrengthSession
+from .base import (
+    NutritionDay,
+    PersonaSpec,
+    RunSession,
+    StrengthSession,
+    established_expected_actions,
+    established_forbidden_actions,
+)
 
 
 SPEC = PersonaSpec(
@@ -44,6 +51,13 @@ SPEC = PersonaSpec(
     today_soreness="low",
     today_energy="moderate",
     today_stress_score=3,
+    # W-AK / F-IR-03 inline declaration. Sporadic logging stresses
+    # missing-data robustness in the classifier, but the *expected*
+    # action set is unchanged from defaults — the persona's gap
+    # behaviour should produce defer or maintain, both already in
+    # the established whitelist.
+    expected_actions=established_expected_actions(),
+    forbidden_actions=established_forbidden_actions(),
     recorded_strength_history=[
         StrengthSession(
             date_offset_days=3,

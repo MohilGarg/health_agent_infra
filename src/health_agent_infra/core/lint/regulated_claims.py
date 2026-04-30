@@ -103,14 +103,35 @@ _QUOTED_PATTERN = re.compile(r"""['"“”‘’]""")
 ATTRIBUTION_WINDOW = 200
 
 # File-wide opt-out pragma: when this comment appears anywhere in
-# the scanned text, the static scan treats the whole file as a
-# meta-document and emits no violations. Reserved for documents
+# the scanned text AND the source skill is in
+# ``META_DOCUMENT_ALLOWLIST``, the static scan treats the whole file
+# as a meta-document and emits no violations. Reserved for documents
 # whose explicit purpose is enumerating regulated terms (safety
 # scope statements, "never use X" lists, definitional skill protocol
 # docs). Author opts in deliberately; the pragma is auditable on
 # diff. Runtime check (CLI rendering boundary) ignores this pragma —
 # meta-documents never get rendered to the user.
+#
+# v0.1.13 IR round 1 F-IR-04 corrected an earlier wholesale-loophole
+# shape where any text containing the pragma comment was bypassed
+# regardless of source skill. The pragma is now bounded to a
+# hardcoded skill allowlist; an arbitrary new skill cannot suppress
+# the scan by adding the comment without deliberately editing the
+# allowlist below.
 META_DOCUMENT_PRAGMA = "<!-- regulated-claim-lint: meta-document -->"
+
+# Packaged skills permitted to use the meta-document pragma.
+# Distinct from ``ALLOWLISTED_SKILLS`` (which gates the four-
+# constraint user-prose exception path). Membership here means "this
+# skill's SKILL.md is by-design a scope statement / negation list /
+# definitional protocol doc, and the pragma silences the static scan
+# inside that file." Adding a new skill requires deliberate
+# allowlist edit visible on diff per F-IR-04 closure.
+META_DOCUMENT_ALLOWLIST: frozenset[str] = frozenset({
+    "safety",
+    "reporting",
+    "expert-explainer",
+})
 
 
 # ---------------------------------------------------------------------------
@@ -267,12 +288,22 @@ def scan_skill_text(
     available at all, the reason is 'strict_regime'.
     """
 
-    # Meta-document pragma — file-wide opt-out for skills whose explicit
-    # purpose is enumerating regulated terms (safety scope statements,
-    # negation lists, definitional protocol docs). Honoured only by the
-    # static scan; the runtime CLI-boundary check ignores it because
-    # meta-documents never get rendered to a user.
-    if allow_exception and META_DOCUMENT_PRAGMA in text:
+    # Meta-document pragma — file-wide opt-out bounded to the
+    # ``META_DOCUMENT_ALLOWLIST`` skills whose explicit purpose is
+    # enumerating regulated terms (safety scope statements, negation
+    # lists, definitional protocol docs). Honoured only by the static
+    # scan; the runtime CLI-boundary check ignores it because meta-
+    # documents never get rendered to a user. v0.1.13 IR round 1
+    # F-IR-04 corrected an earlier shape where the pragma alone
+    # bypassed the scan regardless of source — that was a wholesale
+    # loophole. Both the pragma AND the source-skill allowlist must
+    # match to bypass.
+    if (
+        allow_exception
+        and META_DOCUMENT_PRAGMA in text
+        and source_skill is not None
+        and source_skill in META_DOCUMENT_ALLOWLIST
+    ):
         return []
 
     eligible_for_exception = (

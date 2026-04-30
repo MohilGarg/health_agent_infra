@@ -13,7 +13,14 @@ to under-spec users, or do the bands generalise honestly?
 
 from __future__ import annotations
 
-from .base import NutritionDay, PersonaSpec, RunSession, StrengthSession
+from .base import (
+    NutritionDay,
+    PersonaSpec,
+    RunSession,
+    StrengthSession,
+    established_expected_actions,
+    established_forbidden_actions,
+)
 
 
 SPEC = PersonaSpec(
@@ -53,6 +60,12 @@ SPEC = PersonaSpec(
     today_soreness="low",
     today_energy="high",
     today_stress_score=2,
+    # W-AK / F-IR-03 inline declaration. P10 is the under-spec
+    # adolescent boundary contract; defaults apply but the persona's
+    # purpose is observing graceful behaviour, not pinning a sharper
+    # whitelist.
+    expected_actions=established_expected_actions(),
+    forbidden_actions=established_forbidden_actions(),
     recorded_run_history=[
         RunSession(
             date_offset_days=4,

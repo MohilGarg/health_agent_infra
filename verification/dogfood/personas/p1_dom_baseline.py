@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-from .base import NutritionDay, PersonaSpec, StrengthSession, RunSession
+from .base import (
+    NutritionDay,
+    PersonaSpec,
+    RunSession,
+    StrengthSession,
+    established_expected_actions,
+    established_forbidden_actions,
+)
 
 
 SPEC = PersonaSpec(
@@ -41,6 +48,11 @@ SPEC = PersonaSpec(
     today_soreness="low",
     today_energy="high",
     today_stress_score=1,
+    # W-AK / F-IR-03 inline declaration. P1 is the baseline control
+    # — established profile, no scenario-specific overrides — so the
+    # default established whitelist + forbidden set apply directly.
+    expected_actions=established_expected_actions(),
+    forbidden_actions=established_forbidden_actions(),
     recorded_strength_history=[
         StrengthSession(
             date_offset_days=4,

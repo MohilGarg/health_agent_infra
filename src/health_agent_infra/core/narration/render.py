@@ -82,10 +82,12 @@ def render_today(
 
     ``streak_days`` is the v0.1.13 W-AG hook for cold-start prose.
     When None, behaves exactly as pre-W-AG. When 0, the renderer
-    surfaces "first plan" framing in top-matter + footer. When ≥7,
-    it surfaces "X-day streak" framing. Mid-range (1-6) keeps
-    pre-W-AG voice — the user is mid-onboarding and either framing
-    would feel forced.
+    surfaces "first plan" framing in top-matter + footer. When ≥30,
+    it surfaces "X-day streak" framing. Mid-range (1-29) keeps
+    pre-W-AG voice — the user is still onboarding and either framing
+    would feel forced. (The 30-day threshold is the planned
+    "established" gate per PLAN.md §2.B; v0.1.13 IR r1 F-IR-01
+    corrected a transient 7-day implementation drift.)
     """
 
     if format == "json":
@@ -250,11 +252,14 @@ def _render_cold_start_footers(
     return lines
 
 
-# W-AG (v0.1.13): streak threshold above which "X-day streak" framing
-# kicks in. Below 7 the user is still onboarding; the streak phrase
-# would feel premature. Above 7 the streak is a real signal worth
-# surfacing.
-_STREAK_ESTABLISHED_THRESHOLD = 7
+# W-AG (v0.1.13): streak threshold above which the "X-day streak"
+# framing engages. Per PLAN.md §1.2 + §2.B (W-AG): "different language
+# for day-1 vs day-30+ users." Below 30 the user is still onboarding;
+# the streak phrase would feel premature. At/above 30 the streak is a
+# real-signal habit worth surfacing. v0.1.13 IR round 1 F-IR-01
+# corrected the value from a transient 7-day implementation drift to
+# the planned 30-day contract.
+_STREAK_ESTABLISHED_THRESHOLD = 30
 
 
 def _render_top_matter(

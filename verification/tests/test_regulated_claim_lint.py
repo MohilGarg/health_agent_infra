@@ -279,6 +279,69 @@ def test_meta_document_pragma_suppresses_static_lint():
     assert not violations
 
 
+def test_meta_document_pragma_bounded_to_allowlist():
+    """v0.1.13 IR round 1 F-IR-04: an arbitrary skill cannot suppress
+    the static scan by adding the pragma comment. Bypass requires
+    BOTH the pragma AND a source skill in
+    ``META_DOCUMENT_ALLOWLIST``.
+
+    Three failure modes covered:
+      (a) pragma + non-allowlisted skill → still scanned.
+      (b) pragma + source_skill=None → still scanned (no skill claim
+          means no allowlist match).
+      (c) pragma + invented future-skill name → still scanned.
+    """
+
+    from health_agent_infra.core.lint import META_DOCUMENT_ALLOWLIST
+
+    text_with_pragma = (
+        META_DOCUMENT_PRAGMA + "\n\n"
+        'Never use diagnosis-shaped language: "diagnosis", "disease".'
+    )
+
+    # (a) Non-allowlisted but real skill — still scanned.
+    non_meta_real_skills = ["nutrition-alignment", "intent-router", "writeback-protocol"]
+    for skill_name in non_meta_real_skills:
+        assert skill_name not in META_DOCUMENT_ALLOWLIST, (
+            f"test fixture stale: {skill_name} is in the meta-doc "
+            f"allowlist; pick a different non-meta skill"
+        )
+        violations = scan_skill_text(
+            text_with_pragma, source_skill=skill_name,
+        )
+        assert violations, (
+            f"pragma + {skill_name!r} should NOT bypass; pragma is "
+            f"only honored for allowlisted meta-document skills"
+        )
+
+    # (b) source_skill=None — pragma alone is insufficient.
+    violations_none = scan_skill_text(text_with_pragma, source_skill=None)
+    assert violations_none, (
+        "pragma + source_skill=None should NOT bypass; bypass requires "
+        "an explicit allowlisted source claim"
+    )
+
+    # (c) Invented future-skill name — pragma alone is insufficient.
+    violations_invented = scan_skill_text(
+        text_with_pragma, source_skill="newly-invented-future-skill",
+    )
+    assert violations_invented, (
+        "pragma + invented-skill-name should NOT bypass; allowlist "
+        "must be deliberately edited to add new meta-document skills"
+    )
+
+    # Sanity: each of the 3 allowlisted skills DOES bypass under
+    # the pragma. The bound is on the source check, not the pragma.
+    for skill_name in sorted(META_DOCUMENT_ALLOWLIST):
+        violations_allowed = scan_skill_text(
+            text_with_pragma, source_skill=skill_name,
+        )
+        assert not violations_allowed, (
+            f"{skill_name!r} is in META_DOCUMENT_ALLOWLIST; pragma "
+            f"should bypass scan but got {violations_allowed!r}"
+        )
+
+
 def test_meta_document_pragma_does_not_suppress_runtime_check():
     """The runtime CLI-boundary check ignores the pragma — meta-
     documents never get rendered to the user, so the pragma is

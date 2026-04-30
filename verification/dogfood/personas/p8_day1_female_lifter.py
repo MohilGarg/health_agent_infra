@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .base import PersonaSpec
+from .base import PersonaSpec, day_one_expected_actions
 
 
 SPEC = PersonaSpec(
@@ -44,6 +44,14 @@ SPEC = PersonaSpec(
     today_soreness="low",
     today_energy="high",
     today_stress_score=2,
+    # W-AK / F-IR-03 inline declaration. Day-1 fresh install: every
+    # domain conservative-only (defer + maintain). Proceed /
+    # downgrade / escalate require signal day-1 cannot have.
+    # Empty `forbidden_actions` per the W-AK contract — the day-1
+    # whitelist is already exclusive, so a separate blacklist would
+    # be redundant.
+    expected_actions=day_one_expected_actions(),
+    forbidden_actions={},
     # No recorded history — this is day 1.
     recorded_strength_history=[],
     recorded_run_history=[],

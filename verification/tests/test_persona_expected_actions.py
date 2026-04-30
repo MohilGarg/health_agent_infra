@@ -8,8 +8,12 @@ has a ground-truth shape to compare against.
 
 These tests pin:
 
-  1. Every packaged persona has a non-empty `expected_actions`.
-     Either declared inline OR auto-derived in `__post_init__`.
+  1. Every packaged persona has a non-empty `expected_actions` AND
+     declares it inline in its own `p<N>_<slug>.py` file (per
+     v0.1.13 IR round 1 F-IR-03 closure). The base.py
+     `__post_init__` fallback remains as a safety net for future
+     newly-authored personas that forget to declare, but every
+     shipped persona file must carry the inline declaration.
   2. Every domain in the v1 six-domain set is covered by every
      persona's whitelist (no missing domain coverage).
   3. Every action token referenced by a persona's whitelist is in
@@ -44,8 +48,33 @@ def test_every_persona_has_non_empty_expected_actions():
     for spec in ALL_PERSONAS:
         assert spec.expected_actions, (
             f"persona {spec.persona_id!r} has empty expected_actions; "
-            f"either declare an inline override or rely on the "
-            f"__post_init__ default in personas/base.py"
+            f"declare an inline value via established_expected_actions() "
+            f"or day_one_expected_actions() in personas/base.py (F-IR-03)"
+        )
+
+
+def test_every_persona_file_declares_expected_actions_inline():
+    """v0.1.13 IR round 1 F-IR-03 closure: each persona's
+    ``p<N>_<slug>.py`` file must carry an inline ``expected_actions=``
+    keyword on its ``PersonaSpec``. The base.py ``__post_init__``
+    fallback is a safety net only; per the W-AK contract each persona
+    declares its own ground truth in its own file.
+
+    This is a text-scan rather than an introspection check because
+    the ``__post_init__`` post-fills empty dicts — by construction the
+    spec always carries a non-empty ``expected_actions`` regardless
+    of inline declaration. The file-text scan is the only way to
+    distinguish "declared" from "post-filled by base."""
+
+    persona_dir = _REPO_ROOT / "verification" / "dogfood" / "personas"
+    persona_files = sorted(persona_dir.glob("p*.py"))
+    assert persona_files, f"no persona files found at {persona_dir}"
+    for persona_file in persona_files:
+        text = persona_file.read_text(encoding="utf-8")
+        assert "expected_actions=" in text, (
+            f"{persona_file.name} missing inline `expected_actions=` "
+            f"keyword; per F-IR-03 each persona declares its own "
+            f"ground truth in its own file"
         )
 
 

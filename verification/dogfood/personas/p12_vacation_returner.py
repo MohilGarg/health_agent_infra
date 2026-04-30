@@ -14,7 +14,14 @@ acceptance-test fixture for that fix at the matrix level.
 
 from __future__ import annotations
 
-from .base import NutritionDay, PersonaSpec, RunSession, StrengthSession
+from .base import (
+    NutritionDay,
+    PersonaSpec,
+    RunSession,
+    StrengthSession,
+    established_expected_actions,
+    established_forbidden_actions,
+)
 
 
 SPEC = PersonaSpec(
@@ -56,6 +63,12 @@ SPEC = PersonaSpec(
     today_soreness="low",
     today_energy="high",
     today_stress_score=2,
+    # W-AK / F-IR-03 inline declaration. Returning from a 14-day
+    # gap; defer + downgrade are the desirable shapes (the bands
+    # should not false-spike on first session back). Defaults cover
+    # both, no override needed.
+    expected_actions=established_expected_actions(),
+    forbidden_actions=established_forbidden_actions(),
     # Pre-vacation training history (offsets 15..28).
     recorded_strength_history=[
         StrengthSession(

@@ -5401,15 +5401,55 @@ def cmd_init(args: argparse.Namespace) -> int:
     # via the intervals.icu adapter, and surfaces today's plan. Each
     # step is naturally idempotent so a Ctrl-C mid-flow leaves state
     # consistent and a re-run reaches the first incomplete step.
+    guided_status: Optional[str] = None
     if getattr(args, "guided", False):
-        report["steps"]["guided"] = _run_guided_onboarding(
+        guided_report = _run_guided_onboarding(
             args,
             db_path=resolved,
             user_id=getattr(args, "user_id", "u_local_1"),
             history_days=int(getattr(args, "history_days", 1) or 1),
         )
+        report["steps"]["guided"] = guided_report
+        # Two surface fields name the guided flow's outcome: the
+        # KeyboardInterrupt-handler returns ``status: "interrupted"``
+        # at the top level; the orchestrator's normal path returns
+        # ``overall_status`` (one of ok / ok_with_skips / partial). v0.1.13
+        # IR round 1 F-IR-02 closure: surface those non-ok shapes via
+        # exit-code USER_INPUT so callers (CI scripts, doctor sweeps,
+        # other agents) can detect incomplete onboarding without
+        # parsing the JSON. The actionable next-step prose is already
+        # in the JSON envelope.
+        guided_status = (
+            guided_report.get("status")
+            or guided_report.get("overall_status")
+        )
 
     _emit_json(report)
+    if guided_status in {"interrupted", "partial"}:
+        # W-AD interlock: every USER_INPUT exit carries an actionable
+        # next-step prose hint to stderr. The JSON body already
+        # carries ``guided["hint"]`` with the canonical wording; the
+        # stderr surface is the same hint in human-readable form so
+        # CI scripts and operators that don't parse JSON still see
+        # the right next step.
+        guided_block = report["steps"].get("guided") or {}
+        hint = guided_block.get("hint") or (
+            "rerun `hai init --guided` to resume from the first "
+            "incomplete step"
+        )
+        if guided_status == "interrupted":
+            print(
+                f"hai init: guided onboarding interrupted. {hint}",
+                file=sys.stderr,
+            )
+        else:  # "partial"
+            print(
+                f"hai init: guided onboarding partially failed. "
+                f"Check the JSON report for per-step status; rerun "
+                f"`hai init --guided` to retry the failed step(s).",
+                file=sys.stderr,
+            )
+        return exit_codes.USER_INPUT
     return exit_codes.OK
 
 

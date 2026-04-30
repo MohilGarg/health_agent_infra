@@ -11,10 +11,23 @@ audit may revise it.
 `verification/tests/test_cli_parser_capabilities_regression.py` pins
 the JSON manifest + parser-tree shape against
 `verification/tests/snapshots/cli_capabilities_v0_1_13.json` and
-`verification/tests/snapshots/cli_help_tree_v0_1_13.txt`. Those
-snapshots were frozen AFTER v0.1.13's intentional surface changes
-(W-AB `--human`, W-AE `--deep`) per F-PLAN-11 sequencing. The W-29
-mechanical split must not change either snapshot.
+`verification/tests/snapshots/cli_help_tree_v0_1_13.txt`. The
+snapshots were frozen at v0.1.13 batch 1 (`45319da`) AFTER W-AB
+`--human` + W-AE `--deep` intentional surface changes per F-PLAN-11
+sequencing, and have been legitimately regenerated twice since:
+
+| Commit | Workstream | Reason |
+|---|---|---|
+| `45319da` | batch 1 (initial freeze) | post-W-AB / post-W-AE F-PLAN-11 baseline |
+| `03fab4f` | W-AA | adds `hai init --guided` flag + onboarding subsurface |
+| `bd11be3` | W-FBC-2 | updates `--re-propose-all` help text from v0.1.12 partial-closure language to v0.1.13 full-closure semantics |
+
+Each regeneration was an intentional v0.1.13 public-surface change
+that the W-29-prep contract allows before the v0.1.14 W-29
+mechanical-split freeze. v0.1.14 W-29's split must not produce any
+further snapshot drift; that is the actual purpose of the
+regression test. (Provenance correction added per v0.1.13 IR
+round 1 finding F-IR-05.)
 
 **Live derivation.** The leaf-command list below was generated from
 `hai capabilities --json` against `cycle/v0.1.13` HEAD on 2026-04-30,

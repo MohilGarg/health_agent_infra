@@ -13,6 +13,7 @@ Public API re-exports the terms callers need most:
 
 from health_agent_infra.core.lint.regulated_claims import (
     ALLOWLISTED_SKILLS,
+    META_DOCUMENT_ALLOWLIST,
     META_DOCUMENT_PRAGMA,
     REGULATED_TERMS,
     RegulatedClaimError,
@@ -23,6 +24,7 @@ from health_agent_infra.core.lint.regulated_claims import (
 
 __all__ = [
     "ALLOWLISTED_SKILLS",
+    "META_DOCUMENT_ALLOWLIST",
     "META_DOCUMENT_PRAGMA",
     "REGULATED_TERMS",
     "RegulatedClaimError",

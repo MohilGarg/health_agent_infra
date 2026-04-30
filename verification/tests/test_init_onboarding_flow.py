@@ -556,13 +556,19 @@ class _InterruptingPrompts:
         return self.responses.pop(0)
 
 
-def test_guided_keyboardinterrupt_mid_flow_surfaces_partial(
+def test_guided_keyboardinterrupt_mid_flow_surfaces_user_input(
     tmp_path, capsys, fake_credential_store, monkeypatch,
 ):
     """User Ctrl-C's during the intervals.icu API key prompt (the 2nd
     prompt). The orchestrator catches the signal, the JSON report
-    surfaces 'interrupted' status, and the state DB has no auth or
-    intent or target rows."""
+    surfaces 'interrupted' status, the process exits ``USER_INPUT``
+    so a CI / doctor caller can detect incomplete onboarding, and
+    the state DB has no auth or intent or target rows.
+
+    v0.1.13 IR round 1 F-IR-02 changed the exit-code contract from
+    OK-with-partial-JSON to USER_INPUT-with-partial-JSON; the JSON
+    envelope shape is unchanged.
+    """
 
     prompts = _InterruptingPrompts(
         raise_at=2,
@@ -581,9 +587,10 @@ def test_guided_keyboardinterrupt_mid_flow_surfaces_partial(
     monkeypatch.setattr(cli_mod, "cmd_init", cmd_init_with_stubs)
 
     result = _run_init(_init_argv(tmp_path, "--guided"), capsys)
-    assert result["rc"] == exit_codes.OK, (
-        "Init must exit cleanly even on KeyboardInterrupt — the "
-        "partial state is honestly reported, not crashed."
+    assert result["rc"] == exit_codes.USER_INPUT, (
+        "Init must surface USER_INPUT on KeyboardInterrupt so callers "
+        "see the incomplete onboarding shape via exit code, not just "
+        "the JSON body (F-IR-02)."
     )
     guided = result["report"]["steps"]["guided"]
     assert guided["status"] == "interrupted"
@@ -603,3 +610,54 @@ def test_guided_keyboardinterrupt_mid_flow_surfaces_partial(
         conn.close()
     assert intent_count == 0
     assert target_count == 0
+
+
+@pytest.mark.parametrize("raise_at", [1, 2, 3, 5])
+def test_guided_keyboardinterrupt_at_each_step_boundary_returns_user_input(
+    tmp_path, capsys, fake_credential_store, monkeypatch, raise_at,
+):
+    """v0.1.13 IR round 1 F-IR-02 boundary coverage: simulate a Ctrl-C
+    at multiple step boundaries through the guided flow. The full
+    happy-path scripted-prompt sequence has 6 prompts (2 for auth,
+    4 for intent + targets); ``raise_at`` covers the start of the
+    auth step (1), mid-auth (2), the start of intent/target (3),
+    and mid-intent/target (5). For each, the process must exit
+    USER_INPUT and the JSON body must surface ``status: interrupted``.
+    """
+
+    prompts = _InterruptingPrompts(
+        raise_at=raise_at,
+        # Same shape as the full happy-path run; the prompt object
+        # raises before consuming responses past raise_at, so the
+        # tail of this list is unused at higher raise_at values.
+        responses=[
+            "i999999",
+            "test_api_key",
+            "running",
+            "2400",
+            "140",
+            "8",
+        ],
+    )
+    original_cmd_init = cli_mod.cmd_init
+
+    def cmd_init_with_stubs(args):
+        args._guided_prompts_override = prompts
+        args._guided_pull_runner_override = _make_stub_pull_runner(
+            captured={},
+        )
+        args._guided_today_renderer_override = _make_stub_today_renderer()
+        return original_cmd_init(args)
+
+    monkeypatch.setattr(cli_mod, "cmd_init", cmd_init_with_stubs)
+
+    result = _run_init(_init_argv(tmp_path, "--guided"), capsys)
+    assert result["rc"] == exit_codes.USER_INPUT, (
+        f"raise_at={raise_at}: expected USER_INPUT exit on "
+        f"KeyboardInterrupt; got rc={result['rc']}"
+    )
+    guided = result["report"]["steps"]["guided"]
+    assert guided["status"] == "interrupted", (
+        f"raise_at={raise_at}: guided status not 'interrupted'; "
+        f"got {guided!r}"
+    )

@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
-from .base import NutritionDay, PersonaSpec, StrengthSession
+from .base import (
+    NutritionDay,
+    PersonaSpec,
+    StrengthSession,
+    established_expected_actions,
+    established_forbidden_actions,
+)
 
 
 SPEC = PersonaSpec(
@@ -44,6 +50,10 @@ SPEC = PersonaSpec(
     today_soreness="moderate",
     today_energy="moderate",
     today_stress_score=3,
+    # W-AK / F-IR-03 inline declaration. Manual-only logging +
+    # high-volume strength; defaults apply.
+    expected_actions=established_expected_actions(),
+    forbidden_actions=established_forbidden_actions(),
     recorded_strength_history=[
         StrengthSession(
             date_offset_days=1,

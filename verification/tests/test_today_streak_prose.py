@@ -6,15 +6,19 @@ Three streak buckets pin different prose:
      plan"; footer surfaces "this is your first plan" + "run `hai
      daily` again tomorrow to keep the chain going."
 
-  2. **streak_days >= 7** — established. Top-matter shows "(N-day
+  2. **streak_days >= 30** — established. Top-matter shows "(N-day
      streak)"; footer says "keep your N-day streak going."
 
-  3. **mid-range (1-6) OR streak_days is None** — unchanged from
+  3. **mid-range (1-29) OR streak_days is None** — unchanged from
      pre-W-AG behaviour. Mid-range users are still onboarding and
      the streak phrasing would feel premature.
 
 The test surface uses a synthetic plan in a temp DB so the prose can
 be checked end-to-end through `render_today`.
+
+(IR round 1 F-IR-01 corrected the threshold from a transient 7-day
+implementation drift to the PLAN-contracted 30-day "established"
+gate.)
 """
 
 from __future__ import annotations
@@ -127,43 +131,54 @@ def test_day_1_footer_says_this_is_your_first_plan(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Established (streak_days >= 7)
+# Established (streak_days >= 30)
 # ---------------------------------------------------------------------------
 
 
 def test_established_top_matter_includes_streak_count(tmp_path):
     bundle = _bundle(_setup(tmp_path))
-    out = render_today(bundle, format="plain", streak_days=14)
-    assert "(14-day streak)" in out
+    out = render_today(bundle, format="plain", streak_days=45)
+    assert "(45-day streak)" in out
 
 
 def test_established_footer_mentions_streak(tmp_path):
     bundle = _bundle(_setup(tmp_path))
-    out = render_today(bundle, format="plain", streak_days=14)
-    assert "14-day streak going" in out
+    out = render_today(bundle, format="plain", streak_days=45)
+    assert "45-day streak going" in out
 
 
-def test_threshold_at_seven_engages_established_voice(tmp_path):
-    """Boundary: streak == 7 should already use established voice."""
+def test_threshold_at_thirty_engages_established_voice(tmp_path):
+    """Boundary: streak == 30 should already use established voice."""
 
     bundle = _bundle(_setup(tmp_path))
-    out = render_today(bundle, format="plain", streak_days=7)
-    assert "(7-day streak)" in out
+    out = render_today(bundle, format="plain", streak_days=30)
+    assert "(30-day streak)" in out
+
+
+def test_threshold_below_thirty_does_not_engage_established_voice(tmp_path):
+    """Lower-bound boundary: streak == 29 stays in pre-W-AG voice."""
+
+    bundle = _bundle(_setup(tmp_path))
+    out = render_today(bundle, format="plain", streak_days=29)
+    assert "(29-day streak)" not in out
+    assert "streak going" not in out
+    assert "your first plan" not in out
 
 
 # ---------------------------------------------------------------------------
-# Mid-range (1-6) and None — pre-W-AG voice unchanged
+# Mid-range (1-29) and None — pre-W-AG voice unchanged
 # ---------------------------------------------------------------------------
 
 
 def test_mid_range_streak_keeps_pre_w_ag_voice(tmp_path):
-    """Streak == 3 is still onboarding — the established framing
-    would feel premature, so the renderer keeps the neutral voice."""
+    """Streak == 14 is still onboarding by the planned 30-day gate —
+    the established framing would feel premature, so the renderer
+    keeps the neutral voice."""
 
     bundle = _bundle(_setup(tmp_path))
-    out = render_today(bundle, format="plain", streak_days=3)
+    out = render_today(bundle, format="plain", streak_days=14)
     assert "your first plan" not in out
-    assert "(3-day streak)" not in out
+    assert "(14-day streak)" not in out
     assert "streak going" not in out
 
 
@@ -187,8 +202,8 @@ def test_streak_none_keeps_pre_w_ag_voice(tmp_path):
 
 def test_markdown_format_carries_streak_phrasing(tmp_path):
     bundle = _bundle(_setup(tmp_path))
-    out = render_today(bundle, format="markdown", streak_days=14)
-    assert "(14-day streak)" in out
+    out = render_today(bundle, format="markdown", streak_days=45)
+    assert "(45-day streak)" in out
 
 
 def test_json_format_does_not_inject_streak_prose(tmp_path):
@@ -196,7 +211,7 @@ def test_json_format_does_not_inject_streak_prose(tmp_path):
     text rendering only, not the agent-facing JSON shape."""
 
     bundle = _bundle(_setup(tmp_path))
-    out = render_today(bundle, format="json", streak_days=14)
+    out = render_today(bundle, format="json", streak_days=45)
     payload = json.loads(out)
     # JSON top-level keys should not contain streak prose.
     for v in payload.values():

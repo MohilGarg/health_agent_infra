@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-from .base import NutritionDay, PersonaSpec, RunSession, StrengthSession
+from .base import (
+    NutritionDay,
+    PersonaSpec,
+    RunSession,
+    StrengthSession,
+    established_expected_actions,
+    established_forbidden_actions,
+)
 
 
 SPEC = PersonaSpec(
@@ -42,6 +49,11 @@ SPEC = PersonaSpec(
     today_soreness="moderate",
     today_energy="moderate",
     today_stress_score=2,
+    # W-AK / F-IR-03 inline declaration. High-volume hybrid stresses
+    # ACWR extremes; downgrade actions are expected, but the
+    # established defaults already cover those.
+    expected_actions=established_expected_actions(),
+    forbidden_actions=established_forbidden_actions(),
     recorded_run_history=[
         RunSession(
             date_offset_days=1,

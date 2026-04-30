@@ -226,32 +226,42 @@ def _all_allowed_actions_by_domain() -> dict[str, frozenset[str]]:
 def _derive_default_expected_actions(spec: "PersonaSpec") -> dict[str, list[str]]:
     """Sensible per-domain whitelist of acceptable actions.
 
+    **Fallback only** — v0.1.13 IR round 1 F-IR-03 closed by adding
+    inline declarations to each of the 12 packaged persona files. The
+    auto-derivation here remains as a safety net so a future newly-
+    authored persona that forgets to declare ``expected_actions``
+    still gets a usable default rather than a runtime crash. Tests
+    enforce that every shipped persona file carries the inline
+    declaration; this fallback should not fire in practice.
+
     Default policy:
       * Day-1 personas (history_days == 0): every domain is restricted
         to defer / maintain / rest. No proceed / downgrade / escalate.
       * Established personas: every domain accepts the full known
-        action set EXCEPT escalate_for_user_review. Escalation is the
-        "agent gives up and asks the human" action; for a persona with
-        a coherent scenario, that should be a finding.
+        action set EXCEPT escalate_for_user_review.
 
-    Per-persona overrides are encoded inline in each
-    `personas/p<N>_*.py` file when the scenario expects something
-    sharper (e.g. an intentional-stress persona whose sleep domain may
-    legitimately escalate).
+    Public helpers ``established_expected_actions`` and
+    ``day_one_expected_actions`` return the same shapes for use as
+    explicit per-persona baselines.
     """
 
     if spec.history_days == 0:
-        # Day-1 fresh install — every domain conservative-only.
-        return {
-            "recovery":  ["defer_decision_insufficient_signal"],
-            "running":   ["defer_decision_insufficient_signal"],
-            "sleep":     ["maintain_schedule", "defer_decision_insufficient_signal"],
-            "stress":    ["maintain_routine", "defer_decision_insufficient_signal"],
-            "strength":  ["defer_decision_insufficient_signal"],
-            "nutrition": ["defer_decision_insufficient_signal"],
-        }
+        return day_one_expected_actions()
+    return established_expected_actions()
 
-    # Established persona — accept everything but escalation.
+
+def established_expected_actions() -> dict[str, list[str]]:
+    """Default whitelist for an established (history_days >= 1) persona.
+
+    Every domain accepts its full known action set EXCEPT
+    ``escalate_for_user_review`` — escalation is the "agent gives up
+    and asks the human" action; for a persona with a coherent scenario,
+    surfacing escalation should be a finding. Per-persona files spread
+    this dict and override domains where the scenario legitimately
+    expects sharper or broader behaviour (e.g. P11's elevated-stress
+    persona explicitly allows stress-domain escalation).
+    """
+
     allowed = _all_allowed_actions_by_domain()
     return {
         domain: sorted(tokens - {"escalate_for_user_review"})
@@ -259,28 +269,55 @@ def _derive_default_expected_actions(spec: "PersonaSpec") -> dict[str, list[str]
     }
 
 
-def _derive_default_forbidden_actions(spec: "PersonaSpec") -> dict[str, list[str]]:
-    """Sensible per-domain blacklist of actions that must NOT fire.
+def day_one_expected_actions() -> dict[str, list[str]]:
+    """Default whitelist for a day-1 (history_days == 0) persona.
 
-    Default forbidden set is `escalate_for_user_review` per domain for
-    established personas. For day-1 personas, escalation is also
-    forbidden by the empty-positive whitelist above — the negative
-    field stays empty for them so the assertions are non-redundant.
+    Conservative-only: defer + maintain. Proceed / downgrade / escalate
+    require signal that day-1 simply does not have. P8 is the v0.1.13
+    ship-set day-1 persona; its file uses this baseline directly.
     """
 
-    if spec.history_days == 0:
-        return {}
+    return {
+        "recovery":  ["defer_decision_insufficient_signal"],
+        "running":   ["defer_decision_insufficient_signal"],
+        "sleep":     ["maintain_schedule", "defer_decision_insufficient_signal"],
+        "stress":    ["maintain_routine", "defer_decision_insufficient_signal"],
+        "strength":  ["defer_decision_insufficient_signal"],
+        "nutrition": ["defer_decision_insufficient_signal"],
+    }
 
-    # Only blacklist `escalate_for_user_review` on domains that can
-    # actually emit it. The sleep domain (per
-    # `ALLOWED_ACTIONS_BY_DOMAIN`) has no escalation action; including
-    # it would surface as an unknown-token drift in the contract test.
+
+def established_forbidden_actions() -> dict[str, list[str]]:
+    """Default per-domain blacklist of actions that must NOT fire.
+
+    For established personas, ``escalate_for_user_review`` is the
+    canonical forbidden action on every domain that supports it. The
+    sleep domain has no escalate token (per ``ALLOWED_ACTIONS_BY_DOMAIN``)
+    so it is omitted to avoid surfacing as unknown-token drift in the
+    contract test.
+    """
+
     allowed = _all_allowed_actions_by_domain()
     return {
         domain: ["escalate_for_user_review"]
         for domain, tokens in allowed.items()
         if "escalate_for_user_review" in tokens
     }
+
+
+def _derive_default_forbidden_actions(spec: "PersonaSpec") -> dict[str, list[str]]:
+    """Fallback per-domain blacklist; same fallback-only semantics as
+    ``_derive_default_expected_actions``.
+
+    For day-1 personas, escalation is already forbidden by the
+    empty-positive whitelist; the negative field stays empty so the
+    assertions are non-redundant. Established personas reuse the
+    public ``established_forbidden_actions`` helper.
+    """
+
+    if spec.history_days == 0:
+        return {}
+    return established_forbidden_actions()
 
 
 # ---------------------------------------------------------------------------
