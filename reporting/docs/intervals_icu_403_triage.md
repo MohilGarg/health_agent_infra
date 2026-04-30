@@ -127,10 +127,16 @@ authoritative signal; the HTTP code alone is ambiguous.
 ## How `hai doctor --deep` consumes this
 
 W-AE (v0.1.13 scope) extends `hai doctor` with a `--deep` mode that
-performs the live-API probe above. The output classifies the failure
-into one of:
+performs the live-API probe above. The output classifies the
+response into one of **five outcome classes (one success + four
+failure classes)**:
 
-- `OK` — pull works.
+**Success (1):**
+
+- `OK` — pull works; credentials and adapter both healthy.
+
+**Failure classes (4):**
+
 - `CAUSE_1_CLOUDFLARE_UA` — adapter is sending the urllib-default
   UA (regression of v0.1.12.1 W-CF-UA fix). User cannot resolve;
   this is a code bug.

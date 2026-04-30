@@ -58,7 +58,7 @@ These remain deferred to later cycles. Listed for traceability.
 
 | Item | Defer to | Reason |
 |---|---|---|
-| **W-Vb-3** persona-replay extension to P9/P11/P12 | v0.1.14 | fork-deferred at D14 round 1 per F-PLAN-06; v0.1.13 W-Vb closes P1+P4+P5 fully, P9/P11/P12 named here in honest partial-closure-naming convention (AGENTS.md "Patterns the cycles have validated"). New row added 2026-04-30. |
+| **W-Vb-3** persona-replay extension to the 9 non-ship-set personas (P2/P3/P6/P7/P8/P9/P10/P11/P12) | v0.1.14 | fork-deferred at D14 round 1 per F-PLAN-06; scope clarified at D14 round 2 per F-PLAN-R2-02 — long-term universe is all 12 personas; v0.1.13 W-Vb closes 3 of 12 (P1+P4+P5); v0.1.14 W-Vb-3 covers the 9-persona residual (and may further partial-close). New row added 2026-04-30; expanded 2026-04-30 r2. |
 | W-29 cli.py mechanical split | v0.1.14 | per CP1, conditional on W-29-prep verdict |
 | L2 W-DOMAIN-SYNC scoped contract test | v0.1.14 | per Codex F-PLAN-09 |
 | A12 judge-adversarial fixtures | v0.1.14 | folds into W-AI |
@@ -121,7 +121,11 @@ in v0.1.13 RELEASE_PROOF and may add a v0.1.14 rider in AGENTS.md
 - [ ] Every line in `v0_1_12/RELEASE_PROOF.md` §5 has a disposition
   row in §1 above.
 - [ ] Every reconciliation §6 v0.1.13+ item from `v0_1_12/CARRY_OVER.md`
-  §3 has a row in §2 above.
+  §3 has a row in **§2 (in-cycle items) or §4 (later-cycle pass-
+  through items)**. Revised at D14 round 2 per F-PLAN-R2-03: the
+  source table mixes v0.1.13 in-cycle work with explicitly-named
+  v0.1.14+ defers; this register splits them across §2 + §4 by
+  destination cycle, and the acceptance check now covers both.
 - [ ] Phase 0 findings absorbed in §6 (filled at cycle close).
 - [ ] Pre-cycle ships (W-CF-UA) recorded in §5 with branchpoint +
   artifact references.

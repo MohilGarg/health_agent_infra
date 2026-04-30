@@ -1,16 +1,19 @@
 # v0.1.13 — Public-surface hardening + onboarding
 
 > **Status.** Authored 2026-04-29 by Claude. **D14 plan-audit chain
-> not yet opened** — this is the round-1 input. Codex audit prompt
-> at `codex_plan_audit_prompt.md`. Empirical norm for substantive
-> cycles is 2-4 rounds of D14 plan-audit before `PLAN_COHERENT`.
+> in progress** — round-1 closed `PLAN_COHERENT_WITH_REVISIONS` (11
+> findings, all accepted; revisions applied at commit 547d355).
+> Round 2 closed `PLAN_COHERENT_WITH_REVISIONS` (7 findings, all
+> accepted; revisions applied 2026-04-30). Round 3 input is the
+> current PLAN; empirical norm for substantive cycles is 2-4 rounds
+> with `10 → 5 → 3 → 0` halving signature.
 >
 > **Cycle tier (per CP3 D15 four-tier classification): substantive.**
-> Rationale: 16 workstreams, multi-day per-site refactor in
-> W-N-broader (50 sites), governance edits via CP6 application,
-> new public CLI surfaces (W-AA, W-AB, W-AE), new lint surface
-> (W-LINT). Multi-round D14 expected; full Phase 0 (D11) bug-hunt
-> required.
+> Rationale: 17 workstreams (per F-PLAN-01), multi-day per-site
+> refactor in W-N-broader (50 sites), governance edits via CP6
+> application, new public CLI surfaces (W-AA, W-AB, W-AE), new lint
+> surface (W-LINT). Multi-round D14 expected (round 3 in flight);
+> full Phase 0 (D11) bug-hunt required.
 >
 > **Cycle pattern (D11 + D14 active).**
 >
@@ -39,8 +42,11 @@
 >   here for catalogue completeness.
 >
 > **Branch:** `cycle/v0.1.13` opened off `main` HEAD on 2026-04-29.
-> First commit cherry-picked from `hotfix/v0.1.12.1`: the W-CF-UA
-> fix is already in this branch.
+> Two commits cherry-picked from `hotfix/v0.1.12.1` (per F-PLAN-03):
+> the W-CF-UA code+test diff (`636f5d3`) and the v0.1.12.1
+> lightweight RELEASE_PROOF doc (`a10a238`). Both are present in
+> this branch; the version bump + CHANGELOG hotfix entry remain
+> on the hotfix branch only.
 
 ---
 
@@ -95,7 +101,7 @@ NOT a v0.1.13 deliverable.
 | **W-AA** | First-time-user onboarding flow — `hai init` walks profile + targets + auth | UX (release-blocker for theme) | `src/health_agent_infra/cli.py` init handler, `src/health_agent_infra/core/init/onboarding.py` (new) | tactical §4.1 | 2-3d |
 | **W-AB** | `hai capabilities --human` mode (end-user-readable, not agent-manifest) | UX | `src/health_agent_infra/cli.py` capabilities handler, `src/health_agent_infra/core/capabilities/render.py` (new human-mode formatter) | tactical §4.1 | 1d |
 | **W-AC** | README rewrite — orientation, quickstart, troubleshooting | trust / docs | `README.md` | tactical §4.1 | 1-2d |
-| **W-AD** | Error-message quality pass — every USER_INPUT exit code carries actionable next-step | UX | `cli.py` error-rendering paths; new `verification/tests/test_user_input_messages_actionable.py` | tactical §4.1 | 1-2d |
+| **W-AD** | Error-message quality pass — every USER_INPUT exit code carries actionable next-step | UX | `src/health_agent_infra/cli.py` error-rendering paths; new `verification/tests/test_user_input_messages_actionable.py` | tactical §4.1 | 1-2d |
 | **W-AE** | `hai doctor` expansion — onboarding-readiness check + gap diagnostics + intervals.icu probe-pull live-API check (closes the original F-DEMO-01 gap; the W-CF-UA hotfix patches the symptom, W-AE prevents recurrence detection-wise) | UX / operability | `src/health_agent_infra/core/doctor/checks.py`, `src/health_agent_infra/cli.py` doctor handler, new doctor probe shape | tactical §4.1 + F-DEMO-01 prevention | 1-2d |
 | **W-AF** | Public README quickstart smoke test (CI-runnable) | trust / regression | `verification/tests/test_readme_quickstart_smoke.py` (new), `.github/workflows/ci.yml` if CI integration is in scope | tactical §4.1 | 1d |
 | **W-AG** | `hai today` cold-start prose — different language for day-1 vs day-30 users (uses streak metric from `hai stats`) | UX | `src/health_agent_infra/cli.py` today handler, `src/health_agent_infra/core/render/today.py` if exists | tactical §4.1 | 1d |
@@ -129,7 +135,7 @@ cycle in the v0.1.x track if it lands as scoped.**
 
 | Item | Defer to | Reason |
 |---|---|---|
-| **W-Vb-3** persona-replay extension to P9/P11/P12 (the three personas not in v0.1.13's P1/P4/P5 ship-set) | v0.1.14 | fork-deferred per F-PLAN-06 — v0.1.13 W-Vb closes P1+P4+P5 fully, with P9/P11/P12 named here in honest partial-closure-naming convention |
+| **W-Vb-3** persona-replay extension to the 9 non-ship-set personas (P2/P3/P6/P7/P8/P9/P10/P11/P12) | v0.1.14 | fork-deferred per F-PLAN-06 (revised at D14 round 2 per F-PLAN-R2-02). Long-term universe is all 12 personas in the matrix; v0.1.13 W-Vb closes 3 of 12 (P1+P4+P5). v0.1.14 W-Vb-3 may further partial-close (e.g., 3-at-a-time) but the destination cycle owns the full residual |
 | W-29 cli.py mechanical split (1 main + 1 shared + 11 handler-group, <2500 each) | v0.1.14 | per CP1, conditional on W-29-prep verdict |
 | L2 W-DOMAIN-SYNC scoped contract test | v0.1.14 | per reconciliation L2 + Codex F-PLAN-09 |
 | A12 judge-adversarial fixtures | v0.1.14 | folds into W-AI |
@@ -176,15 +182,18 @@ daily` reaches `synthesized` (not `proposal_log_empty`).
   `apply_fixture()` from boundary-stop to proposal-write branch.
 - `src/health_agent_infra/demo/fixtures/p1_dom_baseline.json`
   (extend; currently a skeleton),
-  `src/health_agent_infra/demo/fixtures/p4_<slug>.json` (new),
-  `src/health_agent_infra/demo/fixtures/p5_<slug>.json` (new) —
-  author full DomainProposal seeds across all 6 domains per
+  `src/health_agent_infra/demo/fixtures/p4_strength_only_cutter.json`
+  (new),
+  `src/health_agent_infra/demo/fixtures/p5_female_multisport.json`
+  (new) — author full DomainProposal seeds across all 6 domains per
   packaged persona. Single-JSON-per-persona shape preserved (no
   loader / package-data migration); the existing loader contract
   at `src/health_agent_infra/core/demo/fixtures.py` resolves
   `health_agent_infra/demo/fixtures/<slug>.json` via
-  `importlib.resources`. **Ship set is P1+P4+P5**; P9/P11/P12 are
-  fork-deferred to v0.1.14 W-Vb-3 per §1.3 + F-PLAN-06.
+  `importlib.resources`. **Ship set is P1+P4+P5** (concrete slugs
+  per the persona registry); the 9 non-ship-set personas
+  (P2/P3/P6/P7/P8/P9/P10/P11/P12) are fork-deferred to v0.1.14
+  W-Vb-3 per §1.3 + F-PLAN-06 + F-PLAN-R2-02.
 - `verification/tests/test_demo_persona_replay_end_to_end.py` (new)
   — assert `hai demo start --persona <slug> && hai daily` reaches
   `synthesized` state with a non-empty `proposal_log` and a
@@ -202,19 +211,19 @@ all pass unchanged.
 
 - `hai demo start --persona p1_dom_baseline && hai daily` produces a
   `synthesized` daily plan.
-- `hai demo start --persona p4_<slug> && hai daily` produces a
-  `synthesized` daily plan.
-- `hai demo start --persona p5_<slug> && hai daily` produces a
-  `synthesized` daily plan.
+- `hai demo start --persona p4_strength_only_cutter && hai daily`
+  produces a `synthesized` daily plan.
+- `hai demo start --persona p5_female_multisport && hai daily`
+  produces a `synthesized` daily plan.
 - All three ship-set personas asserted via `hai today` rendering
   text + `hai explain` audit-chain shape.
 - Clean-wheel subprocess test passes for at least P1 (no editable-
   install dependencies leak into the test path).
 - Original `~/.health_agent` tree byte-identical before/after demo
   session per existing isolation-contract tests.
-- P9 / P11 / P12 NOT covered by v0.1.13 acceptance; recorded as
-  partial-closure in PLAN §1.3 + CARRY_OVER §4 with destination
-  cycle `v0.1.14 W-Vb-3`.
+- The 9 non-ship-set personas (P2/P3/P6/P7/P8/P9/P10/P11/P12) NOT
+  covered by v0.1.13 acceptance; recorded as fork-defer in PLAN
+  §1.3 + CARRY_OVER §4 with destination cycle `v0.1.14 W-Vb-3`.
 
 #### W-N-broader — Resource-warning gate fix
 
@@ -387,15 +396,16 @@ versions.
 
 #### W-AD — Error-message quality pass
 
-Every `USER_INPUT` exit-code path in `cli.py` must surface a
-next-step prose hint. Audit current `USER_INPUT` raises; add hint
-text where missing.
+Every `USER_INPUT` exit-code path in `src/health_agent_infra/cli.py`
+must surface a next-step prose hint. Audit current `USER_INPUT`
+raises; add hint text where missing.
 
 **Acceptance:** new
 `verification/tests/test_user_input_messages_actionable.py` walks
-every `cli.py` USER_INPUT exit code; asserts the printed message
-contains a specific actionable verb ("run", "set", "remove",
-"check", etc.) and references the user's likely next command.
+every `src/health_agent_infra/cli.py` USER_INPUT exit code; asserts
+the printed message contains a specific actionable verb ("run",
+"set", "remove", "check", etc.) and references the user's likely
+next command.
 
 #### W-AE — `hai doctor` expansion
 
@@ -420,13 +430,15 @@ moved into the repo):**
   hints. Test surface covers "no intent rows", "no target rows",
   "no fresh wellness pull", "stale intervals.icu auth".
 - `hai doctor --deep` performs a live-API check against
-  intervals.icu and classifies the response into one of the four
-  cause classes documented at
-  `reporting/docs/intervals_icu_403_triage.md` (now an in-repo
-  versioned artifact, not a private memory note):
-  `OK` / `CAUSE_1_CLOUDFLARE_UA` / `CAUSE_2_CREDS` / `NETWORK` /
-  `OTHER`. Each class carries a specific actionable next-step in
-  the rendered output.
+  intervals.icu and classifies the response into one of **five
+  outcome classes (one success + four failure classes)**, all
+  documented at `reporting/docs/intervals_icu_403_triage.md` (now
+  an in-repo versioned artifact, not a private memory note):
+  `OK` (success) / `CAUSE_1_CLOUDFLARE_UA` / `CAUSE_2_CREDS` /
+  `NETWORK` / `OTHER` (the four failure classes). Each class
+  carries a specific actionable next-step in the rendered output.
+  Wording revised at D14 round 2 per F-PLAN-R2-05 (round 1
+  inconsistently said "four cause classes" while listing five).
 
 #### W-AF — README quickstart smoke test
 
@@ -524,9 +536,18 @@ The exception path allows quoting regulated terms ONLY when ALL
 four constraints hold:
 
 1. **Allowlisted surface only.** The skill emitting the text must
-   be in a hard-coded allowlist (initially: `research`,
-   `expert-explainer`). No skill outside the allowlist gets the
-   exception. CLI rendering paths NEVER get the exception.
+   be in a hard-coded **packaged-skill** allowlist (initially:
+   `expert-explainer` only — the one packaged skill whose explicit
+   purpose is bounded definitional / quoted explanation). The
+   allowlist contains skill names only; code-owned research
+   surfaces (the `src/health_agent_infra/core/research/` registry,
+   the `hai research` CLI) are NOT allowlisted because they are
+   CLI/runtime surfaces
+   and run strict regime per constraint (4) below. The allowlist
+   is expandable per future packaged skills that need it; the
+   v0.1.13 ship-set is `expert-explainer` alone. (Revised at D14
+   round 2 per F-PLAN-R2-06: round 1 erroneously named a
+   non-existent `research` skill.)
 2. **Citation required.** Each occurrence of a regulated term
    must be accompanied by a provenance citation in the same
    rationale block. The lint helper resolves the citation against
@@ -617,7 +638,7 @@ reconciliation v0.1.13+ item from v0.1.12 CARRY_OVER §3 has a row.
 | **Bandit** | `bandit -ll`: 0 unsuppressed Medium/High; Low ≤ 50 (D10 settled threshold) |
 | **Capabilities byte-stability** | `hai capabilities --json` deterministic against the post-W-AB/W-AE baseline (W-29-prep regression test green; baseline frozen AFTER intentional v0.1.13 surface changes per F-PLAN-11 sequencing) |
 | **Persona matrix** | 12 personas, ≤ 1 finding total post-cycle, all with `expected_actions` declared (W-AK) |
-| **Demo regression** | `hai demo start --persona <slug> && hai daily` reaches `synthesized` for **each** of P1 + P4 + P5 (W-Vb end-to-end ship-set; P9/P11/P12 fork-deferred to v0.1.14 W-Vb-3 per F-PLAN-06) |
+| **Demo regression** | `hai demo start --persona <slug> && hai daily` reaches `synthesized` for **each** of `p1_dom_baseline`, `p4_strength_only_cutter`, `p5_female_multisport` (W-Vb end-to-end ship-set; the 9 non-ship-set personas P2/P3/P6/P7/P8/P9/P10/P11/P12 fork-deferred to v0.1.14 W-Vb-3 per F-PLAN-06 + F-PLAN-R2-02) |
 | **Onboarding deterministic test gate** | `test_init_onboarding_flow.py` green: stubbed-input + stubbed-intervals.icu run reaches `synthesized` (W-AA; this is the ship-gate, not the wall-clock SLO per F-PLAN-08) |
 | **Onboarding operator demo SLO** | Target: new-user `pipx install` → `hai init` → `synthesized` plan ≤ 5 min on broadband + modern hardware. Documented in `reporting/docs/onboarding_slo.md` (new); manual demo protocol, NOT a CI gate |
 | **README smoke test** | `test_readme_quickstart_smoke` green (W-AF) |
@@ -634,7 +655,7 @@ reconciliation v0.1.13+ item from v0.1.12 CARRY_OVER §3 has a row.
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | W-N-broader 50-site refactor reveals deeper connection-lifecycle bug requiring schema-touching fix | medium | scope-expand | Phase 0 D11 audit will surface before implementation; authoritative file list derived from a fresh `pytest -W error::Warning` run at Phase 0 open per F-PLAN-04; if found, escalate to substantive-substantive (cycle re-scope) |
-| W-Vb persona-replay reveals proposal-log shape gaps in current state-snapshot contract | medium | scope-expand | Implement P1 first as smoke test; if gap found, route through `cycle_proposals/CP7.md` (new) before continuing P4/P5; never route to P9/P11/P12 mid-cycle (they are honestly fork-deferred to v0.1.14 W-Vb-3 per F-PLAN-06) |
+| W-Vb persona-replay reveals proposal-log shape gaps in current state-snapshot contract | medium | scope-expand | Implement P1 first as smoke test; if gap found, route through `cycle_proposals/CP7.md` (new) before continuing P4/P5; never route mid-cycle to any of the 9 non-ship-set personas (P2/P3/P6/P7/P8/P9/P10/P11/P12 are honestly fork-deferred to v0.1.14 W-Vb-3 per F-PLAN-06 + F-PLAN-R2-02) |
 | W-FBC-2 multi-domain rollout exposes design choice (option A default vs option B fork) | medium | architectural-decision | Per F-PLAN-07 + the design doc at `reporting/docs/supersede_domain_coverage.md`: option A is the default; option B is the only documented fork available; option C is explicitly out-of-v0.1.x scope. If option B is selected at design phase, add the per-domain fingerprint-primitive sub-W-id; otherwise option A carries cleanly |
 | W-LINT exception path becomes a wholesale loophole | low | safety / regulatory | Four-constraints-all-hold gate per F-PLAN-09 (allowlist + citation + quoted-context + ordinary-prose-still-blocked) + `test_regulated_claim_exception_bounded` negative test asserting each individual constraint fails when violated. CLI rendering boundary always runs strict regime regardless of skill provenance |
 | W-AA onboarding wall-clock SLO conflict between deterministic gate + operator SLO | low | governance / UX | SLO split per F-PLAN-08: deterministic test gate (stubbed) is the ship-gate; operator wall-clock SLO is a documented target with "still pulling" allowed degraded state, recorded in `reporting/docs/onboarding_slo.md` and not a CI gate |
@@ -651,8 +672,11 @@ per F-PLAN-01 — W-CARRY's 0.5d roll-up included). Largest cycle in
 the v0.1.x track if all 17 W-ids land. Realistic ship: **5-7
 calendar weeks** from open assuming 4 hours/day average.
 
-If risk-driven cuts engage, effort drops to **18.5-25.5 days** (cut
-W-AC + W-AF + W-AK).
+If risk-driven cuts engage (cut W-AC at 1-2d + W-AF at 1d + W-AK
+at 1d, total savings 3-4d), effort drops to **19.5-28.5 days**
+(revised at D14 round 2 per F-PLAN-R2-07 — round 1 reported
+18.5-25.5d, which implied 4-7d of savings rather than the actual
+3-4d the named cuts produce).
 
 ---
 
