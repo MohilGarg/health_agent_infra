@@ -151,4 +151,8 @@ PLAN.md is authored.
 
 ## Round-N codex verdict
 
-*pending — CP not yet submitted to Codex review.*
+**Applied at v0.1.14 D14 round 1 (PLAN_COHERENT_WITH_REVISIONS,
+2026-05-01).** strategic_plan_v1.md Wave 3 staging delta applied
+2026-05-01 pre-cycle. F-PLAN-08 corrected the source-list verification
+timing ("verify current at v0.4" → "verify current at v0.2.0
+authoring; refresh at v0.4 prereq completion").

@@ -5,7 +5,9 @@
 **Cycle tier (D15):** substantive (14 W-ids; ≥1 release-blocker
 workstream W-2U-GATE; ≥3 governance-or-audit-chain edits;
 ≥10 days estimated).
-**Estimated effort:** 30-40 days (1 maintainer).
+**Estimated effort:** 32-45 days (1 maintainer; matches §5
+arithmetic 31.5-44.5; F-PLAN-R2-01 corrected the metadata-surface
+miss from round 1).
 **D14 expectation:** 4-5 rounds; if it exceeds 5 rounds, maintainer
 re-scopes before implementation. (Empirical norm at 17 W-ids
 v0.1.13 was 5 rounds; 14 W-ids should fall in the 4-5 range.)
@@ -98,24 +100,31 @@ remediation:
 7. W-Vb-3 (parallelizable with eval substrate).
 8. W-FRESH-EXT (last; doc-fix sweep aware of all changes).
 
-### 1.3.1 Candidate-absence procedure (per F-PLAN-03)
+### 1.3.1 Candidate-absence procedure (per F-PLAN-03 + R2-04 timing fix)
 
 W-2U-GATE has a hard external dependency on a non-maintainer
-candidate. The OQ-I placeholder ("TBD") must resolve before Phase 0
-can open. Procedure:
+candidate. The OQ-I placeholder ("TBD") must resolve before
+W-2U-GATE can open. Phase 0 (D11 bug-hunt: internal sweep, audit-
+chain probe, 12-persona matrix) does *not* depend on the foreign
+user and may proceed regardless. Procedure:
 
-- **Hard rule:** named candidate must be on file by **Phase 0 gate**
-  (not D14 close — D14 audits the PLAN, not coordination state).
-  "On file" means: maintainer has identified the candidate, contacted
-  them, and confirmed availability for the recorded session.
-- **If no candidate by Phase 0 gate**, three options — maintainer
-  chooses:
-  1. **Hold the cycle.** Defer Phase 0 until a candidate surfaces;
-     v0.1.14 holds at PLAN-authored / D14-passed state.
+- **Hard rule:** named candidate must be on file by the
+  **pre-implementation gate** (after Phase 0 closes, before
+  W-2U-GATE — the first implementation workstream — opens).
+  D14 audits the PLAN, not coordination state; Phase 0 audits the
+  pre-cycle code/audit-chain state, not the candidate. "On file"
+  means: maintainer has identified the candidate, contacted them,
+  and confirmed availability for the recorded session.
+- **If no candidate by pre-implementation gate**, three options —
+  maintainer chooses:
+  1. **Hold W-2U-GATE / implementation.** Phase 0 bug-hunt may
+     proceed (already complete by this point); pre-implementation
+     gate withholds implementation start until candidate surfaces
+     OR option 2/3 fires.
   2. **Defer W-2U-GATE to v0.1.15** with named destination; v0.1.14
-     opens without it. W-EXPLAIN-UX foreign-user review uses a
-     maintainer-substitute reader (or also defers to v0.1.15
-     without prejudice). Cycle reshapes around the absence.
+     opens implementation without it. W-EXPLAIN-UX foreign-user
+     review uses a maintainer-substitute reader (or also defers to
+     v0.1.15 without prejudice). Cycle reshapes around the absence.
   3. **Re-author PLAN.md** (rescope around the absence) and re-run
      D14. Use this path if the maintainer believes W-2U-GATE
      should not be sequenced first under the absence (e.g., if
@@ -155,8 +164,9 @@ risk; if W-2U-GATE surfaces a structural blocker, the cycle reshapes.
 **Workstream:**
 - One recorded foreign-machine onboarding session by a non-
   maintainer (candidate: TBD — placeholder per OQ-I; maintainer
-  surfaces the candidate by Phase 0 gate per §1.3.1; if no
-  candidate by Phase 0 gate, §1.3.1 procedure fires).
+  surfaces the candidate by **pre-implementation gate** per §1.3.1
+  (Phase 0 bug-hunt may proceed regardless); if no candidate by
+  pre-implementation gate, §1.3.1 procedure fires).
 - Capture: terminal recording, time-to-`synthesized`, every place
   the user paused, every place they had to ask the maintainer.
 - Output artifact: `reporting/docs/second_user_onboarding_2026-XX.md`
@@ -181,10 +191,13 @@ v0.1.14 ships unproven. Candidate-absence path: §1.3.1.
 ### §2.B — W-PROV-1: source-row locator type + 1-domain demo (P0)
 
 **Why P0.** v0.2.0 W52 weekly review depends on source-row locators
-being a first-class type. Reconciliation §4 C10 named this as
-non-deferrable for W52. Building W52 on the assumption that
-provenance can be retrofitted is the most expensive sequencing
-error available.
+being a first-class type.
+`reporting/plans/future_strategy_2026-04-29/reconciliation.md` §4
+C10 named this as non-deferrable for W52 (per F-PLAN-R2-06: the
+unqualified "reconciliation §4 C10" was ambiguous after the
+post-v0.1.13 reconciliation file was added; full path now cited).
+Building W52 on the assumption that provenance can be retrofitted
+is the most expensive sequencing error available.
 
 **Workstream:**
 - Schema design: `source_row_locator` value type (table + pk +
@@ -434,7 +447,7 @@ and exempted explicitly.
 | W-Vb-3 partial-closes again | Same shape as v0.1.13 (3-at-a-time) | Honest partial-closure naming with v0.1.15 destination per AGENTS.md "Honest partial-closure naming" pattern; W-Vb-3 owns P2-P12 only (per F-PLAN-06) |
 | W-EXPLAIN-UX foreign user unavailable | OQ-I candidate falls through | Use W-2U-GATE candidate for both; or defer W-EXPLAIN-UX to v0.1.15 if neither resolves; covered by §1.3.1 |
 | Cycle exceeds 45-day budget | Cumulative effort overruns 32-45 envelope | Re-scope: defer one of W-AM / W-AN / W-FRESH-EXT to v0.1.15; substrate W-ids (W-2U-GATE / W-PROV-1 / W-BACKUP / W-29) are non-negotiable |
-| D14 exceeds 5 rounds | New finding-density at round N > N-1 | Per §1.3 sequencing constraint + §1.3.1 candidate-absence procedure: maintainer re-scopes before implementation; surface to Codex why the cycle is settling slower than the empirical norm |
+| D14 exceeds 5 rounds | New finding-density at round N > N-1 | Per §3 ship gate + §5 D14 expectation: maintainer re-scopes before implementation; surface to Codex why the cycle is settling slower than the empirical norm. (R2-05 corrected the original §1.3 / §1.3.1 cross-refs — §1.3.1 governs candidate absence, not round-count rescope.) |
 
 ---
 
@@ -492,7 +505,8 @@ Findings consolidate to
 - Codex returns verdict; maintainer responds; PLAN.md revises until
   `PLAN_COHERENT`.
 - Empirical norm: 4 rounds, 10→5→3→0 signature; v0.1.14 expectation
-  4-5 rounds per §1.4 acceptance.
+  4-5 rounds per §3 ship gate (R2-05 corrected the original
+  "§1.4 acceptance" reference — §1.4 is the deferrals table).
 
 ### Pre-implementation gate
 

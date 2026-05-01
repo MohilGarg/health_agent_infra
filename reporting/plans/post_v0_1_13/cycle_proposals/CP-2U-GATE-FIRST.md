@@ -130,4 +130,10 @@ sequencing.
 
 ## Round-N codex verdict
 
-*pending — CP not yet submitted to Codex review.*
+**Applied at v0.1.14 D14 round 1 (PLAN_COHERENT_WITH_REVISIONS,
+2026-05-01).** Implemented in v0.1.14 PLAN.md §1.3 + §1.3.1 + §2.A.
+F-PLAN-03 added the §1.3.1 candidate-absence procedure; F-PLAN-06
+clarified W-Vb-3 vs W-EXPLAIN-UX P13 boundary. F-PLAN-R2-04 (round 2)
+re-timed the candidate-absence gate to "pre-implementation gate"
+(was "Phase 0 gate"); §1.3.1 option 1 holds W-2U-GATE /
+implementation, not Phase 0.

@@ -473,11 +473,16 @@ per CP-2U-GATE-FIRST):**
 
 ### 5.3 Effort estimate
 
-**30-40 days** (14 W-ids: 9 baseline + 5 P0/P1 additions). Cycle
+**32-45 days** (14 W-ids: 9 baseline + 5 P0/P1 additions). Cycle
 tier: substantive. Larger than v0.1.10 (~10 W-ids) but smaller than
-v0.1.13 (17 W-ids). D14 expectation: 4-5 rounds; original 23-29 day
-estimate (pre-Codex-audit) under-counted the eval-substrate
-baseline.
+v0.1.13 (17 W-ids). D14 expectation: 4-5 rounds. Arithmetic:
+31.5-44.5 days; reported as 32-45 to match honestly (D14 r1
+F-PLAN-02 corrected the pre-audit 23-29 envelope; D14 r2
+F-PLAN-R2-01 caught this surface as a propagation gap).
+
+If the cycle trends past 45 days, the v0.1.14 PLAN §4 risks
+"Cycle exceeds 45-day budget" mitigation fires: defer one of
+W-AM / W-AN / W-FRESH-EXT to v0.1.15.
 
 **Contingency clause:** if W-2U-GATE surfaces a structural blocker
 (e.g., the foreign user cannot complete `hai init --guided`),
@@ -501,7 +506,8 @@ without prejudice.
   recommendation, X-rule firing, review outcome, data quality.
   Source-row locators required for every quantitative claim
   (carrier: `recommendation_evidence_card.v1` schema per
-  reconciliation C8). Builds on v0.1.14 W-PROV-1.
+  `reporting/plans/future_strategy_2026-04-29/reconciliation.md`
+  §4 C8). Builds on v0.1.14 W-PROV-1.
 - **W58D: Deterministic factuality gate.** Every quoted
   quantitative claim in weekly-review prose must resolve to a
   source-row locator. Blocking from day 1. No LLM in this layer.
@@ -728,16 +734,30 @@ Per-workstream contract per `v0_1_10/PLAN.md` template:
 - Acceptance criteria
 - Dependencies
 
-### 11.3 Phase 2 — Codex audit round 1
+### 11.3 Phase 2 — Codex D14 plan-audit (pre-cycle, on PLAN.md only)
 
-External audit of PLAN.md + working tree state. Verdict: SHIP /
-SHIP_WITH_NOTES / DO_NOT_SHIP.
+External audit of PLAN.md *before* the cycle opens. Verdict scale
+per AGENTS.md D14: **PLAN_COHERENT / PLAN_COHERENT_WITH_REVISIONS /
+PLAN_INCOHERENT**. Multiple rounds are normal — empirical settling
+is 2-4 rounds for a substantive PLAN, 4-5 rounds for a large
+substantive PLAN (v0.1.13 settled at 5 rounds for 17 W-ids; v0.1.14
+expects 4-5 for 14 W-ids).
 
-### 11.4 Phase 3 — Maintainer response + implementation rounds
+Loop: PLAN_COHERENT_WITH_REVISIONS → maintainer applies revisions →
+re-audit → ... → PLAN_COHERENT (cycle opens).
 
-Each Codex finding gets one of: fix, defer with reason,
-disagreement with reason. Implementation rounds continue until
-verdict is SHIP.
+This phase is **PLAN-only**; no implementation has started.
+
+### 11.4 Phase 3 — Maintainer response + implementation rounds (Codex IR)
+
+After PLAN_COHERENT and Phase 0 (D11) close, the cycle opens and
+implementation begins. Codex IR (implementation review) audits
+post-implementation diffs. Verdict scale per AGENTS.md IR phase:
+**SHIP / SHIP_WITH_NOTES / SHIP_WITH_FIXES**. Each finding gets one
+of: fix, defer with reason, disagreement with reason. IR rounds
+continue until verdict is SHIP. (D14 r2 F-PLAN-R2-07 corrected the
+original mixing of D14 PLAN-audit verdicts and IR ship verdicts in
+this section.)
 
 ### 11.5 Phase 4 — RELEASE_PROOF.md + ship
 

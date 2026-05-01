@@ -261,4 +261,11 @@ plan-audits (each smaller than a single 5-6 round D14 on a
 
 ## Round-N codex verdict
 
-*pending — CP not yet submitted to Codex review.*
+**Applied at v0.1.14 D14 round 1 (PLAN_COHERENT_WITH_REVISIONS,
+2026-05-01).** tactical_plan §6/§7/§8/§9 split applied 2026-05-01
+pre-cycle. F-PLAN-07 surfaced stale propagation gaps from the
+application: title still "v0.1.11 through v0.2.0", §11 subheads
+still 8.x, §12 risk-cut text still claimed "W53 from v0.2.0", §13
+boundary still "v0.1.11 → v0.2.0" — all corrected at v0.1.14 D14
+round 1. F-PLAN-R2-07 (round 2) corrected §11.3 verdict-scale
+mixing (D14 vs IR phases now described separately).

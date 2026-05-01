@@ -63,10 +63,12 @@ all shipped, so all v0.2.x schema additions are present.
 **With:**
 
 > Capabilities-manifest schema freeze scheduled for **v0.2.3**
-> after all v0.2.x schema additions land (W52 v0.2.0, W53
-> v0.2.1, W58J v0.2.2). (Origin: v0.1.12 CP1 + CP2, paired
-> acceptance; v0.2.x destination updated by post-v0.1.13
-> CP-PATH-A + CP-W30-SPLIT, OQ-B answered Path A 2026-05-01.)
+> after all v0.2.x schema additions land (**W52 + W58D claim-block
+> (v0.2.0), W53 (v0.2.1), W58J (v0.2.2)**). (Origin: v0.1.12 CP1 +
+> CP2, paired acceptance; v0.2.x destination updated by
+> post-v0.1.13 CP-PATH-A + CP-W30-SPLIT, OQ-B answered Path A
+> 2026-05-01; W58D claim-block added to v0.2.0 schema-group list
+> per v0.1.14 D14 round 1 F-PLAN-10 + round 2 F-PLAN-R2-02.)
 
 ## Proposed delta — AGENTS.md "Do Not Do" line
 
@@ -125,7 +127,14 @@ freeze as the cycle's last act) updates to v0.2.3.
 
 ## Round-N codex verdict
 
-*pending — CP not yet submitted to Codex review.*
+**Applied at v0.1.14 D14 round 1 (PLAN_COHERENT_WITH_REVISIONS,
+2026-05-01).** AGENTS.md D4 + "Do Not Do" line updated 2026-05-01
+pre-cycle. F-PLAN-10 surfaced that the D4 schema-group list omitted
+W58D claim-block from v0.2.0; corrected at v0.1.14 D14 round 1
+(W52 + W58D claim-block ship together in v0.2.0, followed by W53
+v0.2.1 and W58J v0.2.2 before W-30 v0.2.3). F-PLAN-R2-02 (round 2)
+caught that this CP's own "Proposed delta — AGENTS.md D4" body still
+omitted W58D claim-block; corrected at round 2.
 
 ## Companion CP
 
