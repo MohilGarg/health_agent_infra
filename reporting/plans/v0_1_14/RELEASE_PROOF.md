@@ -2,8 +2,9 @@
 
 # v0.1.14 RELEASE PROOF — Eval substrate + provenance + recovery path
 
-**Status.** Ready for Codex IR; pending maintainer-handoff PyPI publish.
-**Branch.** `cycle/v0.1.14` at `16d2cd0`, 8 commits ahead of `main`.
+**Status.** **IR chain CLOSED at round 3 (SHIP_WITH_NOTES, 1 nit applied).**
+Ready for merge + PyPI publish (maintainer-handoff).
+**Branch.** `cycle/v0.1.14`, 12 commits ahead of `main`.
 **Date.** 2026-05-01.
 
 ## 1. Workstreams shipped
@@ -30,15 +31,29 @@
 
 ## 2. Quality gates
 
-### 2.1 Test surface (post-IR-round-2 fixes)
+### 2.1 Test surface (post-IR-CLOSE round 3)
 
 | Gate | Target | Result |
 |---|---|---|
-| Pytest narrow | ≥ 2540 | **2565 passed, 3 skipped, 0 failed** (post-IR-r2 fix-and-reland; +13 vs round 0's 2552 from new regression tests covering F-IR-01..07 + F-IR-R2-01..02) |
-| Pytest broader (-W error::Warning) | clean | **2565 passed, 3 skipped, 0 failed, 0 errors** |
+| Pytest narrow | ≥ 2540 | **2566 passed, 3 skipped, 0 failed** (+14 vs round 0's 2552 from new regression tests covering F-IR-01..07 + F-IR-R2-01..02 + F-IR-R3-01) |
+| Pytest broader (-W error::Warning) | clean | **2566 passed, 3 skipped, 0 failed, 0 errors** |
 | Mypy | 0 errors | **0 errors @ 127 source files** |
 | Bandit -ll | 0 Med/High; ≤ 50 Low | **46 Low / 0 Medium / 0 High** |
 | Ruff | clean | **All checks passed** |
+
+### 2.5 Codex IR chain — CLOSED at round 3
+
+| Round | Codex verdict | Findings | Maintainer disposition |
+|---|---|---|---|
+| 1 | SHIP_WITH_FIXES | 7 (F-IR-01..07) | 7 ACCEPT, applied + committed (`c4ac1d0`) |
+| 2 | SHIP_WITH_FIXES | 2 (F-IR-R2-01, F-IR-R2-02; second-order from r1 fixes) | 2 ACCEPT, applied + committed (`2e1fe7f`) |
+| 3 | SHIP_WITH_NOTES | 1 nit (F-IR-R3-01) | 1 ACCEPT, applied + close commit |
+
+**Settling shape:** `7 → 2 → 1-nit → SHIP_WITH_NOTES`. Mirrors v0.1.12
+(`5 → 2 → 0`) + v0.1.13 (`6 → 2 → 0`) at the same 3-round shape.
+Round-1's higher count reflects the broader v0.1.14 surface
+(security + scope-mismatch + ship-gate + provenance).
+Cumulative IR findings: **10. All ACCEPT, zero DISAGREE.**
 
 ### 2.2 Capabilities byte-stability (per F-PLAN-04 expected-diff classes)
 

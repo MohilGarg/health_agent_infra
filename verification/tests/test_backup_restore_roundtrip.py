@@ -373,6 +373,39 @@ def _build_bundle_missing_member(tmp_path, *, drop_db: bool, drop_jsonl: bool):
     return bundle, head
 
 
+def test_restore_refuses_malformed_bundle_without_creating_destination_dirs(tmp_path):
+    """F-IR-R3-01: a refused restore must not create destination
+    directories. Tightens the no-destination-mutation contract from
+    'no data mutation' (round 2) to literal 'no mutation, including
+    mkdir'."""
+
+    bundle, head = _build_bundle_missing_member(
+        tmp_path, drop_db=True, drop_jsonl=False,
+    )
+    # Deliberately do NOT pre-create dst dirs.
+    dst_db = tmp_path / "fresh_dst" / "state.db"
+    dst_audit = tmp_path / "fresh_dst" / "audit"
+    assert not dst_db.parent.exists()
+    assert not dst_audit.exists()
+
+    with pytest.raises(BackupError, match="state.db"):
+        restore_backup(
+            bundle_path=bundle,
+            state_db_path=dst_db,
+            base_dir=dst_audit,
+            expected_schema_version=head,
+        )
+
+    # Literal "no destination mutation": parent dirs were never created.
+    assert not dst_db.parent.exists(), (
+        "F-IR-R3-01: state_db_path.parent was created before bundle "
+        "preflight refused"
+    )
+    assert not dst_audit.exists(), (
+        "F-IR-R3-01: base_dir was created before bundle preflight refused"
+    )
+
+
 def test_restore_refuses_missing_state_db_without_mutating_destination(tmp_path):
     """F-IR-R2-01: a bundle missing state.db must not delete stale
     destination logs before refusing."""

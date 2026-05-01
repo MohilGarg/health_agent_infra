@@ -209,15 +209,17 @@ def restore_backup(
                 f"outside base_dir."
             )
 
-    # F-IR-R2-01: validate bundle completeness BEFORE any destination
-    # mutation. Round-1 cleared stale destination logs first, then
-    # discovered missing tar members — leaving the destination
-    # mutated by a refused restore. The fix below preflight-reads
-    # every required member into memory (state.db + every manifest-
-    # listed jsonl), and only performs destination writes (clearing
-    # stale + writing new) once every member is confirmed present.
-    state_db_path.parent.mkdir(parents=True, exist_ok=True)
-    base_dir.mkdir(parents=True, exist_ok=True)
+    # F-IR-R2-01 + F-IR-R3-01: validate bundle completeness BEFORE
+    # any destination mutation, including directory creation. Round-1
+    # cleared stale destination logs first, then discovered missing
+    # tar members — leaving the destination mutated by a refused
+    # restore. Round-2 added an in-memory preflight pass for tar
+    # members but still mkdir'd destination parents before that pass;
+    # round-3 (F-IR-R3-01) closed the gap. The shape below preflight-
+    # reads every required member into memory (state.db + every
+    # manifest-listed jsonl), and only performs ANY destination
+    # mutation (mkdir, stale clearing, payload writes) once every
+    # member is confirmed present and every dest path is safe.
 
     with tarfile.open(bundle_path, "r:gz") as tf:
         # Preflight 1: state.db must exist and be readable.
@@ -275,7 +277,10 @@ def restore_backup(
 
     # Preflight passed. From here, every write is committed; refusal
     # paths above ensured no destination mutation occurs on
-    # malformed bundles.
+    # malformed bundles. Directory creation moves below the preflight
+    # gate per F-IR-R3-01.
+    state_db_path.parent.mkdir(parents=True, exist_ok=True)
+    base_dir.mkdir(parents=True, exist_ok=True)
 
     # F-IR-05: clear stale `*.jsonl` files at the destination so
     # restore is a true point-in-time restore. Existing JSONL files

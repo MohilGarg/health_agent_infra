@@ -16,10 +16,13 @@ proof (no candidate on file at gate). **Tier:** substantive.
 | Round | Codex response | Maintainer response |
 |---|---|---|
 | Plan-audit 1-4 | [`codex_plan_audit_response.md`](reporting/plans/v0_1_14/codex_plan_audit_response.md) (+ rounds 2-4; settled at PLAN_COHERENT round 4 with 12 → 7 → 3 → 1-nit → CLOSE signature; 23 cumulative findings, all ACCEPT) | rounds 1-4 |
-| Implementation review | [`codex_implementation_review_response.md`](reporting/plans/v0_1_14/codex_implementation_review_response.md) (pending Codex; prompt at [`codex_implementation_review_prompt.md`](reporting/plans/v0_1_14/codex_implementation_review_prompt.md)) | pending |
+| Implementation review 1-3 | [`codex_implementation_review_response.md`](reporting/plans/v0_1_14/codex_implementation_review_response.md) (round 1 SHIP_WITH_FIXES, 7 findings) → [`codex_implementation_review_round_2_response.md`](reporting/plans/v0_1_14/codex_implementation_review_round_2_response.md) (round 2 SHIP_WITH_FIXES, 2 findings) → [`codex_implementation_review_round_3_response.md`](reporting/plans/v0_1_14/codex_implementation_review_round_3_response.md) (round 3 SHIP_WITH_NOTES, 1 nit) | [`codex_implementation_review_round_1_response.md`](reporting/plans/v0_1_14/codex_implementation_review_round_1_response.md) → [`codex_implementation_review_round_2_response_response.md`](reporting/plans/v0_1_14/codex_implementation_review_round_2_response_response.md) → [`codex_implementation_review_round_3_response_response.md`](reporting/plans/v0_1_14/codex_implementation_review_round_3_response_response.md) |
 
-**Outcome:** pending Codex IR. Test surface: 2552 passed, 3 skipped
-(+59 vs v0.1.13). All ship gates green: pytest broader, mypy 0 @ 127,
+**Outcome:** `SHIP_WITH_NOTES` in implementation round 3 with the
+F-IR-R3-01 nit applied. Settling shape `7 → 2 → 1-nit` mirrors
+v0.1.12 (`5 → 2 → 0`) + v0.1.13 (`6 → 2 → 0`); 10 cumulative IR
+findings, all ACCEPT. Test surface: 2566 passed, 3 skipped (+73 vs
+v0.1.13). All ship gates green: pytest broader, mypy 0 @ 127,
 bandit 46 Low / 0 Med / 0 High, ruff clean, capabilities byte-stable
 post-snapshot regen for the named-change-accepted W-AN + W-BACKUP +
 W-PROV-1 surfaces. Release proof:

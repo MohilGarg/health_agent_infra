@@ -12,7 +12,7 @@ This file is a high-level pointer; for actual scope, read those plans.
 
 ## Now
 
-- **v0.1.14 implementation complete; pending Codex IR + PyPI publish (2026-05-01).**
+- **v0.1.14 IR CLOSED at round 3 SHIP_WITH_NOTES; pending PyPI publish (2026-05-01).**
   13 W-ids at PLAN open (post-W-2U-GATE-defer): 8 closed, 3 partial-
   closed with named v0.1.15 destinations (W-AH / W-AI / W-Vb-3),
   2 deferred (W-2U-GATE / W-29), 1 absorbed (W-AM into W-AI).
