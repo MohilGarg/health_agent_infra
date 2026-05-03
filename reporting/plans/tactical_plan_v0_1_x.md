@@ -44,7 +44,8 @@
 | **v0.1.14** | Eval substrate + provenance + recovery path. 8 W-ids closed (W-PROV-1, W-EXPLAIN-UX, W-BACKUP, W-FRESH-EXT, W-AJ, W-AL, W-AN, W-DOMAIN-SYNC) + 3 partial-closed → v0.1.15 (W-AH / W-AI / W-Vb-3) + 2 deferred → v0.1.15 (W-2U-GATE / W-29) + 1 absorbed (W-AM into W-AI). | shipped 2026-05-01 | shipped | v0.1.13 (CLI surface stable + W-29-prep verdict green) |
 | **v0.1.14.1** | Hardening cycle: Garmin-live unreliability surfaced as structured capabilities signal (W-GARMIN-MANIFEST-SIGNAL). `hai capabilities --json` exposes per-choice `choice_metadata.reliability == "unreliable"` block; `_resolve_pull_source` emits stderr warning. Single workstream, purely-additive surface change, no D14 plan-audit, no external Codex IR (D15 hardening latitude). | shipped 2026-05-02 | shipped | v0.1.14 |
 | **v0.1.15** | **Foreign-user-ready package, published 2026-05-03.** 6 W-ids shipped: W-GYM-SETID (gym set-id PK collision) + W-A (`hai intake gaps` presence + `is_partial_day`) + F-PV14-01 (CSV-fixture isolation) + W-C (`hai target nutrition` over existing `target` table; migration 025 adds `carbs_g` + `fat_g`) + W-D arm-1 (partial-day nutrition suppression) + W-E (`merge-human-inputs` presence-block update). W-2U-GATE reframed from pre-publish ship gate to post-publish empirical validation feeding v0.1.16. Maintainability + eval substrate deferred to v0.1.17. | shipped 2026-05-03 | shipped | v0.1.14.1 |
-| **v0.1.16** | Empirical post-publish fixes from v0.1.15's W-2U-GATE recorded session. v0.1.16 picks up P1/P2 findings from Mohil's session, W-EXPLAIN-UX-2, and conditional W-FPV14-SYM if the asymmetric-override pattern causes friction. **Ship claim:** foreign-user session findings consolidated. Cycle scope is purely empirical; PLAN.md authored after the transcript exists. | post-v0.1.15 | 2026-Q3 mid | v0.1.15 published + Mohil transcript |
+| **v0.1.15.1** | Hotfix: Linux keyring fall-through hardening after CI exposed `NoKeyringError` on runners without a registered backend. Adds `keyrings.alt`, defensive `_default_backend()` fallback, README install hardening, and public candidate-name scrub. Schema head unchanged at 25. | shipped 2026-05-03 | shipped | v0.1.15 |
+| **v0.1.16** | Empirical post-publish fixes from v0.1.15.1's W-2U-GATE recorded session. v0.1.16 picks up P1/P2 findings from the named foreign-user candidate's session, W-EXPLAIN-UX-2, and conditional W-FPV14-SYM if the asymmetric-override pattern causes friction. **Ship claim:** foreign-user session findings consolidated. Cycle scope is purely empirical; PLAN.md authored after the transcript exists. | post-v0.1.15.1 | 2026-Q3 mid | v0.1.15.1 published + foreign-user candidate transcript |
 | **v0.1.17** | Maintainability + eval substrate consolidation (deferred from v0.1.15 round-0 over-scoping). W-29 cli.py 9217-line mechanical split + W-30 regression test + W-AH-2 scenario expansion 35 → 120+ + W-AI-2 `hai eval review` CLI + W-AM-2 4 fork-deferred escalate-tagged scenarios + W-Vb-4 persona-replay residual P7..P12 + F-PV14-02 (`hai sync purge`) + W-B (`hai intake weight` body-comp surface + table) + W-D arm-2 + W-C-EQP query-plan assertions. **Ship claim:** internal correctness + maintainer-side cleanup. Parallelizable with v0.2.0 since v0.2.0 hard deps do not include v0.1.17 work. See `reporting/plans/v0_1_17/README.md`. | post-v0.1.16 | 2026-Q3 late / Q4 early | v0.1.15 (W-A + W-C in tree) + v0.1.16 (session fixes consolidated) |
 | **v0.2.0** | Weekly review (W52) + deterministic factuality (W58D) + 4 doc-only adjuncts (Path A) | post-v0.1.16 + 2-4 weeks | 2026-Q4 | v0.1.16 (foreign-user session fixes consolidated) + v0.1.14 (W-PROV-1 + W-AJ judge harness). **NOT** dependent on v0.1.17 — runs in parallel. |
 | **v0.2.1** | Insight ledger (W53) (Path A) | post-v0.2.0 + 2-3 weeks | 2026-Q4 / 2027-Q1 | v0.2.0 |
@@ -55,8 +56,10 @@
 2026-05-02 evening restructure kept v0.1.15 focused on the second-user
 path and reassigned maintainability + eval substrate to a new
 **v0.1.17** cycle. The 2026-05-03 publish-first pivot then shipped
-v0.1.15 to PyPI before the W-2U-GATE session so Mohil's install path
+v0.1.15 to PyPI before the W-2U-GATE session so the named foreign-user candidate's install path
 uses the real package; v0.1.16 remains empirical post-session fixes.
+The v0.1.15.1 hotfix then repaired the Linux keyring fall-through
+surfaced by CI before the recorded session.
 The 4-release Path A split for v0.2.x honors reconciliation C6 (one
 schema group per release) per CP-PATH-A (post-v0.1.13 OQ-B answered
 Path A 2026-05-01).
@@ -581,7 +584,7 @@ is for agents.
 > edit + W-GYM-SETID migration + F-PV14-01 audit-chain edit).
 >
 > **Theme.** Make the package installable and credible for a
-> non-maintainer to run from PyPI. Mohil's recorded session is now
+> non-maintainer to run from PyPI. The named foreign-user candidate's recorded session is now
 > post-publish empirical validation feeding v0.1.16, not a pre-publish
 > ship gate.
 
@@ -599,7 +602,7 @@ contract in `reporting/plans/v0_1_15/PLAN.md` §2 and final state in
 | **W-C** | `hai target nutrition` daily macro target commit (W57-gated) — extends existing `target` table (CHECK adds `'carbs_g'` + `'fat_g'` via migration 025; 4-row convenience handler) per round-4 F-PHASE0-01 Option A | 2-3d |
 | **W-D arm-1** | Suppress nutrition classification when partial-day + no target (`status=insufficient_data`, reason `partial_day_no_target`) | 1-2d |
 | **W-E** | `merge-human-inputs` skill update consuming W-A presence tokens; optional packaged `morning-ritual` skill | 2-4d |
-| **W-2U-GATE** | Post-publish empirical validation session against `health-agent-infra==0.1.15`; findings feed v0.1.16 | post-release |
+| **W-2U-GATE** | Post-publish empirical validation session against `health-agent-infra==0.1.15.1`; findings feed v0.1.16 | post-release |
 
 ### 5B.2 Acceptance
 
@@ -608,7 +611,7 @@ contract in `reporting/plans/v0_1_15/PLAN.md` §2 and final state in
   after D15 IR closed. The recorded session remains load-bearing
   empirical evidence, but its findings route to v0.1.16 per the
   publish-first pivot.
-- All P0/P1/P2 findings from Mohil's post-publish session are triaged
+- All P0/P1/P2 findings from the named foreign-user candidate's post-publish session are triaged
   into v0.1.16 unless small isolated P0 severity justifies a v0.1.15.1
   hotfix.
 - Transcript + state DB snapshot + install record archived at
@@ -629,7 +632,7 @@ Migration head 25.
 The 2026-05-02 evening restructure kept v0.1.15 focused on the
 second-user path and moved maintainability/eval substrate to v0.1.17.
 The 2026-05-03 publish-first pivot then changed sequencing again:
-PyPI publish happened before Mohil's recorded session, and v0.1.16
+PyPI publish happened before the named foreign-user candidate's recorded session, and v0.1.16
 became the empirical-fix cycle for whatever the real install session
 finds. Detail in `reporting/plans/v0_1_15/RELEASE_PROOF.md` §5.
 
@@ -637,7 +640,7 @@ finds. Detail in `reporting/plans/v0_1_15/RELEASE_PROOF.md` §5.
 
 ## 5C. v0.1.16 — Empirical post-publish bug fixes
 
-> **Status.** **Will follow Mohil's post-publish session.** Cycle
+> **Status.** **Will follow the named foreign-user candidate's post-publish session.** Cycle
 > scope is purely empirical and authors after v0.1.15's W-2U-GATE
 > recorded session surfaces its findings.
 >
@@ -749,7 +752,7 @@ defer past v0.2.0 if the maintainer prefers.
   W-COMP-LANDSCAPE (`reporting/docs/competitive_landscape.md`),
   W-NOF1-METHOD (`reporting/docs/n_of_1_methodology.md`),
   W-2U-GATE-2 (second foreign-machine onboarding session;
-  sequenced after the v0.1.15 Mohil session and v0.1.16 empirical-fix
+  sequenced after the v0.1.15 foreign-user candidate session and v0.1.16 empirical-fix
   consolidation).
 - **W-EXPLAIN-UX carry-forward consumption.** v0.2.0 W52 PLAN
   authoring must reference v0.1.14's

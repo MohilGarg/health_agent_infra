@@ -13,6 +13,9 @@ Tests inject an in-memory keyring backend so no real keyring is touched.
 
 from __future__ import annotations
 
+import sys
+import types
+
 import pytest
 
 from health_agent_infra.core.pull.auth import (
@@ -31,6 +34,7 @@ from health_agent_infra.core.pull.auth import (
     IntervalsIcuCredentials,
     KeyringUnavailableError,
     _NullBackend,
+    _default_backend,
 )
 
 
@@ -246,6 +250,28 @@ def test_null_backend_store_loads_via_env_only():
     )
     creds = store.load_garmin()
     assert creds == GarminCredentials(email="env@example.com", password="envpw")
+
+
+def test_default_backend_falls_through_when_keyring_has_no_backend(monkeypatch):
+    """Linux can import keyring but still raise NoKeyringError on first read."""
+
+    class NoKeyringError(Exception):
+        pass
+
+    keyring_mod = types.ModuleType("keyring")
+    keyring_mod.__path__ = []  # mark as package-like for keyring.errors import
+
+    def _raise_no_keyring(service, username):
+        raise NoKeyringError("no recommended backend")
+
+    keyring_mod.get_password = _raise_no_keyring
+    errors_mod = types.ModuleType("keyring.errors")
+    errors_mod.NoKeyringError = NoKeyringError
+
+    monkeypatch.setitem(sys.modules, "keyring", keyring_mod)
+    monkeypatch.setitem(sys.modules, "keyring.errors", errors_mod)
+
+    assert isinstance(_default_backend(), _NullBackend)
 
 
 # ===========================================================================

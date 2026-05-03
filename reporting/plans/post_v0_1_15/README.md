@@ -11,6 +11,6 @@ proof and is not yet a v0.1.16 PLAN.
 
 ## Boundary
 
-Runtime fixes from Mohil's empirical session belong in v0.1.16.
+Runtime fixes from the named foreign-user candidate's empirical session belong in v0.1.16.
 Maintenance/eval work already assigned to v0.1.17 stays there. This
 folder captures post-v0.1.15 analysis only.

@@ -3,7 +3,7 @@
 **Cycle:** v0.1.15 (foreign-user candidate package + recorded gate).
 **Phase:** Pre-implementation gate, fires after Phase 0 (D11) bug-hunt closes; before Phase 1 implementation opens.
 **Authored:** 2026-05-03 evening.
-**Status:** **OPEN for Phase 1 once D14 round 4 closes.** F-PHASE0-01 Option A revisions applied 2026-05-03 evening; round-4 codex prompt authored. **Q2 (foreign-user candidate) closed 2026-05-03 evening** — maintainer named Mohil Garg (coursemate at Imperial, Economics Data Science and Finance Year 1) as the named candidate. Path (a) — cycle proceeds without holding or downgrading. Phase 3 (W-2U-GATE recorded session) targets the candidate on file.
+**Status:** **OPEN for Phase 1 once D14 round 4 closes.** F-PHASE0-01 Option A revisions applied 2026-05-03 evening; round-4 codex prompt authored. **Q2 (foreign-user candidate) closed 2026-05-03 evening** — maintainer named the named foreign-user candidate as the named candidate. Path (a) — cycle proceeds without holding or downgrading. Phase 3 (W-2U-GATE recorded session) targets the candidate on file.
 
 ---
 
@@ -99,4 +99,4 @@ Phase 1 implementation does not start. The gate is held. The audit chain is quer
 - 2026-05-03 evening: F-PHASE0-01 surfaced from the internal sweep; persona matrix returned 13/13 clean; this gate-decision document authored.
 - 2026-05-03 evening (post-maintainer-response): maintainer chose **F-PHASE0-01 Option A** ("Proceed based on your recommendations, I agree that revisions should be made"). PLAN revisions applied to §2.B / §2.D / §2.E / §4 / §5 / §1.2 / §1.3 / §1.4 / §3 / §8 / §9 / header. Three nit-class findings (F-PHASE0-02 / F-PHASE0-03 / F-PHASE0-04) applied at the same gate close. Cross-doc fan-out applied to README.md + tactical_plan_v0_1_x.md + agent_state_visibility_findings.md. See `audit_findings.md` §6 for the full disposition.
 - 2026-05-03 evening: D14 round 4 codex audit prompt authored at `codex_plan_audit_round_4_prompt.md`. **NEXT:** maintainer fires Codex round 4; small-surface revision means single-round close expected (PLAN_COHERENT or 1-2 nits close-in-place). Q2 (foreign-user candidate) re-surfaces to maintainer before Phase 3 opens.
-- 2026-05-03 evening: Q2 closed — maintainer named **Mohil Garg** (Imperial, Economics Data Science and Finance Year 1, maintainer's coursemate) as the W-2U-GATE foreign-user candidate. Path (a) confirmed; cycle proceeds without holding or downgrading. Phase 3 acceptance per PLAN §2.G targets this candidate.
+- 2026-05-03 evening: Q2 closed — maintainer named the W-2U-GATE foreign-user candidate. Path (a) confirmed; cycle proceeds without holding or downgrading. Phase 3 acceptance per PLAN §2.G targets this candidate.

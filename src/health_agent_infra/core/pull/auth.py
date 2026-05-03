@@ -108,11 +108,29 @@ class _NullBackend:
 
 
 def _default_backend() -> KeyringBackend:
-    """Import keyring lazily; return a null backend if unavailable."""
+    """Import keyring lazily; return a null backend if unavailable.
+
+    Linux environments can import ``keyring`` successfully while still
+    lacking any registered backend. In that shape the first read raises
+    ``NoKeyringError`` at runtime. Probe defensively so non-credential
+    commands degrade to "no creds configured" instead of crashing.
+    """
 
     try:
         import keyring  # type: ignore
     except ImportError:
+        return _NullBackend()
+
+    try:
+        from keyring.errors import NoKeyringError  # type: ignore
+    except ImportError:
+        return keyring
+
+    try:
+        keyring.get_password("__hai_probe__", "__hai_probe__")
+    except NoKeyringError:
+        return _NullBackend()
+    except Exception:
         return _NullBackend()
     return keyring
 

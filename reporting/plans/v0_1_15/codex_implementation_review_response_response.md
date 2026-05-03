@@ -387,7 +387,7 @@ is a pure comment-text edit; no behavior change possible).
 | 3 | **SHIP_WITH_NOTES** | 1 (F-IR-R3-01 nit) | AGREED + applied close-in-place |
 
 **D15 IR closed.** The cycle is now ready for **Phase 3
-(W-2U-GATE recorded session against Mohil Garg)**. RELEASE_PROOF
+(W-2U-GATE recorded session against the named foreign-user candidate)**. RELEASE_PROOF
 + REPORT authored after Phase 3 closes; PyPI publish after
 RELEASE_PROOF.
 

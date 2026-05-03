@@ -314,7 +314,7 @@ D15 IR round 1 ✓ (SHIP_WITH_FIXES, 6 findings, all AGREED + applied)
 D15 IR round 2 ← you are here
   → SHIP_WITH_FIXES → maintainer + new commits → round 3
   → SHIP / SHIP_WITH_NOTES → proceed to Phase 3
-Phase 3 W-2U-GATE recorded session (Mohil Garg)
+Phase 3 W-2U-GATE recorded session (the named foreign-user candidate)
   → RELEASE_PROOF + REPORT
   → version bump 0.1.14.1 → 0.1.15
   → PyPI publish

@@ -162,6 +162,22 @@ See the domain classifiers under
 ``domains/<d>/policy.py`` for the authoritative list of bands and
 rule firings.
 
+### Nutrition target-aware path
+
+Nutrition keeps the v1 macros-only boundary, but v0.1.15 made the
+classification path target-aware. `hai intake gaps` computes a
+read-side presence block with `present.*.logged`, `is_partial_day`,
+and a three-valued `target_status` (`present`, `absent`,
+`unavailable`) from `core/intake/presence.py`. Snapshot construction
+threads those W-A signals through `derive_nutrition_signals`, so the
+production `hai daily` path reaches the same classifier behavior as
+the direct domain tests. When the day is partial and no active
+nutrition target covers the date, `domains/nutrition/classify.py`
+short-circuits to `nutrition_status='insufficient_data'` instead of
+misclassifying breakfast-only intake against a baseline. The
+`merge-human-inputs` skill consumes the same presence block to choose
+recap vs forward-march framing.
+
 ## X-rules (synthesis-layer cross-domain)
 
 See [``x_rules.md``](x_rules.md) for the full catalogue.

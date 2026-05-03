@@ -73,7 +73,7 @@ So 2 of the 14 failures are tests I added that exercise the latent bug, and the 
 
 ### 2.4 User impact
 
-- **Mohil on macOS Imperial laptop:** unaffected. macOS Keychain handles the keyring-backend lookup transparently.
+- **The named foreign-user candidate on macOS:** unaffected. macOS Keychain handles the keyring-backend lookup transparently.
 - **Anyone installing v0.1.15 from PyPI on Linux:** crashes on first `hai init` / `hai doctor` / `hai stats` / `hai pull`. The package is effectively broken on Linux right now.
 - **CI signal quality:** red right after a publish — bad for release confidence and for Codex's ability to validate future cycles against a green baseline.
 
@@ -138,7 +138,7 @@ The `*_status()` methods at `core/pull/auth.py:187-...` call `self.backend.get_p
 After applying §3.1 + §3.2, all 14 CI failures should resolve. Codex should confirm by:
 
 ```bash
-uv run pytest verification/tests -q                      # expect 2630 pass (+0 from baseline)
+uv run pytest verification/tests -q                      # expect 2631 pass (+1 regression test)
 uvx mypy src/health_agent_infra                          # expect Success
 uvx bandit -ll -r src/health_agent_infra                 # expect 0 medium/high
 ```
@@ -164,7 +164,7 @@ The maintainer's standing question: should v0.1.15.1 be a pure single-bug hotfix
 
   Codex should add a short paragraph in the nutrition-pipeline section covering the W-A presence-block read surface, the W-D arm-1 partial-day suppression to `nutrition_status='insufficient_data'`, and the snapshot-side wiring through `derive_nutrition_signals`. ~10-15 lines.
 
-- ⚠️ **`README.md` install instructions** — line 137 still says `pipx install health-agent-infra` without version pin or CDN-cache bypass. Per `reference_pypi_publish_cdn_lag.md` memory, the bare form fails for ~2 min after publish. For Mohil's onboarding (and any future foreign user), the canonical install is:
+- ⚠️ **`README.md` install instructions** — line 137 still says `pipx install health-agent-infra` without version pin or CDN-cache bypass. Per `reference_pypi_publish_cdn_lag.md` memory, the bare form fails for ~2 min after publish. For the named foreign-user candidate's onboarding (and any future foreign user), the canonical install is:
 
   ```bash
   pipx install --force --pip-args="--no-cache-dir --index-url https://pypi.org/simple/" 'health-agent-infra==0.1.15.1'
@@ -174,7 +174,7 @@ The maintainer's standing question: should v0.1.15.1 be a pure single-bug hotfix
 
 ### 4.2 README install hardening
 
-`README.md` install section currently says `pipx install health-agent-infra` without a version pin or CDN-cache bypass. Per `reference_pypi_publish_cdn_lag.md` memory, the bare form fails for ~2 min after publish. For Mohil's onboarding (any future foreign user), the canonical install command is:
+`README.md` install section currently says `pipx install health-agent-infra` without a version pin or CDN-cache bypass. Per `reference_pypi_publish_cdn_lag.md` memory, the bare form fails for ~2 min after publish. For the named foreign-user candidate's onboarding (any future foreign user), the canonical install command is:
 
 ```bash
 pipx install --force --pip-args="--no-cache-dir --index-url https://pypi.org/simple/" 'health-agent-infra==0.1.15.1'
@@ -189,7 +189,7 @@ Two options (revised after the maintainer's parallel doc-sweep landed the bulk o
 - **(A) Pure keyring-fix-only as v0.1.15.1.** Matches v0.1.12.1 / v0.1.14.1 hotfix discipline. The 2 small remaining doc gaps (architecture.md nutrition section + README install snippet) roll into v0.1.16 named-fix.
 - **(B) Bundle keyring fix + the 2 small remaining doc items into v0.1.15.1.** Light scope expansion; the 2 doc edits are ≤30 lines combined; tightens the "everything we missed" close-out.
 
-**Maintainer to decide.** With most doc gaps already closed by the parallel sweep, the case for (B) is stronger now than it was — only ~30 lines of doc work remain and they directly improve Mohil's install path (the README snippet) and the audit-visible nutrition-pipeline surface (architecture.md). Default to **(B)** unless the maintainer prefers strict hotfix discipline.
+**Maintainer to decide.** With most doc gaps already closed by the parallel sweep, the case for (B) is stronger now than it was — only ~30 lines of doc work remain and they directly improve the named foreign-user candidate's install path (the README snippet) and the audit-visible nutrition-pipeline surface (architecture.md). Default to **(B)** unless the maintainer prefers strict hotfix discipline.
 
 ---
 
@@ -313,7 +313,7 @@ Per Dom's standing instruction: PyPI publish + git push are maintainer-only (tok
 - ✅ `_default_backend()` falls through to `_NullBackend` on `NoKeyringError`, not just `ImportError`.
 - ✅ `keyrings.alt` listed as runtime dep in `pyproject.toml`.
 - ✅ All 14 CI failures from the v0.1.15 run resolve.
-- ✅ Suite 2630 pass / 3 skipped on macOS (or +1-2 if Codex adds the optional defensive-fall-through test).
+- ✅ Suite 2631 pass / 3 skipped on macOS (Codex added the optional defensive-fall-through test).
 - ✅ Mypy clean.
 - ✅ Bandit 0 medium/high.
 - ✅ pyproject version `0.1.15` → `0.1.15.1`.
@@ -367,14 +367,14 @@ From `~/.claude/CLAUDE.md` "Working Style" + project memory:
 - `feedback_pypi_publish_cdn_lag.md` — bypass cache on first install.
 - `reference_release_toolchain.md` — build + publish commands (uvx --from build; explicit dist filenames).
 - `feedback_run_commands_dont_print_them.md` — when authorized, execute; only ask for PyPI / push / destructive shared-state ops.
-- `project_v0_1_15_w2u_gate_candidate.md` — Mohil Garg is the named foreign-user candidate; KEEP HIS NAME OUT OF PUBLIC ARTIFACTS (CHANGELOG, RELEASE_PROOF, GitHub-visible docs use initials or omit). The v0.1.15 RELEASE_PROOF + REPORT use his full name; that's a residual the maintainer may want to scrub at v0.1.15.1 ship time — flag at hand-off, don't unilaterally rewrite.
+- `project_v0_1_15_w2u_gate_candidate.md` — private memory preserves the candidate identity; KEEP HIS NAME OUT OF PUBLIC ARTIFACTS (CHANGELOG, RELEASE_PROOF, GitHub-visible docs use initials or omit). The v0.1.15 RELEASE_PROOF + REPORT used the full name before the v0.1.15.1 scrub.
 
 ---
 
 ## §11 — Open questions for Dom (decide before Codex starts implementation)
 
 1. **Scope decision:** Option A (pure keyring fix) or Option B (keyring + 2 small remaining doc items — architecture.md nutrition section + README install snippet)? Doc gaps that landed in the parallel sweep before this report (state_model_v1.md, current_system_state.md, etc.) are out of Codex's touch list either way. Default revised to **(B)** — see §4.3.
-2. **Mohil's name in public artifacts:** the v0.1.15 RELEASE_PROOF + REPORT both use his full name. Per `project_v0_1_15_w2u_gate_candidate.md` memory ("KEEP NAME OUT OF PUBLIC ARTIFACTS"), should v0.1.15.1 ship include scrubbing those (replace with initials "MG" or just "the foreign-user candidate")? This is technically an audit-trail edit on a sealed cycle, but the cycle's RELEASE_PROOF is the public-facing evidence trail so the scrub is justified. **If maintainer says yes, Codex should also scrub:** v0.1.15 RELEASE_PROOF.md, v0.1.15 REPORT.md, CHANGELOG.md (entry 0.1.15 mentions Mohil), AUDIT.md (entry v0.1.15 mentions Mohil), tactical_plan_v0_1_x.md (row 46 mentions Mohil).
+2. **Candidate name in public artifacts:** the v0.1.15.1 ship includes the maintainer-approved scrub. Public docs now preserve the structural fact that a named candidate exists while omitting the personal identifier. Private memory keeps the operational identity.
 3. **CI workflow audit:** if the README quickstart smoke was failing on Linux pre-v0.1.15, the maintainer was shipping despite red CI. Worth a v0.1.16-or-later cycle proposal to enforce CI-green-before-publish; out of scope for this hotfix but worth noting in the v0.1.16 README scope table.
 4. **§3.3 status-method audit:** include in v0.1.15.1 or defer to v0.1.16? Recommend defer — the §3.1 + §3.2 fixes likely close the CI failure; §3.3 is belt-and-braces and adds scope.
 5. **Parallel doc-sweep work currently uncommitted:** at hand-off time the maintainer (or linter) has a working tree with ~14 modified files (AGENTS.md, README.md, architecture.md, state_model_v1.md, etc.) and ~3 untracked (current_system_state.md, post_v0_1_15/). Should Codex commit those alongside the hotfix, or are they separate maintainer work that lands independently? Recommend committing as a separate "post-v0.1.15 doc sweep" commit before the v0.1.15.1 hotfix commit so the hotfix delta is clean.

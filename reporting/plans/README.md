@@ -1,8 +1,8 @@
 # Planning Tree — Reading Order Index
 
-> **Last updated:** 2026-05-03 (v0.1.15 shipped per publish-first pivot;
-> foreign-user-ready package on PyPI; W-2U-GATE recorded session
-> against Mohil pending as empirical-validation feeding v0.1.16).
+> **Last updated:** 2026-05-03 (v0.1.15.1 hotfix follows the v0.1.15
+> publish-first release; foreign-user-ready package on PyPI; W-2U-GATE recorded session
+> against the named foreign-user candidate pending as empirical-validation feeding v0.1.16).
 
 This is the orientation guide to the `reporting/plans/` tree.
 Read this when you're returning cold and need to find the right
@@ -22,7 +22,8 @@ reporting/plans/
 ├── v0_1_14/                           ← shipped 2026-05-01 (eval substrate + provenance + recovery path)
 ├── v0_1_14_1/                         ← shipped 2026-05-02 (hardening: garmin_live structured signal)
 ├── v0_1_15/                           ← shipped 2026-05-03 (foreign-user-ready package; publish-first pivot)
-├── v0_1_16/                           ← next empirical-fix workspace (authors after Mohil transcript)
+├── v0_1_15_1/                         ← hotfix 2026-05-03 (Linux keyring fall-through)
+├── v0_1_16/                           ← next empirical-fix workspace (authors after foreign-user candidate transcript)
 ├── v0_1_17/                           ← maintainability + eval consolidation workspace
 ├── post_v0_1_10/                      ← between-cycles work (demo, Phase 4 audit)
 ├── post_v0_1_13/                      ← post-v0.1.13 strategic research + audit chain + CPs
@@ -55,7 +56,7 @@ If you only have time for one: `strategic_plan_v1.md`.
 2. `tactical_plan_v0_1_x.md` — current release-in-flight rows
    (v0.1.16 empirical fixes, v0.1.17 maintainability/eval).
 3. `v0_1_16/README.md` — next-cycle workspace. PLAN.md is intentionally
-   absent until Mohil's transcript exists.
+   absent until the named foreign-user candidate's transcript exists.
 4. The opening cycle's `PLAN.md` once authored.
 
 If you only have time for one: the open cycle's `PLAN.md` (or, when

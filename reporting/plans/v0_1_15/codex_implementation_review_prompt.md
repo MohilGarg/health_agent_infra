@@ -7,13 +7,13 @@
 > signature 12 → 7 → 3 → 2). Phase 0 (D11) bug-hunt cleared with 1
 > revises-scope finding (F-PHASE0-01) addressed via Option A revision +
 > D14 round 4. Pre-implementation gate fired green; Q2 candidate
-> (Mohil Garg) on file.
+> (the named foreign-user candidate) on file.
 >
 > **Phase 3 (W-2U-GATE recorded session) has NOT yet fired.** This
 > review is **scoped to Phase 1+2 implementation** — the runtime/code/
 > skill changes that close W-GYM-SETID + F-PV14-01 + W-A + W-C + W-D
 > arm-1 + W-E. The W-2U-GATE recorded session is a separate audit
-> surface that runs after Mohil performs the gate session against
+> surface that runs after the named foreign-user candidate performs the gate session against
 > the candidate-package wheel; its findings will surface in a separate
 > Phase-3-specific review (or the v0.1.16 cycle if deferred).
 >
@@ -57,7 +57,7 @@ b47552c  v0.1.15 W-C: hai target nutrition 4-row macro convenience over existing
 df44cb5  v0.1.15 F-PV14-01: CSV-fixture pull default-deny against canonical state DB …
 485bae7  v0.1.15 W-GYM-SETID: gym_set PK includes exercise slug to prevent multi-exercise collisions …
 f593b5a  v0.1.15 D14 closed at round 4 (F-R4-01 W-C contract tightening + F-R4-02 stale-prose cluster) …
-5cd5864  v0.1.15 Q2 closed: W-2U-GATE candidate named (Mohil Garg, Imperial); cycle proceeds path (a)
+5cd5864  v0.1.15 Q2 closed: W-2U-GATE candidate named (the named foreign-user candidate); cycle proceeds path (a)
 917d70a  v0.1.15 Phase 0 + D14 round-4 ready (F-PHASE0-01 Option A …)
 0bd534e  v0.1.15 cycle-open session prompt …
 38d4cb3  v0.1.15 D14 close-in-place at round 3 + v0.1.16/v0.1.17 workspace stubs …
@@ -84,7 +84,7 @@ preamble.
    (1 revises-scope F-PHASE0-01 + 3 nits). §6 records the maintainer's
    F-PHASE0-01 Option A choice + the disposition table.
 4. **`reporting/plans/v0_1_15/pre_implementation_gate_decision.md`** —
-   gate decision record (Q1 = Option A; Q2 = candidate Mohil Garg
+   gate decision record (Q1 = Option A; Q2 = candidate the named foreign-user candidate
    on file path (a)).
 5. **`reporting/plans/v0_1_15/codex_plan_audit_round_4_response.md`**
    + **`_response_response.md`** — round-4 close (F-R4-01 + F-R4-02
@@ -463,7 +463,7 @@ Phase 2 implementation (W-D arm-1 + W-E) ✓ 2 commits
 Codex implementation review (Phase 1+2) ← you are here
   → SHIP_WITH_FIXES → maintainer + new commits
   → SHIP / SHIP_WITH_NOTES → proceed to Phase 3
-Phase 3 W-2U-GATE recorded session (Mohil Garg)
+Phase 3 W-2U-GATE recorded session (the named foreign-user candidate)
   → RELEASE_PROOF + REPORT authored
   → version bump 0.1.14.1 → 0.1.15 in pyproject.toml
   → PyPI publish (per reference_release_toolchain.md)

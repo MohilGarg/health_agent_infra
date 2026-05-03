@@ -1,10 +1,10 @@
 # v0.1.16 cycle — workspace
 
-**Status:** scoped as **empirical-by-design**, not yet open. PLAN.md is intentionally NOT authored ahead of cycle open — its scope IS the post-publish findings from v0.1.15's W-2U-GATE recorded session, which cannot be pre-scoped honestly.
+**Status:** scoped as **empirical-by-design**, not yet open. PLAN.md is intentionally NOT authored ahead of cycle open — its scope IS the post-publish findings from v0.1.15.1's W-2U-GATE recorded session, which cannot be pre-scoped honestly.
 
 **Tier (anticipated):** substantive. Empirical post-session cycles typically close 4-9 days but the cycle pattern still fires full Phase 0 + multi-round D14 because what's being audited is the session-output triage, not a fixed workstream catalogue.
 
-**Provenance.** Created 2026-05-03 alongside the v0.1.15 D14 close. The 2026-05-02 evening scope-restructure folded the original-v0.1.16 "first foreign-machine onboarding empirical proof" claim into v0.1.15. After D15 IR closed, the maintainer made the publish-first pivot: v0.1.15 published to PyPI first, and Mohil's recorded W-2U-GATE session became post-publish empirical validation feeding this cycle. Maintainability + eval substrate that the v0.1.15 round-0 PLAN tried to graft into v0.1.15 was reassigned to v0.1.17 instead.
+**Provenance.** Created 2026-05-03 alongside the v0.1.15 D14 close. The 2026-05-02 evening scope-restructure folded the original-v0.1.16 "first foreign-machine onboarding empirical proof" claim into v0.1.15. After D15 IR closed, the maintainer made the publish-first pivot: v0.1.15 published to PyPI first, then v0.1.15.1 hotfixed the Linux keyring fall-through before the named foreign-user candidate's recorded W-2U-GATE session. That session is post-publish empirical validation feeding this cycle. Maintainability + eval substrate that the v0.1.15 round-0 PLAN tried to graft into v0.1.15 was reassigned to v0.1.17 instead.
 
 ## Why no PLAN.md yet
 
@@ -19,13 +19,13 @@ The v0.1.15 round-0 over-scoping (16 catalogued slots; D14 round-1 cut to 7 agai
 | **W-EXPLAIN-UX-2** | Empirical foreign-user pass over `hai explain` consuming v0.1.14 review doc's `carries-forward-to-v0.1.15` section | v0.1.14 W-EXPLAIN-UX |
 | **W-FPV14-SYM** *(conditional)* | Broader F-PV14-01 symmetry rule: every CLI command consuming both `--db-path` and `--base-dir` refuses asymmetric overrides (the source-finding `post_v0_1_14/carry_over_findings.md` F-PV14-01 item 4 wider scope). Land **only if the post-publish foreign-user session surfaces a friction point with the asymmetric-override pattern.** Otherwise defer to v0.1.17 or later. Source: v0.1.15 D15 IR round 1 F-IR-02 named-defer. | v0.1.15 IR round 1 F-IR-02 disposition |
 
-**Effort estimate (anticipated):** 4-9 days. Bounded by the session-output cap (~10 P-class findings if the v0.1.15 package is reasonably prepared). If the session surfaces a small isolated P0, v0.1.15.1 is the hotfix path; otherwise findings consolidate here.
+**Effort estimate (anticipated):** 4-9 days. Bounded by the session-output cap (~10 P-class findings if the v0.1.15.1 package is reasonably prepared). If the session surfaces a small isolated P0, a follow-up patch hotfix remains available; otherwise findings consolidate here.
 
 ## Hard dependencies
 
-- **v0.1.15 must be published** with RELEASE_PROOF.md + REPORT.md present and `pyproject.toml` at `0.1.15`.
-- Mohil's post-publish transcript at `reporting/plans/v0_1_15/foreign_machine_session_<YYYY-MM-DD>.md` must exist.
-- Mohil's install record + state DB snapshot must be archived per the v0.1.15 release-proof "Next: Mohil's session" contract.
+- **v0.1.15.1 must be published** with RELEASE_PROOF.md + REPORT.md present and `pyproject.toml` at `0.1.15.1`.
+- the named foreign-user candidate's post-publish transcript at `reporting/plans/v0_1_15/foreign_machine_session_<YYYY-MM-DD>.md` must exist.
+- The named foreign-user candidate's install record + state DB snapshot must be archived per the v0.1.15 release-proof "Next: the named foreign-user candidate's session" contract.
 - All P1 findings the v0.1.15 cycle named-deferred to v0.1.16 must have specific destinations (per v0.1.15 PLAN §2.G acceptance — "named-deferred to v0.1.16 with a specific destination").
 
 ## What's explicitly OUT of scope for v0.1.16
@@ -37,11 +37,11 @@ The v0.1.15 round-0 over-scoping (16 catalogued slots; D14 round-1 cut to 7 agai
 - **No state-model schema additions** (W-B body-comp, W-D arm-2 projection) — v0.1.17.
 - **No v0.2.x scope.**
 
-If a finding from the session reveals a need for one of the above, **the maintainer's call is whether to (a) defer that finding to v0.1.17 / v0.2.x with named scope, or (b) cut a focused v0.1.15.1 hotfix if the issue is small and release-blocking** — not silently absorb it.
+If a finding from the session reveals a need for one of the above, **the maintainer's call is whether to (a) defer that finding to v0.1.17 / v0.2.x with named scope, or (b) cut a focused patch hotfix if the issue is small and release-blocking** — not silently absorb it.
 
 ## First actions for the cycle session (when it opens)
 
-1. Confirm v0.1.15 published (RELEASE_PROOF.md + REPORT.md present in `v0_1_15/`; PyPI version is `0.1.15`).
+1. Confirm v0.1.15.1 published (RELEASE_PROOF.md + REPORT.md present in `v0_1_15_1/`; PyPI version is `0.1.15.1`).
 2. Read v0.1.15's post-publish session transcript at `reporting/plans/v0_1_15/foreign_machine_session_<YYYY-MM-DD>.md`.
 3. Read v0.1.15's RELEASE_PROOF.md §carry-overs (named-deferred P1 list).
 4. Confirm `pwd == /Users/domcolligan/health_agent_infra` per the AGENTS.md active-repo declaration.

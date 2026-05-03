@@ -227,7 +227,7 @@ D15 IR round 2 ✓ (SHIP_WITH_FIXES, 2 findings, all AGREED + applied)
 D15 IR round 3 ← you are here
   → SHIP / SHIP_WITH_NOTES → proceed to Phase 3
   → SHIP_WITH_FIXES → maintainer + new commits → round 4 (unusual)
-Phase 3 W-2U-GATE recorded session (Mohil Garg)
+Phase 3 W-2U-GATE recorded session (the named foreign-user candidate)
   → RELEASE_PROOF + REPORT
   → version bump 0.1.14.1 → 0.1.15
   → PyPI publish
@@ -243,5 +243,5 @@ Phase 3 W-2U-GATE recorded session (Mohil Garg)
 **No code changes.** Maintainer applies any agreed fixes.
 
 If round 3 returns SHIP / SHIP_WITH_NOTES, the cycle proceeds to
-Phase 3 (W-2U-GATE recorded session against Mohil Garg, the named
+Phase 3 (W-2U-GATE recorded session against the named foreign-user candidate, the named
 foreign-user candidate). The IR chain is then complete for v0.1.15.

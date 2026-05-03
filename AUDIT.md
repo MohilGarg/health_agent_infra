@@ -4,6 +4,24 @@ Health Agent Infra uses structured Codex review before substantive releases.
 The review is not a badge; the artifact is the value. This file indexes the
 existing release-cycle audit records so they are visible from the repo root.
 
+## v0.1.15.1 - 2026-05-03
+
+Linux keyring fall-through hotfix. CI on Linux exposed a runtime crash
+where `keyring` imported successfully but raised `NoKeyringError` when
+no backend was registered. The hotfix adds `keyrings.alt` as a runtime
+dependency and makes `_default_backend()` degrade to `_NullBackend`
+when the backend probe fails. **Tier:** hotfix.
+
+| Round | Artifact | Result |
+|---|---|---|
+| Scope | [`reporting/plans/v0_1_15_1/HOTFIX_SCOPE.md`](reporting/plans/v0_1_15_1/HOTFIX_SCOPE.md) | Maintainer ratified Option B: keyring fix + two doc items + public candidate-name scrub |
+| D14 / external IR | skipped | Hotfix latitude per AGENTS.md D15; single bug class |
+| Verification | [`reporting/plans/v0_1_15_1/RELEASE_PROOF.md`](reporting/plans/v0_1_15_1/RELEASE_PROOF.md) | Full gates recorded; no schema change; CLI contract regenerated for version line |
+
+**Outcome:** `v0.1.15.1` is the candidate package for the post-publish
+foreign-user session. v0.1.16 remains the empirical-fix cycle for any
+session findings.
+
 ## v0.1.15 - 2026-05-03
 
 Foreign-user-ready package + empirical-validation framework. Six W-ids

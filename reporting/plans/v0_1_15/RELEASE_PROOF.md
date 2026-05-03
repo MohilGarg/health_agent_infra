@@ -2,7 +2,7 @@
 
 **Tier (D15):** **substantive** — W-2U-GATE foreign-user gate cycle + W-C state-model edit (`target` table CHECK extension via migration 025) + W-GYM-SETID schema-data migration (024) + F-PV14-01 audit-chain edit. Per AGENTS.md "(D15, v0.1.12) Cycle-weight tiering": ≥3 governance/state-model/audit-chain edits → substantive.
 
-**Theme:** Make the package usable for a non-maintainer on a foreign machine. Ship the v0.1.15 wheel to PyPI; Mohil installs `pip install health-agent-infra==0.1.15` and runs the recorded gate session as empirical-validation feeding v0.1.16.
+**Theme:** Make the package usable for a non-maintainer on a foreign machine. Ship the v0.1.15 wheel to PyPI; the named foreign-user candidate installs `pip install health-agent-infra==0.1.15` and runs the recorded gate session as empirical-validation feeding v0.1.16.
 
 **Released:** 2026-05-03 evening.
 
@@ -18,7 +18,7 @@
 | W-C | shipped | `b47552c` (+ `9e113b4` IR-r1 byte-stable preservation test) | 10 acceptance tests; migration 025 (extends `target_type` CHECK + Python `_VALID_TARGET_TYPE`); `add_targets_atomic` helper; `hai target nutrition` 4-row macro convenience; W57 source/status pairing; natural-key idempotency |
 | W-D arm-1 | shipped | `70d4f76` (+ `9e113b4` IR-r1 enum docs) | 6 acceptance tests; nutrition classifier suppresses to `nutrition_status='insufficient_data'` when `is_partial_day=True && target_status in (absent, unavailable)`; snapshot wires W-A signals through `derive_nutrition_signals`; F-IR-06 docstring + skill enum updates |
 | W-E | shipped | `0fd5179` | 4 acceptance tests; `merge-human-inputs` skill consumes W-A `present` block (recap-vs-forward-march framing across 4 domains); explicit no-branch-on-`weigh_in.logged` per W-B-deferred-to-v0.1.17 |
-| W-2U-GATE | **post-publish empirical-validation** (publish-first pivot) | post-RELEASE_PROOF | Mohil's recorded session against the published v0.1.15; findings feed v0.1.16 |
+| W-2U-GATE | **post-publish empirical-validation** (publish-first pivot) | post-RELEASE_PROOF | The named foreign-user candidate's recorded session against the published v0.1.15; findings feed v0.1.16 |
 
 **6 of 7 W-ids shipped at IR close.** W-2U-GATE was reframed from ship-gate to empirical-validation per the publish-first pivot (PLAN §2.G "Why the reversal"; see §5 below).
 
@@ -65,11 +65,11 @@
 
 D15 IR closed SHIP_WITH_NOTES. The pre-pivot sequencing (PLAN §2.G + §6) had Phase 3 W-2U-GATE recorded session firing as a SHIP gate, with PyPI publish gated on the gate session passing.
 
-**Maintainer call (2026-05-03 evening, post-IR-close):** v0.1.15 publishes to PyPI BEFORE Phase 3. Mohil's session reframes from ship-gate to empirical-validation feeding v0.1.16. The "v0.1.15 = ready for second user; v0.1.16 = bug-fix iteration of whatever the run finds; v0.1.17 = hardening leftover" model is the strategic architecture for the v0.1.x arc; PyPI publish is the act that makes v0.1.15 actually accessible to a second user.
+**Maintainer call (2026-05-03 evening, post-IR-close):** v0.1.15 publishes to PyPI BEFORE Phase 3. The named foreign-user candidate's session reframes from ship-gate to empirical-validation feeding v0.1.16. The "v0.1.15 = ready for second user; v0.1.16 = bug-fix iteration of whatever the run finds; v0.1.17 = hardening leftover" model is the strategic architecture for the v0.1.x arc; PyPI publish is the act that makes v0.1.15 actually accessible to a second user.
 
 **OQ-8 reversal.** D14 round 3's OQ-8 ratification ("commit SHA only, no PyPI pre-release") was overridden post-IR-close. The PyPI-pollution risk OQ-8 protected against (immutable PyPI version with potential P0) is the exact risk v0.1.16 is structured to absorb in days, not cycles. Per the AGENTS.md "Settled Decisions" pattern: this is a maintainer-scope decision, documented here for audit-chain queryability; not a settled-decision reversal because OQ-8 was a cycle-scope ratification, not a D-entry.
 
-**Hotfix path.** If Mohil's session reveals a small + isolated P0, a v0.1.15.1 hotfix may ship (matches the v0.1.12.1 / v0.1.14.1 hotfix pattern). Larger findings feed v0.1.16.
+**Hotfix path.** If the named foreign-user candidate's session reveals a small + isolated P0, a v0.1.15.1 hotfix may ship (matches the v0.1.12.1 / v0.1.14.1 hotfix pattern). Larger findings feed v0.1.16.
 
 ---
 
@@ -78,10 +78,10 @@ D15 IR closed SHIP_WITH_NOTES. The pre-pivot sequencing (PLAN §2.G + §6) had P
 Per cycle architecture:
 
 - **v0.1.16 (empirical-by-design):**
-  - W-2U-FIX-P1 (any P1 named-deferred from Mohil's recorded session)
+  - W-2U-FIX-P1 (any P1 named-deferred from the named foreign-user candidate's recorded session)
   - W-2U-FIX-P2 (any P2 named-deferred)
   - W-EXPLAIN-UX-2 (foreign-user pass over `hai explain`)
-  - **W-FPV14-SYM (conditional)** — broader F-PV14-01 symmetry rule for asymmetric `--db-path` / `--base-dir` overrides; lands only if Mohil's session surfaces friction. Per IR round-1 F-IR-02 named-defer + IR round-2 F-IR-R2-02 durable-surface placement.
+  - **W-FPV14-SYM (conditional)** — broader F-PV14-01 symmetry rule for asymmetric `--db-path` / `--base-dir` overrides; lands only if the named foreign-user candidate's session surfaces friction. Per IR round-1 F-IR-02 named-defer + IR round-2 F-IR-R2-02 durable-surface placement.
 - **v0.1.17 (maintainability + eval consolidation):**
   - W-29 cli.py mechanical split + W-30 regression test (per AGENTS.md D124-135)
   - W-AH-2 / W-AI-2 / W-AM-2 / W-Vb-4 (eval substrate from v0.1.14 carry-overs)
@@ -96,7 +96,7 @@ All deferrals carry destination cycles + sources; future cycle authors find them
 
 ## §7 — Maintainer pre-publish recovery procedure (per PLAN §4 risk 3)
 
-Before Mohil's gate session, the maintainer's local state needs the W-GYM-SETID JSONL recovery (the production leg+back session has 8 dropped sets recoverable only via reproject):
+Before the named foreign-user candidate's gate session, the maintainer's local state needs the W-GYM-SETID JSONL recovery (the production leg+back session has 8 dropped sets recoverable only via reproject):
 
 ```bash
 hai backup --dest ~/hai-backup-pre-w-gym-setid-recovery.tar.gz
@@ -105,7 +105,7 @@ hai state reproject --base-dir ~/.health_agent --cascade-synthesis
 hai synthesize --as-of $(date -u +%F) --user-id u_local_1
 ```
 
-Maintainer-only path; Mohil starts from a fresh DB so this doesn't apply to him.
+Maintainer-only path; the named foreign-user candidate starts from a fresh DB so this does not apply to the candidate.
 
 ---
 

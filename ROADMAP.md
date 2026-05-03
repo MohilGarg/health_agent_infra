@@ -12,6 +12,12 @@ This file is a high-level pointer; for actual scope, read those plans.
 
 ## Now
 
+- **v0.1.15.1 shipped (2026-05-03).** Hotfix: Linux keyring
+  fall-through hardening after CI surfaced `NoKeyringError` on runners
+  without a registered backend. Adds `keyrings.alt`, defensive
+  `_default_backend()` fallback, README install hardening, and public
+  candidate-name scrub. Schema head unchanged at 25.
+  See [`reporting/plans/v0_1_15_1/RELEASE_PROOF.md`](reporting/plans/v0_1_15_1/RELEASE_PROOF.md).
 - **v0.1.15 shipped (2026-05-03).** Foreign-user-ready package.
   Six W-ids (W-GYM-SETID gym set-id PK collision fix; F-PV14-01
   CSV-fixture default-deny; W-A `hai intake gaps` presence block +
@@ -20,7 +26,7 @@ This file is a high-level pointer; for actual scope, read those plans.
   nutrition partial-day suppression; W-E merge-human-inputs skill
   presence-block consumption). Migration head 23 → 25. The W-2U-GATE
   recorded session reframes from ship-gate to empirical-validation
-  feeding v0.1.16 per the publish-first pivot — Mohil installs
+  feeding v0.1.16 per the publish-first pivot — the named foreign-user candidate installs
   `pip install health-agent-infra==0.1.15` directly. Audit chain:
   D14 12→7→3→2 (4 rounds + Phase 0 revises-scope round) + D15 IR
   6→2→1 (3 rounds, SHIP_WITH_NOTES close-in-place). Substantive tier.
@@ -67,8 +73,8 @@ This file is a high-level pointer; for actual scope, read those plans.
 
 ## Next
 
-- **v0.1.16 — empirical post-publish validation fixes.** Mohil's
-  recorded session runs against `health-agent-infra==0.1.15` from
+- **v0.1.16 — empirical post-publish validation fixes.** The named foreign-user candidate's
+  recorded session runs against `health-agent-infra==0.1.15.1` from
   PyPI. PLAN.md authors after the transcript exists. Expected scope:
   P1/P2 fixes from the session, W-EXPLAIN-UX-2 (`hai explain`
   foreign-user pass), and conditional W-FPV14-SYM if asymmetric
@@ -86,7 +92,7 @@ This file is a high-level pointer; for actual scope, read those plans.
   from day 1), W-FACT-ATOM atomic decomposition, plus 4 doc-only
   adjuncts (W-MCP-THREAT, W-COMP-LANDSCAPE, W-NOF1-METHOD,
   W-2U-GATE-2 second foreign-machine session, sequenced after the
-  v0.1.15 Mohil session and v0.1.16 empirical-fix consolidation).
+  v0.1.15 foreign-user candidate session and v0.1.16 empirical-fix consolidation).
   One schema group per release (honors C6).
 - **v0.2.1 — insight ledger (Path A release 2 of 4).** W53 only;
   one schema group.
@@ -130,21 +136,22 @@ v0.1.13 onboarding + governance prereqs (shipped 2026-04-30)
     -> v0.1.14 eval substrate + provenance + recovery path (8 W-ids closed; W-29 deferred) (shipped 2026-05-01)
         -> v0.1.14.1 hardening: garmin_live structured-signal trap (shipped 2026-05-02)
             -> v0.1.15 foreign-user-ready package (published 2026-05-03)
-                -> v0.1.16 empirical fixes from Mohil's post-publish session
-                    -> v0.1.17 maintainability + eval consolidation
-                        -> v0.2.0 W52 weekly review + W58D deterministic factuality (Path A 1/4)
-                            -> v0.2.1 W53 insight ledger (Path A 2/4)
-                                -> v0.2.2 W58J LLM judge shadow + W-JUDGE-BIAS panel (Path A 3/4)
-                                    -> v0.2.3 W58J promote to blocking + W-30 capabilities freeze (Path A 4/4)
-                                        -> v0.3 MCP plan (consumes v0.2.0 W-MCP-THREAT artifact)
-                                            -> v0.4 MCP prereqs (least-privilege scope + threat-model done)
-                                                -> v0.4-or-v0.5 MCP read surface ships
-                                                -> v0.5 N-of-1 substrate (read-only UI decision-checkpoint)
-                                                     -> 90+ days of accumulated triples
-                                                     -> v0.6 personal-evidence estimator
-                                                         -> v0.7 governed adaptation
-                                                             -> 3+ months zero-incident
-                                                             -> v1.0 stable contract
+                -> v0.1.15.1 Linux keyring hotfix
+                    -> v0.1.16 empirical fixes from the named foreign-user candidate's post-publish session
+                        -> v0.1.17 maintainability + eval consolidation
+                            -> v0.2.0 W52 weekly review + W58D deterministic factuality (Path A 1/4)
+                                -> v0.2.1 W53 insight ledger (Path A 2/4)
+                                    -> v0.2.2 W58J LLM judge shadow + W-JUDGE-BIAS panel (Path A 3/4)
+                                        -> v0.2.3 W58J promote to blocking + W-30 capabilities freeze (Path A 4/4)
+                                            -> v0.3 MCP plan (consumes v0.2.0 W-MCP-THREAT artifact)
+                                                -> v0.4 MCP prereqs (least-privilege scope + threat-model done)
+                                                    -> v0.4-or-v0.5 MCP read surface ships
+                                                    -> v0.5 N-of-1 substrate (read-only UI decision-checkpoint)
+                                                         -> 90+ days of accumulated triples
+                                                         -> v0.6 personal-evidence estimator
+                                                             -> v0.7 governed adaptation
+                                                                 -> 3+ months zero-incident
+                                                                 -> v1.0 stable contract
 ```
 
 The Path A 4-release v0.2.x split (CP-PATH-A) honors reconciliation

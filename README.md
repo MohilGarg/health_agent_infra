@@ -9,14 +9,15 @@ and the runtime defines + enforces what the agent is allowed to do.
 
 It is a working single-user package — dogfooded daily by the
 maintainer — and a reference architecture for the code/skill split.
-v0.1.15 is published as the foreign-user-ready package; the recorded
-non-maintainer validation session is post-publish empirical evidence
-feeding v0.1.16. It is not a chatbot or a hosted coaching app; it is
-the boundary that lets an LLM work over health data without owning the
-policy engine, the database, or the final write path.
+v0.1.15.1 is published as the foreign-user-ready package after a
+Linux keyring hotfix; the recorded non-maintainer validation session
+is post-publish empirical evidence feeding v0.1.16. It is not a
+chatbot or a hosted coaching app; it is the boundary that lets an LLM
+work over health data without owning the policy engine, the database,
+or the final write path.
 
 [![PyPI](https://img.shields.io/pypi/v/health-agent-infra)](https://pypi.org/project/health-agent-infra/)
-[![Tests](https://img.shields.io/badge/tests-2630_passing-green)](verification/tests/)
+[![Tests](https://img.shields.io/badge/tests-2631_passing-green)](verification/tests/)
 [![Python](https://img.shields.io/badge/python-3.11+-blue)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
@@ -54,7 +55,7 @@ agent without handing the model unchecked authority over personal health data.
 | CLI contract | 60 annotated `hai` commands with mutation class, idempotency, JSON mode, exit codes, and agent-safety metadata |
 | State | 25 SQLite migrations, local-only by default |
 | Synthesis | 10 X-rule evaluators across two phases, committed in one transaction |
-| Verification | 2630 passing tests, 13-persona harness, 5-path trusted-first-value acceptance matrix |
+| Verification | 2631 passing tests, 13-persona harness, 5-path trusted-first-value acceptance matrix |
 
 ## Why it is different
 
@@ -76,15 +77,16 @@ agent without handing the model unchecked authority over personal health data.
   and `hai stats`; these surfaces reconcile supersede chains and hide schema
   churn that raw SQL will not.
 
-**Current state.** v0.1.15 (2026-05-03) is published. It ships the
-foreign-user-ready package: gym set-id collision repair, CSV-fixture
-default-deny on `hai pull` and `hai daily`, `hai intake gaps` presence
-signals, `hai target nutrition` over the existing `target` table,
-partial-day nutrition suppression, and a `merge-human-inputs` skill
-update. Migration head is 25. The dogfooded single-user system works;
-the non-maintainer recorded session is still pending as empirical
-validation feeding v0.1.16. The release-by-release audit index is in
-[AUDIT.md](AUDIT.md); the shortest current-truth map is
+**Current state.** v0.1.15.1 (2026-05-03) is the current PyPI package:
+the v0.1.15 foreign-user-ready release plus a Linux keyring
+fall-through hotfix. The v0.1.15 base shipped gym set-id collision
+repair, CSV-fixture default-deny on `hai pull` and `hai daily`, `hai
+intake gaps` presence signals, `hai target nutrition` over the
+existing `target` table, partial-day nutrition suppression, and a
+`merge-human-inputs` skill update. Migration head is 25. The dogfooded
+single-user system works; the non-maintainer recorded session is still
+pending as empirical validation feeding v0.1.16. The release-by-release
+audit index is in [AUDIT.md](AUDIT.md); the shortest current-truth map is
 [`reporting/docs/current_system_state.md`](reporting/docs/current_system_state.md).
 
 ## What the loop looks like
@@ -134,7 +136,11 @@ you want, let it inspect `hai capabilities`, and let it invoke the right
 validated command.
 
 ```bash quickstart
-pipx install health-agent-infra                # or: pip install -e .
+# First-install canonical (bypasses the brief PyPI CDN cache window):
+pipx install --force \
+  --pip-args="--no-cache-dir --index-url https://pypi.org/simple/" \
+  'health-agent-infra==0.1.15.1'
+# OR for a dev checkout: pip install -e .
 hai init                                       # scaffolds state + config + skills
 hai auth intervals-icu                         # preferred live source
 hai capabilities --human                       # one-page overview of every command
@@ -144,6 +150,10 @@ hai daily                                      # orchestrates pull -> clean ->
                                                # the agent then posts proposals
 hai today                                      # read today's plan in plain language
 ```
+
+After roughly two minutes the bare `pipx install health-agent-infra`
+works; the `--no-cache-dir` form is for the immediately-post-publish
+window.
 
 `--source` defaults to `intervals_icu` when credentials are configured, else
 `csv` for the committed fixture. Garmin Connect live scraping remains

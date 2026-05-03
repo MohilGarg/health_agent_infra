@@ -63,7 +63,7 @@ PLAN §2.D acceptance tests rewritten 5 → 8 to cover:
 
 **Codex opinion (Q-R4.4.a + Q-R4.4.b):** per-row commit is the right v0.1.15 default. The existing `cmd_target_commit` UX is per-row only; no batched commit-by-reason exists, so the OQ-10 per-row default matches W57 surface convention. Commit-group is reversible to v0.1.16 (if the foreign-user gate surfaces friction) or v0.1.17 (if treated as maintainability/UX consolidation).
 
-**Maintainer ratification:** per-row commit confirmed. No change to PLAN §2.D OQ-10 default. If the W-2U-GATE recorded session shows Mohil hitting friction with 4 sequential commit prompts (P1 trust-degrading-but-threshold-met per PLAN §2.G), defer to v0.1.16 with named `W-2U-FIX-P1` scope per the PLAN §2.G P1 rules.
+**Maintainer ratification:** per-row commit confirmed. No change to PLAN §2.D OQ-10 default. If the W-2U-GATE recorded session shows the named foreign-user candidate hitting friction with 4 sequential commit prompts (P1 trust-degrading-but-threshold-met per PLAN §2.G), defer to v0.1.16 with named `W-2U-FIX-P1` scope per the PLAN §2.G P1 rules.
 
 ---
 
@@ -105,7 +105,7 @@ PLAN §2.D acceptance tests rewritten 5 → 8 to cover:
 - Tests-first per W-id (PLAN §2 contracts are the acceptance criteria; F-R4-01 acceptance tests for W-C are the lock-in surface).
 - Atomic commits per W-id.
 
-Phase 3 W-2U-GATE candidate is on file (Mohil Garg, named at the pre-implementation gate). Cycle proceeds path (a) per PLAN §4 risk 6 closure.
+Phase 3 W-2U-GATE candidate is on file (the named foreign-user candidate, named at the pre-implementation gate). Cycle proceeds path (a) per PLAN §4 risk 6 closure.
 
 **Empirical D14 settling-shape retrospective for v0.1.15:**
 - Round 1 (pre-Phase-0 chain): 12 findings.

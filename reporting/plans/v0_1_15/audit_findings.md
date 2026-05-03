@@ -229,6 +229,6 @@ See `pre_implementation_gate_decision.md` for the full gate-decision record once
 - `reporting/plans/v0_1_15/README.md` — status updated (D14 round 4 ready); Phase 0 close entry added.
 - `reporting/plans/tactical_plan_v0_1_x.md` — §5B W-C row + effort estimate updated; v0.1.15 row in main release table updated with round-4 revision note.
 
-**Q2 (foreign-user candidate) status:** **CLOSED 2026-05-03 evening** — maintainer named **Mohil Garg** (Imperial, Economics Data Science and Finance Year 1, coursemate). Path (a) — cycle proceeds without holding or downgrading. Phase 3 W-2U-GATE acceptance per PLAN §2.G now has a named candidate to target.
+**Q2 (foreign-user candidate) status:** **CLOSED 2026-05-03 evening** — maintainer named a foreign-user candidate. Path (a) — cycle proceeds without holding or downgrading. Phase 3 W-2U-GATE acceptance per PLAN §2.G now has a named candidate to target.
 
 **Next step:** D14 round 4 codex audit fires against the round-4-revised PLAN. Codex prompt at `codex_plan_audit_round_4_prompt.md` (this session authored). Maintainer fires Codex; response file pattern follows the round-1/2/3 chain.

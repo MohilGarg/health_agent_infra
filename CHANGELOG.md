@@ -11,6 +11,35 @@ Per-release detail lives under `reporting/plans/<version>/`.
 
 ---
 
+## [0.1.15.1] - 2026-05-03
+
+> **Theme.** Linux keyring fall-through hardening. The package now
+> degrades to env-var/no-credential mode when `keyring` imports but no
+> backend is registered on Linux, instead of crashing `hai init`,
+> `hai doctor`, `hai stats`, `hai pull`, or `hai daily`.
+>
+> **Tier (per CP3 D15):** hotfix. Single bug class plus maintainer-
+> approved doc/privacy cleanup; no D14 or external IR.
+
+### Fixed
+- **Linux `NoKeyringError` fallback.** `_default_backend()` now probes
+  the imported `keyring` module and falls through to `_NullBackend`
+  when `keyring.errors.NoKeyringError` or another backend-read error
+  is raised. Non-credential commands report "no credentials configured"
+  instead of exiting with an internal error.
+
+### Changed
+- **Runtime dependency:** added `keyrings.alt` so Linux installs have
+  an always-available fallback backend when no desktop secret store is
+  registered.
+- **Install docs:** README first-install snippet now pins
+  `health-agent-infra==0.1.15.1` and uses `--no-cache-dir --index-url
+  https://pypi.org/simple/` for the immediately-post-publish CDN
+  cache window.
+- **Public candidate-name scrub:** public release and planning docs
+  preserve the fact that a named foreign-user candidate exists while
+  omitting the personal identifier.
+
 ## [0.1.15] - 2026-05-03
 
 > **Theme.** Foreign-user-ready package — `pip install
@@ -22,7 +51,7 @@ Per-release detail lives under `reporting/plans/<version>/`.
 > **Tier (per CP3 D15):** substantive (6 W-ids; W-2U-GATE foreign-user
 > validation; W-C state-model edit + W-GYM-SETID schema-data migration
 > + F-PV14-01 audit-chain edit). Empirical-validation session against
-> Mohil Garg (Imperial Econ Year 1) feeds v0.1.16 post-publish per the
+> the named foreign-user candidate feeds v0.1.16 post-publish per the
 > publish-first pivot (see `reporting/plans/v0_1_15/RELEASE_PROOF.md` §5).
 
 ### Added
@@ -101,8 +130,8 @@ Per-release detail lives under `reporting/plans/<version>/`.
 - **W-AH-2 / W-AI-2 / W-AM-2 / W-Vb-4 eval-substrate carry-overs** →
   v0.1.17.
 - **W-FPV14-SYM (conditional) broader symmetric --db-path / --base-dir
-  rule** → v0.1.16 if Mohil's session surfaces friction; otherwise
-  v0.1.17.
+  rule** → v0.1.16 if the named foreign-user candidate's session
+  surfaces friction; otherwise v0.1.17.
 - **W-C-EQP EXPLAIN QUERY PLAN stability assertions** → v0.1.17.
 
 ### Migration head

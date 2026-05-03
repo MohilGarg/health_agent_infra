@@ -46,4 +46,4 @@ left intact.
 No separate release is needed for this docs pass unless the maintainer
 wants a packaged docs-only version. Keep the changes as post-v0.1.15
 documentation cleanup, then run v0.1.16 from the new current-state map
-plus the v0.1.16 workspace README once Mohil's transcript exists.
+plus the v0.1.16 workspace README once the named foreign-user candidate's transcript exists.

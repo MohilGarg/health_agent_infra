@@ -27,10 +27,10 @@ The audit chain ran longer than usual (4 D14 rounds + Phase 0 + 3 D15 IR rounds)
 
 Per the cycle's strategic architecture:
 
-**v0.1.16 (empirical-fix cycle, post-Mohil-session):**
-- W-2U-FIX-P1 / W-2U-FIX-P2 — whatever Mohil's session surfaces.
+**v0.1.16 (empirical-fix cycle, post-candidate-session):**
+- W-2U-FIX-P1 / W-2U-FIX-P2 — whatever the named foreign-user candidate's session surfaces.
 - W-EXPLAIN-UX-2 — empirical foreign-user pass over `hai explain`.
-- W-FPV14-SYM (conditional) — broader symmetric `--db-path` / `--base-dir` rule, only if Mohil's session surfaces friction.
+- W-FPV14-SYM (conditional) — broader symmetric `--db-path` / `--base-dir` rule, only if the named foreign-user candidate's session surfaces friction.
 
 **v0.1.17 (maintainability + eval consolidation, finishes off v0.1):**
 - W-29 cli.py mechanical split (10K-line file → 1 main + 1 shared + 11 handler-group, byte-stable manifest).
@@ -47,11 +47,11 @@ After v0.1.17, v0.1 is structurally complete; v0.2+ moves on to weekly-review (W
 
 ## Pivot: publish-first sequencing
 
-The PLAN's pre-pivot Phase 3 W-2U-GATE was a ship-gate (Mohil's session pass = ship to PyPI; fail = hold v0.1.15). Post-IR-close maintainer call: publish v0.1.15 to PyPI as soon as IR closes; Mohil's session is empirical-validation feeding v0.1.16.
+The PLAN's pre-pivot Phase 3 W-2U-GATE was a ship-gate (the named foreign-user candidate's session pass = ship to PyPI; fail = hold v0.1.15). Post-IR-close maintainer call: publish v0.1.15 to PyPI as soon as IR closes; the named foreign-user candidate's session is empirical-validation feeding v0.1.16.
 
-The reversal supersedes the round-3 OQ-8 ratification ("no PyPI pre-release"). Rationale: v0.1.16 is already structured as the empirical-fix cycle — that's the supersession mechanism for any P0/P1 from Mohil's session. The PyPI-pollution risk OQ-8 protected against is exactly what v0.1.16 absorbs in days, not cycles. Choosing publish-first makes Mohil's install path realistic (`pip install` from PyPI, like any second user) which strengthens the gate evidence.
+The reversal supersedes the round-3 OQ-8 ratification ("no PyPI pre-release"). Rationale: v0.1.16 is already structured as the empirical-fix cycle — that's the supersession mechanism for any P0/P1 from the named foreign-user candidate's session. The PyPI-pollution risk OQ-8 protected against is exactly what v0.1.16 absorbs in days, not cycles. Choosing publish-first makes the named foreign-user candidate's install path realistic (`pip install` from PyPI, like any second user) which strengthens the gate evidence.
 
-If Mohil hits a small + isolated P0, a v0.1.15.1 hotfix may ship (matches the v0.1.12.1 / v0.1.14.1 hotfix pattern).
+If the named foreign-user candidate hits a small + isolated P0, a v0.1.15.1 hotfix may ship (matches the v0.1.12.1 / v0.1.14.1 hotfix pattern).
 
 ---
 
@@ -80,9 +80,9 @@ If Mohil hits a small + isolated P0, a v0.1.15.1 hotfix may ship (matches the v0
 
 ---
 
-## Next: Mohil's session
+## Next: the named foreign-user candidate's session
 
-- Mohil installs `pip install health-agent-infra==0.1.15` on his Imperial laptop.
+- The named foreign-user candidate installs `pip install health-agent-infra==0.1.15` on the candidate's laptop.
 - He runs through morning ritual + intake + `hai today` + agent conversation.
 - I (the maintainer) observe-only.
 - Recorded transcript at `reporting/plans/v0_1_15/foreign_machine_session_<YYYY-MM-DD>.md`.
