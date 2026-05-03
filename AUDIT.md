@@ -4,6 +4,38 @@ Health Agent Infra uses structured Codex review before substantive releases.
 The review is not a badge; the artifact is the value. This file indexes the
 existing release-cycle audit records so they are visible from the repo root.
 
+## v0.1.15 - 2026-05-03
+
+Foreign-user-ready package + empirical-validation framework. Six W-ids
+shipped (W-GYM-SETID, F-PV14-01, W-A, W-C, W-D arm-1, W-E); W-2U-GATE
+recorded session reframed from ship-gate to empirical-validation
+feeding v0.1.16 per the post-IR-close publish-first pivot. Migration
+head 23 → 25 (gym_set PK with exercise slug + target_type CHECK
+extended with carbs_g + fat_g via recreate-and-copy). **Tier:**
+substantive.
+
+| Round | Codex response | Maintainer response |
+|---|---|---|
+| D14 plan-audit r1 | PLAN_COHERENT_WITH_REVISIONS, 12 findings (F-PLAN-01..12) | All AGREED + applied |
+| D14 plan-audit r2 | PLAN_COHERENT_WITH_REVISIONS, 7 findings (F-PLAN-R2-01..07) | All AGREED + applied |
+| D14 plan-audit r3 | PLAN_COHERENT_WITH_REVISIONS, 3 nits | Close-in-place |
+| Phase 0 (D11) | 1 revises-scope (F-PHASE0-01) + 3 nits + persona matrix 13/13 clean | Option A: extend existing target table (F-PHASE0-01); D14 r4 applied |
+| D14 plan-audit r4 | PLAN_COHERENT_WITH_REVISIONS, 2 close-in-place (F-R4-01 + F-R4-02) | Both AGREED + applied |
+| D15 IR r1 | SHIP_WITH_FIXES, 6 findings (F-IR-01..06) | All AGREED + applied (commit 9e113b4) |
+| D15 IR r2 | SHIP_WITH_FIXES, 2 findings (F-IR-R2-01 vacuous test + F-IR-R2-02 stale citations + named-defer surfacing) | Both AGREED + applied (commit 48eb3e2) |
+| D15 IR r3 | SHIP_WITH_NOTES, 1 nit (F-IR-R3-01 stale source comment) | Close-in-place (commit ac2d1fe) |
+
+**Outcome:** Shipped post-IR-close per the publish-first pivot. D14
+chain settled at 12 → 7 → 3 → 2 (4 rounds, AGENTS.md halving-norm met
+modulo the post-Phase-0 round-4 revision). D15 IR chain settled at
+6 → 2 → 1 (AGENTS.md `5 → 2 → 1-nit` norm met at slightly higher
+absolute counts driven by the cycle bundling 6 W-ids). Test surface:
+2630 passed, 3 skipped (+50 vs v0.1.14.1). Mypy clean (0 errors @ 128
+source files). Bandit clean (0 medium/high). Capabilities snapshot
+regenerated; W-A presence-block + W-C `hai target nutrition` + new
+flags additive. Release proof:
+[`reporting/plans/v0_1_15/RELEASE_PROOF.md`](reporting/plans/v0_1_15/RELEASE_PROOF.md).
+
 ## v0.1.14.1 - 2026-05-02
 
 Garmin-live unreliability surfaced as a structured signal in the

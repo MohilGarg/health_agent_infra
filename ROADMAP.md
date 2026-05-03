@@ -12,6 +12,20 @@ This file is a high-level pointer; for actual scope, read those plans.
 
 ## Now
 
+- **v0.1.15 shipped (2026-05-03).** Foreign-user-ready package.
+  Six W-ids (W-GYM-SETID gym set-id PK collision fix; F-PV14-01
+  CSV-fixture default-deny; W-A `hai intake gaps` presence block +
+  is_partial_day + target_status; W-C `hai target nutrition` 4-row
+  macro convenience over the existing target table; W-D arm-1
+  nutrition partial-day suppression; W-E merge-human-inputs skill
+  presence-block consumption). Migration head 23 → 25. The W-2U-GATE
+  recorded session reframes from ship-gate to empirical-validation
+  feeding v0.1.16 per the publish-first pivot — Mohil installs
+  `pip install health-agent-infra==0.1.15` directly. Audit chain:
+  D14 12→7→3→2 (4 rounds + Phase 0 revises-scope round) + D15 IR
+  6→2→1 (3 rounds, SHIP_WITH_NOTES close-in-place). Substantive tier.
+  Test surface: 2630 passed (+50 vs v0.1.14.1).
+  See [`reporting/plans/v0_1_15/RELEASE_PROOF.md`](reporting/plans/v0_1_15/RELEASE_PROOF.md).
 - **v0.1.14.1 shipped (2026-05-02).** Hardening cycle: Garmin-live
   unreliability surfaced as a structured capabilities signal. Single
   workstream (W-GARMIN-MANIFEST-SIGNAL). `hai capabilities --json`

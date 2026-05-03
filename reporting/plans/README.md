@@ -1,8 +1,8 @@
 # Planning Tree — Reading Order Index
 
-> **Last updated:** 2026-05-02 (v0.1.14.1 hardening cycle shipped;
-> Garmin-live unreliability surfaced as structured capabilities
-> signal; v0.1.15 / v0.1.16 split surfaced for foreign-user gate).
+> **Last updated:** 2026-05-03 (v0.1.15 shipped per publish-first pivot;
+> foreign-user-ready package on PyPI; W-2U-GATE recorded session
+> against Mohil pending as empirical-validation feeding v0.1.16).
 
 This is the orientation guide to the `reporting/plans/` tree.
 Read this when you're returning cold and need to find the right
@@ -23,7 +23,7 @@ reporting/plans/
 ├── v0_1_14_1/                         ← shipped 2026-05-02 (hardening: garmin_live structured signal)
 ├── post_v0_1_10/                      ← between-cycles work (demo, Phase 4 audit)
 ├── post_v0_1_13/                      ← post-v0.1.13 strategic research + audit chain + CPs
-├── post_v0_1_14/                      ← post-v0.1.14 carry-over findings (F-PV14-01/02 → v0.1.15)
+├── post_v0_1_14/                      ← post-v0.1.14 carry-over findings + research notes
 ├── future_strategy_2026-04-29/        ← Claude/Codex deep strategy review
 ├── historical/                        ← 9 superseded planning docs
 └── docs_overhaul/                     ← docs-overhaul review record

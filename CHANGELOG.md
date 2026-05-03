@@ -11,6 +11,105 @@ Per-release detail lives under `reporting/plans/<version>/`.
 
 ---
 
+## [0.1.15] - 2026-05-03
+
+> **Theme.** Foreign-user-ready package — `pip install
+> health-agent-infra==0.1.15` on a clean Python 3.11+ machine and the
+> daily flow works end-to-end without re-asking the user for state
+> already in the DB or misclassifying partial-day intake against an
+> unset target.
+>
+> **Tier (per CP3 D15):** substantive (6 W-ids; W-2U-GATE foreign-user
+> validation; W-C state-model edit + W-GYM-SETID schema-data migration
+> + F-PV14-01 audit-chain edit). Empirical-validation session against
+> Mohil Garg (Imperial Econ Year 1) feeds v0.1.16 post-publish per the
+> publish-first pivot (see `reporting/plans/v0_1_15/RELEASE_PROOF.md` §5).
+
+### Added
+- **`hai intake gaps` `present` block + `is_partial_day` +
+  `target_status`** (W-A). The agent now has a structured "what HAS
+  been logged today" surface symmetric with the existing "what's
+  missing" surface — five domains (`nutrition`, `gym`, `readiness`,
+  `sleep`, `weigh_in`) report `logged: bool` plus per-domain
+  identifiers. `is_partial_day` is target-independent (time + meal
+  count); `target_status` is a 3-valued enum (`present`/`absent`/
+  `unavailable`) reading the existing `target` table for nutrition
+  macros. Cutoff + expected-meal count configurable via
+  `gap_detection.presence_partial_day_*` thresholds.
+- **`hai target nutrition --kcal --protein-g --carbs-g --fat-g
+  [--phase] [--effective-from]`** (W-C). Convenience command writing
+  4 atomic `target` rows in a single transaction. Source/status
+  pairing per the W57 invariant: agent invocations land
+  `proposed/agent_proposed`; user invocations land `active/user_authored`.
+  Natural-key idempotency: identical re-invocation is a no-op.
+- **`hai pull --allow-fixture-into-real-state` +
+  `hai daily --allow-fixture-into-real-state`** (F-PV14-01 + IR-r1
+  F-IR-02). Explicit opt-in for CSV-fixture writes into the canonical
+  state DB. Default-deny otherwise (escape paths: `hai demo` session,
+  the new flag, or non-canonical `--db-path` / `HAI_STATE_DB`).
+- **`add_targets_atomic` helper** in `core/target/store.py`. Single
+  `BEGIN IMMEDIATE` / `COMMIT` for multi-row target inserts;
+  pre-validates every record before acquiring the lock.
+
+### Changed
+- **`gym_set.set_id` format** (W-GYM-SETID). New format
+  `set_<session_id>_<exercise_slug>_<NNN>` includes the exercise slug
+  to prevent multi-exercise PK collisions when set numbers restart per
+  exercise. Migration 024 rewrites OLD-format rows in place; preserves
+  custom-id correction rows; updates `supersedes_set_id` references in
+  lockstep.
+- **`target_type` CHECK constraint** (W-C). Migration 025 extends the
+  constraint with `'carbs_g'` and `'fat_g'`. Python `_VALID_TARGET_TYPE`
+  set extended in lockstep.
+- **Nutrition classifier short-circuits to
+  `nutrition_status='insufficient_data'`** (W-D arm-1) when
+  `is_partial_day=True && target_status in (absent, unavailable)`.
+  Snapshot wires W-A signals through `derive_nutrition_signals` so
+  production daily pipelines hit the suppression. Replaces the
+  pre-W-D misclassification of breakfast-only partial-day intake as
+  `high_deficit` against the config baseline.
+- **`merge-human-inputs` skill** (W-E) consumes the W-A `present` block
+  to choose recap-vs-forward-march framing across the 4 in-scope
+  domains. Explicitly does NOT branch on `weigh_in.logged` (W-B
+  deferred to v0.1.17).
+- **Capabilities-manifest `--source` choice metadata** (F-PV14-01)
+  tags `csv` as `source_type='fixture'`; `garmin_live` and
+  `intervals_icu` as `source_type='live'`. Agents reading the manifest
+  can pattern-match on the type instead of parsing prose.
+
+### Fixed
+- **CSV-fixture default-deny on `hai daily`** (IR-r1 F-IR-02). Pre-fix,
+  only `hai pull` enforced the F-PV14-01 guard; `hai daily` was a
+  silent bypass surface — the path most likely to be used in a
+  foreign-user gate. Centralised the guard into a shared helper
+  invoked by both surfaces.
+- **`hai stats` + `hai doctor` flag >48h `last`-vs-`for_date`
+  divergence** per source (F-PV14-01). Catches the contamination
+  shape from the v0.1.14 carry-over evidence (CSV fixture written
+  today for a `for_date` months in the past).
+- **Bandit B608 false positives in W-A SQL** (IR-r1 F-IR-01).
+  `# nosec B608` annotations on the two `compute_target_status`
+  queries — same constant-placeholder rationale as
+  `core/target/store.py`.
+
+### Deferred (named, with destinations)
+- **W-29 cli.py mechanical split + W-30 regression test** → v0.1.17
+  (per AGENTS.md D124-135).
+- **W-B `hai intake weight` body-comp surface** → v0.1.17.
+- **W-D arm-2 partial-day end-of-day projection** → v0.1.17.
+- **F-PV14-02 `hai sync purge` surgical-cleanup CLI** → v0.1.17.
+- **W-AH-2 / W-AI-2 / W-AM-2 / W-Vb-4 eval-substrate carry-overs** →
+  v0.1.17.
+- **W-FPV14-SYM (conditional) broader symmetric --db-path / --base-dir
+  rule** → v0.1.16 if Mohil's session surfaces friction; otherwise
+  v0.1.17.
+- **W-C-EQP EXPLAIN QUERY PLAN stability assertions** → v0.1.17.
+
+### Migration head
+23 → 25 (`024_gym_set_id_with_exercise_slug.sql` + `025_target_macros_extension.sql`).
+
+---
+
 ## [0.1.14.1] - 2026-05-02
 
 > **Theme.** Hardening — close the agent-contract trap that exposed
