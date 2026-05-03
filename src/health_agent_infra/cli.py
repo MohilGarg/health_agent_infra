@@ -169,44 +169,86 @@ def _emit_json(obj: Any) -> None:
 # hai pull
 # ---------------------------------------------------------------------------
 
+class _DailyPullRefusal(Exception):
+    """Raised by `_daily_pull_and_project` when the F-PV14-01 guard
+    refuses a CSV-fixture pull against the canonical state DB. Caught
+    by `_run_daily` and converted into the standard refused-stage
+    report shape so the daily orchestrator never silently bypasses
+    the guard."""
+
+    def __init__(self, exit_code: int) -> None:
+        self.exit_code = exit_code
+        super().__init__(
+            f"hai daily refused by F-PV14-01 CSV-canonical guard "
+            f"(exit_code={exit_code})"
+        )
+
+
+def _f_pv14_csv_canonical_guard(
+    args: argparse.Namespace, *, source: str, command_label: str,
+) -> Optional[int]:
+    """F-PV14-01 (v0.1.15) shared guard: refuse a CSV-fixture write into
+    the canonical state DB unless the user explicitly opted in.
+
+    Centralised per F-IR-02 round-1 IR fix so both `cmd_pull` and
+    `_daily_pull_and_project` enforce the same default-deny posture
+    (the v0.1.14 carry-over contamination shape was canonical-DB
+    pollution; the daily orchestrator is the path most likely to be
+    used in a foreign-user gate, so it must not silently bypass the
+    guard).
+
+    Returns ``None`` when the call is permitted, ``USER_INPUT`` when
+    the guard refuses. Escape paths:
+
+      1. ``source != "csv"`` — guard never fires for live sources.
+      2. Explicit ``--allow-fixture-into-real-state`` flag.
+      3. Active ``hai demo`` session marker.
+      4. Explicit ``--db-path`` arg (user named the target → opted in).
+      5. ``HAI_STATE_DB`` env-var override (env-level user intent).
+    """
+
+    if source != "csv":
+        return None
+
+    from health_agent_infra.core.demo.session import is_demo_active
+
+    explicit_db_path = getattr(args, "db_path", None) is not None
+    env_db_path = bool(os.environ.get("HAI_STATE_DB"))
+    allow_fixture = getattr(args, "allow_fixture_into_real_state", False)
+    if (
+        not explicit_db_path
+        and not env_db_path
+        and not allow_fixture
+        and not is_demo_active()
+    ):
+        print(
+            f"{command_label} --source csv refused: writing CSV-fixture "
+            "data into the canonical state DB corrupts user state.\n"
+            "Run inside a `hai demo start` session, OR pass "
+            "--allow-fixture-into-real-state to confirm, OR set "
+            "--db-path / HAI_STATE_DB to a non-canonical destination. "
+            "(F-PV14-01, v0.1.15.)",
+            file=sys.stderr,
+        )
+        return exit_codes.USER_INPUT
+    return None
+
+
 def cmd_pull(args: argparse.Namespace) -> int:
     as_of = _coerce_date(args.date)
     source = _resolve_pull_source(args)
 
-    # F-PV14-01 (v0.1.15): refuse a CSV-fixture pull when the resolver
-    # lands on the canonical default state DB without explicit user
-    # opt-in. The carry-over evidence (post_v0_1_14/carry_over_findings.md
-    # F-PV14-01) showed three fixture-shaped sync_run_log rows landing in
-    # the canonical state DB on 2026-05-01 because `core/pull/garmin.py`'s
-    # CSV adapter wrote through the same `_open_sync_row` path live pulls
-    # use, with no demo-marker check. Default-deny: refuse before opening
-    # the sync row so the acceptance "zero rows in sync_run_log" holds.
-    # Escape paths: (1) explicit --allow-fixture-into-real-state, (2) an
-    # active `hai demo` session marker, (3) explicit --db-path arg, (4)
-    # HAI_STATE_DB env var override. (3)/(4) are user-intent: if you said
-    # where to write, you opted in to whatever target you named.
-    if source == "csv":
-        from health_agent_infra.core.demo.session import is_demo_active
-
-        explicit_db_path = getattr(args, "db_path", None) is not None
-        env_db_path = bool(os.environ.get("HAI_STATE_DB"))
-        allow_fixture = getattr(args, "allow_fixture_into_real_state", False)
-        if (
-            not explicit_db_path
-            and not env_db_path
-            and not allow_fixture
-            and not is_demo_active()
-        ):
-            print(
-                "hai pull --source csv refused: writing CSV-fixture data "
-                "into the canonical state DB corrupts user state.\n"
-                "Run inside a `hai demo start` session, OR pass "
-                "--allow-fixture-into-real-state to confirm, OR set "
-                "--db-path / HAI_STATE_DB to a non-canonical destination. "
-                "(F-PV14-01, v0.1.15.)",
-                file=sys.stderr,
-            )
-            return exit_codes.USER_INPUT
+    # F-PV14-01 default-deny: refuse before opening the sync row so the
+    # acceptance "zero rows in sync_run_log" holds. The carry-over
+    # evidence (post_v0_1_14/carry_over_findings.md F-PV14-01) showed
+    # fixture-shaped sync rows landing in the canonical DB on 2026-05-01
+    # because `core/pull/garmin.py`'s CSV adapter wrote through the same
+    # `_open_sync_row` path live pulls use, with no demo-marker check.
+    refused = _f_pv14_csv_canonical_guard(
+        args, source=source, command_label="hai pull",
+    )
+    if refused is not None:
+        return refused
 
     # Mode still tracks csv vs live for sync_run_log — both live sources
     # share the "live" label so existing freshness checks don't need to
@@ -5111,6 +5153,20 @@ def _daily_pull_and_project(
     """
 
     source = _resolve_pull_source(args)
+
+    # F-PV14-01 default-deny (F-IR-02 round-1 IR fix): same guard
+    # `cmd_pull` enforces. The daily orchestrator is the path most
+    # likely to be used in a foreign-user gate, so it must NOT silently
+    # bypass the canonical-DB protection. Refuse before any adapter
+    # construction or sync-row write.
+    refused = _f_pv14_csv_canonical_guard(
+        args, source=source, command_label="hai daily",
+    )
+    if refused is not None:
+        # Outer caller (cmd_daily) treats USER_INPUT raised this way as
+        # a clean refusal; bubble through the existing exit-code path.
+        raise _DailyPullRefusal(refused)
+
     # F-A-03 fix per W-H1 — see annotated comment in cmd_pull.
     adapter: Any
     if source == "csv":
@@ -5391,6 +5447,22 @@ def _run_daily(
             source_name, projected, evidence_bundle = _daily_pull_and_project(
                 args, as_of=as_of, user_id=user_id, db_path=db_path,
             )
+        except _DailyPullRefusal as refusal:
+            # F-PV14-01 (F-IR-02 round-1 IR fix): the daily orchestrator
+            # refuses CSV→canonical writes by the same rule cmd_pull
+            # uses. Surface the refusal as a structured stage failure
+            # so the report shape stays inspectable.
+            report["stages"]["pull"] = {
+                "status": "refused",
+                "reason": (
+                    "F-PV14-01: --source csv against canonical state DB "
+                    "without --allow-fixture-into-real-state, hai demo, "
+                    "or non-canonical --db-path / HAI_STATE_DB"
+                ),
+            }
+            report["overall_status"] = "refused"
+            _emit_json(report)
+            return refusal.exit_code
         except (GarminLiveError, IntervalsIcuError) as exc:
             report["stages"]["pull"] = {"status": "failed", "error": str(exc)}
             report["overall_status"] = "failed"
@@ -9036,6 +9108,20 @@ def build_parser() -> argparse.ArgumentParser:
              "when credentials are configured, else csv.",
     )
     annotate_choice_metadata(p_daily_source, PULL_SOURCE_CHOICE_METADATA)
+    p_daily.add_argument(
+        "--allow-fixture-into-real-state",
+        action="store_true",
+        help=(
+            "Permit `--source csv` (committed CSV fixture) to write "
+            "into the canonical state DB during the daily pull stage. "
+            "Default-deny per F-PV14-01 (v0.1.15) — fixture data in "
+            "the canonical DB corrupts user state. Use a `hai demo "
+            "start` session or an explicit --db-path / HAI_STATE_DB "
+            "override instead where possible. (F-IR-02 round-1 IR "
+            "fix: previously only `hai pull` enforced this guard; "
+            "the daily orchestrator was a bypass surface.)"
+        ),
+    )
     p_daily.add_argument("--history-days", type=int, default=14,
                          help="Trailing window for live pull series "
                               "(matches `hai pull --history-days`).")

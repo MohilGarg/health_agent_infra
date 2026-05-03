@@ -602,7 +602,7 @@ is for agents.
 | **W-GYM-SETID** | Gym set-id PK collision fix (multi-exercise sessions) + prospective SQL migration + required fixture | 1.5-3d |
 | **W-A** | `hai intake gaps` extended with `present` block + `is_partial_day` (time-only signal) + `target_status` enum | 2-3d |
 | **F-PV14-01** | CSV-fixture pull isolation marker (default-deny without demo marker) | 1-2d |
-| **W-C** | `hai target nutrition` daily macro target commit (W57-gated) — extends existing `target` table (CHECK adds `'carbs_g'` + `'fat_g'` via migration 024; 4-row convenience handler) per round-4 F-PHASE0-01 Option A | 2-3d |
+| **W-C** | `hai target nutrition` daily macro target commit (W57-gated) — extends existing `target` table (CHECK adds `'carbs_g'` + `'fat_g'` via migration 025; 4-row convenience handler) per round-4 F-PHASE0-01 Option A | 2-3d |
 | **W-D arm-1** | Suppress nutrition classification when partial-day + no target (`status=insufficient_data`, reason `partial_day_no_target`) | 1-2d |
 | **W-E** | `merge-human-inputs` skill update consuming W-A presence tokens; optional packaged `morning-ritual` skill | 2-4d |
 | **W-2U-GATE** | First non-maintainer foreign-machine recorded session + P0 inline + P1 close-if-cheap | 4-7d |

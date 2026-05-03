@@ -9,7 +9,7 @@ hai config diff: --help,--path
 hai config init: --force,--help,--path
 hai config show: --help,--path
 hai config validate: --help,--path,--strict
-hai daily: --agent-version,--as-of,--auto,--base-dir,--db-path,--domains,--explain,--help,--history-days,--live,--re-propose-all,--skip-pull,--skip-reviews,--source,--supersede,--user-id
+hai daily: --agent-version,--allow-fixture-into-real-state,--as-of,--auto,--base-dir,--db-path,--domains,--explain,--help,--history-days,--live,--re-propose-all,--skip-pull,--skip-reviews,--source,--supersede,--user-id
 hai demo cleanup: --help
 hai demo end: --help
 hai demo start: --blank,--help,--persona

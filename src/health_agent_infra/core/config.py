@@ -589,6 +589,15 @@ DEFAULT_THRESHOLDS: dict[str, Any] = {
     # `core.config.coerce_int` per D12.
     "gap_detection": {
         "snapshot_staleness_max_hours": 48,
+        # v0.1.15 W-A (F-IR-03 round-1 IR fix): cutoff hour and
+        # expected-meal count for the `is_partial_day` signal in
+        # `core/intake/presence.py:is_partial_day`. PLAN §2.B says
+        # "Cutoff configurable via thresholds; default 18:00 user-
+        # local"; this is the default surface. Override via
+        # thresholds.toml. Resolved via `core.config.coerce_int`
+        # at call site per D12.
+        "presence_partial_day_cutoff_hour": 18,
+        "presence_partial_day_expected_meals": 3,
     },
 }
 

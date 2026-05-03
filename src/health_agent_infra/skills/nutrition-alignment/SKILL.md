@@ -19,7 +19,7 @@ Under `snapshot.nutrition` you receive these blocks:
 
 - `today` — today's `accepted_nutrition_state_daily` row (calories, protein_g, carbs_g, fat_g, hydration_l, meals_count, derivation_path), or null.
 - `history` — trailing rows for lookback context.
-- `signals` — runtime-derived dict the classifier consumed: `today_row`, `goal_domain`. Context only; never re-derive.
+- `signals` — runtime-derived dict the classifier consumed: `today_row`, `goal_domain`, plus (v0.1.15 W-A) optional `is_partial_day` (bool) and `target_status` (`"present"` | `"absent"` | `"unavailable"`). Context only; never re-derive.
 - `classified_state` — `calorie_balance_band`, `protein_sufficiency_band`, `hydration_band`, `micronutrient_coverage`, `coverage_band`, `nutrition_status`, `nutrition_score`, `calorie_deficit_kcal`, `protein_ratio`, `hydration_ratio`, `derivation_path`, `uncertainty`. **Source of truth.**
 - `policy_result` — `policy_decisions[]`, `forced_action`, `forced_action_detail`, `capped_confidence`. **Source of truth.**
 - `missingness` — per state_model_v1.md §5.
@@ -45,6 +45,7 @@ Keyed on `classified_state.nutrition_status`:
 | `protein_gap` | `increase_protein_intake` with `{"reason_token": "<protein_sufficiency_band>", "protein_ratio": <value>}` |
 | `under_hydrated` | `increase_hydration` with `{"hydration_ratio": <value>}` |
 | `surplus` | `maintain_targets` with `{"caveat": "calorie_surplus_trend"}` — surplus alone does not force a correction, only surfaces for awareness |
+| `insufficient_data` | (v0.1.15 W-D arm-1) Don't reach this row in the matrix — the W-D arm-1 short-circuit also sets `coverage_band='insufficient'` and `uncertainty=("partial_day_no_target",)`, so step 1's `defer_decision_insufficient_signal` forced-action path fires first. Surface honestly: "I'm holding off on classifying — partial-day intake against an unset nutrition target wouldn't be meaningful." |
 
 ### 3. Confidence
 

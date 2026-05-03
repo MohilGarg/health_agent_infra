@@ -64,6 +64,110 @@ def _init_db(tmp_path: Path) -> Path:
 # ---------------------------------------------------------------------------
 
 
+def test_migration_025_preserves_pre_existing_target_rows_byte_stable(
+    tmp_path: Path,
+):
+    """Per F-IR-04 + PLAN §2.D acceptance test 1 (existing-row
+    preservation clause): seed pre-025 target rows covering active
+    + archived nutrition rows (the maintainer's actual production
+    shape), apply migration 025, and assert every shared column is
+    identical post-migration. Also assert the three indexes from
+    migration 020 exist post-recreate-and-copy."""
+
+    from health_agent_infra.core.state.store import (
+        apply_pending_migrations,
+        discover_migrations,
+    )
+
+    db_path = tmp_path / "state.db"
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    try:
+        all_migrations = discover_migrations()
+        pre_025 = [m for m in all_migrations if m[0] < 25]
+        apply_pending_migrations(conn, pre_025)
+
+        # Seed three rows mirroring the maintainer's live state shape
+        # (calories_kcal=3300 archived, =3100 active, protein_g=160 active).
+        seed_rows = [
+            ("target_4a69faef1adf", USER, "nutrition", "calories_kcal",
+             "archived", json.dumps({"value": 3300}), "kcal", None, None,
+             "2026-04-27", None, None,
+             "Mifflin-St Jeor BMR 1911 x 1.725 maintenance",
+             "agent_proposed", "claude_agent_v1",
+             "2026-04-27T17:13:37.260872+00:00", None, None),
+            ("target_5c19cd8f3478", USER, "nutrition", "calories_kcal",
+             "active", json.dumps({"value": 3100}), "kcal", None, None,
+             "2026-05-02", None, "2026-05-09",
+             "Cut phase - 200 kcal deficit",
+             "agent_proposed", "claude_agent_v1",
+             "2026-05-02T06:27:50.412151+00:00", None, None),
+            ("target_83ab8fc1f903", USER, "nutrition", "protein_g",
+             "active", json.dumps({"value": 160}), "g", None, None,
+             "2026-04-27", None, None,
+             "1.9 g/kg x 84kg = 160g",
+             "agent_proposed", "claude_agent_v1",
+             "2026-04-27T17:13:37.674498+00:00", None, None),
+        ]
+        for row in seed_rows:
+            conn.execute(
+                "INSERT INTO target ("
+                "target_id, user_id, domain, target_type, status, "
+                "value_json, unit, lower_bound, upper_bound, "
+                "effective_from, effective_to, review_after, reason, "
+                "source, ingest_actor, created_at, "
+                "supersedes_target_id, superseded_by_target_id) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                row,
+            )
+        conn.commit()
+
+        # Snapshot pre-025 row state for byte-stable comparison.
+        pre_rows = conn.execute(
+            "SELECT * FROM target WHERE user_id=? ORDER BY target_id",
+            (USER,),
+        ).fetchall()
+        pre_dicts = [dict(r) for r in pre_rows]
+
+        # Apply migration 025.
+        m025 = [m for m in all_migrations if m[0] == 25]
+        assert m025, "migration 025 must exist"
+        apply_pending_migrations(conn, m025)
+
+        # Re-fetch and compare every column byte-stable.
+        post_rows = conn.execute(
+            "SELECT * FROM target WHERE user_id=? ORDER BY target_id",
+            (USER,),
+        ).fetchall()
+        post_dicts = [dict(r) for r in post_rows]
+
+        assert len(post_dicts) == len(pre_dicts), (
+            f"row count drift: pre={len(pre_dicts)} post={len(post_dicts)}"
+        )
+        for pre, post in zip(pre_dicts, post_dicts):
+            assert pre == post, (
+                f"row drift after migration 025:\n  pre:  {pre}\n  post: {post}"
+            )
+
+        # Three indexes from migration 020 must exist after recreate-and-copy.
+        index_rows = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='index' "
+            "AND tbl_name='target' AND name NOT LIKE 'sqlite_%'"
+        ).fetchall()
+        index_names = {r["name"] for r in index_rows}
+        for required in (
+            "idx_target_active_window",
+            "idx_target_domain_type",
+            "idx_target_supersedes",
+        ):
+            assert required in index_names, (
+                f"index {required!r} missing after migration 025; "
+                f"got {sorted(index_names)}"
+            )
+    finally:
+        conn.close()
+
+
 def test_migration_025_extends_target_type_check_and_python_set(
     tmp_path: Path,
 ):

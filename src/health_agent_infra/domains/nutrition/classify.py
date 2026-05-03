@@ -33,14 +33,25 @@ Bands:
   neither hydration nor meals_count logged; "partial" means one of
   {hydration, meals_count} logged; "full" means both logged.
 - **nutrition_status** ∈ {aligned, deficit_caloric, protein_gap,
-  under_hydrated, surplus, unknown} — composite verdict over every
-  band. Precedence high→low: deficit_caloric (high or moderate), then
-  protein_gap (very_low or low), then under_hydrated (low), then
-  surplus (surplus), then aligned. ``unknown`` iff coverage=insufficient.
+  under_hydrated, surplus, unknown, insufficient_data} — composite
+  verdict over every band. Precedence high→low: deficit_caloric (high
+  or moderate), then protein_gap (very_low or low), then
+  under_hydrated (low), then surplus (surplus), then aligned.
+  ``unknown`` iff coverage=insufficient. **``insufficient_data``** is
+  the v0.1.15 W-D arm-1 short-circuit: emitted when
+  ``is_partial_day=True`` AND ``target_status in ('absent',
+  'unavailable')``. The runtime explicitly refuses to classify rather
+  than misclassifying partial-day intake against a config-baseline
+  target the user hasn't committed to. Downstream policy treats
+  ``insufficient_data`` via the existing forced-action path
+  (coverage=insufficient → defer_decision_insufficient_signal); the
+  status enum value is the audit-visible token + the
+  ``partial_day_no_target`` uncertainty reason carries the cause.
 - **nutrition_score** ∈ [0.0, 1.0] or None — None iff
-  ``coverage_band == 'insufficient'``. Lower score = more nutritional
-  stress; 1.0 = neutral-met.
-- **uncertainty**: tuple of dedup'd, sorted reason tokens.
+  ``coverage_band == 'insufficient'`` (which includes the W-D arm-1
+  suppression path).
+- **uncertainty**: tuple of dedup'd, sorted reason tokens. W-D arm-1
+  emits exactly ``("partial_day_no_target",)`` when suppressing.
 
 Signal dict keys recognised:
 
@@ -49,6 +60,15 @@ Signal dict keys recognised:
     fat_g, hydration_l, meals_count, derivation_path.
   - ``goal_domain`` (optional str): reserved for post-v1 goal-aware
     targets. Ignored in v1 — the target set is config-driven only.
+  - ``is_partial_day`` (bool, optional, v0.1.15 W-A): True iff the
+    snapshot is for today + local clock is before the W-A cutoff +
+    fewer than expected meals are logged. When omitted (the pre-W-D
+    call shape), the W-D arm-1 short-circuit doesn't fire — backwards-
+    compat for callers that haven't been wired to W-A yet.
+  - ``target_status`` (str, optional, v0.1.15 W-A): three-valued enum
+    ``"present" | "absent" | "unavailable"`` reading the existing
+    ``target`` table for nutrition macros. Together with
+    ``is_partial_day``, drives the W-D arm-1 suppression.
 
 All keys are optional; absent keys propagate as ``unknown`` bands and
 ``insufficient`` coverage.
@@ -67,7 +87,7 @@ ProteinSufficiencyBand = str  # "met"|"low"|"very_low"|"unknown"
 HydrationBand = str         # "met"|"low"|"unknown"
 MicronutrientCoverage = str  # "unavailable_at_source"|"unknown"
 CoverageBand = str          # "insufficient"|"sparse"|"partial"|"full"
-NutritionStatus = str       # "aligned"|"deficit_caloric"|"protein_gap"|"under_hydrated"|"surplus"|"unknown"
+NutritionStatus = str       # "aligned"|"deficit_caloric"|"protein_gap"|"under_hydrated"|"surplus"|"unknown"|"insufficient_data"
 
 
 @dataclass(frozen=True)

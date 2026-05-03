@@ -226,6 +226,43 @@ def test_is_partial_day_false_for_past_day():
     assert "today" in reason or "past" in reason
 
 
+def test_compute_presence_block_honours_threshold_override(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+):
+    """F-IR-03 (round-1 IR): the W-A cutoff + expected_meals defaults
+    are configurable via `gap_detection.presence_partial_day_*` keys
+    in thresholds.toml. Override via DEFAULT_THRESHOLDS monkeypatch
+    so the test doesn't write to the user's real config."""
+
+    from health_agent_infra.core import config as _cfg
+
+    db = _init_db(tmp_path)
+    _seed_nutrition_intake(db, as_of=TODAY, meals_count=2)
+
+    # Override cutoff to 09:00 — at 10:00 the call should now NOT
+    # be partial-day (we're past the cutoff). Default 18:00 would
+    # have returned partial=True.
+    overridden = dict(_cfg.DEFAULT_THRESHOLDS)
+    overridden["gap_detection"] = dict(overridden["gap_detection"])
+    overridden["gap_detection"]["presence_partial_day_cutoff_hour"] = 9
+    monkeypatch.setattr(_cfg, "DEFAULT_THRESHOLDS", overridden)
+
+    conn = open_connection(db)
+    try:
+        block = compute_presence_block(
+            conn, as_of=TODAY, user_id=USER,
+            now_local=datetime(2026, 5, 3, 10, 0),
+        )
+    finally:
+        conn.close()
+
+    assert block["is_partial_day"] is False, (
+        f"override cutoff_hour=9 should make 10:00 past-cutoff; "
+        f"got is_partial_day={block['is_partial_day']!r}, "
+        f"reason={block['is_partial_day_reason']!r}"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Presence block — compute_presence_block tests
 # ---------------------------------------------------------------------------

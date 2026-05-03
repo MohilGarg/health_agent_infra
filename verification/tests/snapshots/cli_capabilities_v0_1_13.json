@@ -511,6 +511,18 @@
           "type": "str"
         },
         {
+          "action": "store_true",
+          "aliases": [],
+          "choices": null,
+          "default": false,
+          "help": "Permit `--source csv` (committed CSV fixture) to write into the canonical state DB during the daily pull stage. Default-deny per F-PV14-01 (v0.1.15) \u2014 fixture data in the canonical DB corrupts user state. Use a `hai demo start` session or an explicit --db-path / HAI_STATE_DB override instead where possible. (F-IR-02 round-1 IR fix: previously only `hai pull` enforced this guard; the daily orchestrator was a bypass surface.)",
+          "name": "--allow-fixture-into-real-state",
+          "nargs": 0,
+          "positional": false,
+          "required": false,
+          "type": "bool"
+        },
+        {
           "action": "store",
           "aliases": [],
           "choices": null,

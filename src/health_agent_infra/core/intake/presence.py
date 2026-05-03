@@ -47,11 +47,42 @@ from typing import Any, Optional
 # ---------------------------------------------------------------------------
 
 
-# v0.1.15 W-A defaults. Configurable via thresholds.toml in a future
-# cycle if the foreign-user gate session surfaces friction; for now
-# kept as module constants so the policy is grep-able.
+# v0.1.15 W-A defaults — also live in `core.config.DEFAULT_THRESHOLDS`
+# under `gap_detection.presence_partial_day_cutoff_hour` /
+# `presence_partial_day_expected_meals` per F-IR-03 round-1 IR fix.
+# These module constants are the FALLBACK when no thresholds dict is
+# loaded (testing surface + the rare call-site that does its own
+# config-loading); production callers thread the loaded values through
+# the kwargs.
 DEFAULT_CUTOFF_HOUR = 18
 DEFAULT_EXPECTED_MEALS = 3
+
+
+def _load_partial_day_thresholds() -> tuple[int, int]:
+    """Read W-A cutoff + expected_meals from thresholds.toml.
+
+    Returns ``(cutoff_hour, expected_meals)``. Falls back to module
+    defaults on any load/coerce failure (defensive — the runtime never
+    hard-fails because the user's thresholds.toml is malformed).
+    """
+
+    try:
+        from health_agent_infra.core.config import (
+            coerce_int,
+            load_thresholds,
+        )
+        t = load_thresholds().get("gap_detection", {})
+        cutoff = coerce_int(
+            t.get("presence_partial_day_cutoff_hour", DEFAULT_CUTOFF_HOUR),
+            name="gap_detection.presence_partial_day_cutoff_hour",
+        )
+        expected = coerce_int(
+            t.get("presence_partial_day_expected_meals", DEFAULT_EXPECTED_MEALS),
+            name="gap_detection.presence_partial_day_expected_meals",
+        )
+        return cutoff, expected
+    except Exception:  # noqa: BLE001 — defensive fallback to defaults
+        return DEFAULT_CUTOFF_HOUR, DEFAULT_EXPECTED_MEALS
 
 # Target types that count as "nutrition macro" rows for W-A's
 # target_status query. Round-4 F-PHASE0-01 Option A: the existing
@@ -148,9 +179,12 @@ def compute_target_status(
 
     placeholders = ",".join("?" for _ in NUTRITION_MACRO_TARGET_TYPES)
 
-    # Active-window query.
+    # Active-window query. f-string interpolates only the literal "?" placeholder
+    # count derived from the module constant NUTRITION_MACRO_TARGET_TYPES; every
+    # value (user_id, target_type values, as_of dates) is bound. Same safe-
+    # interpolation rationale as `core/target/store.py:218` / `:359`.
     active_row = conn.execute(
-        f"SELECT 1 FROM target "
+        f"SELECT 1 FROM target "  # nosec B608
         f"WHERE user_id=? AND domain='nutrition' "
         f"AND target_type IN ({placeholders}) "
         f"AND status='active' AND superseded_by_target_id IS NULL "
@@ -165,7 +199,7 @@ def compute_target_status(
 
     # Broader query: any nutrition target row in any status.
     any_row = conn.execute(
-        f"SELECT 1 FROM target "
+        f"SELECT 1 FROM target "  # nosec B608 - same constant-placeholder rationale
         f"WHERE user_id=? AND domain='nutrition' "
         f"AND target_type IN ({placeholders}) "
         f"LIMIT 1",
@@ -280,8 +314,8 @@ def compute_presence_block(
     *,
     as_of: date,
     user_id: str,
-    cutoff_hour: int = DEFAULT_CUTOFF_HOUR,
-    expected_meals: int = DEFAULT_EXPECTED_MEALS,
+    cutoff_hour: Optional[int] = None,
+    expected_meals: Optional[int] = None,
     now_local: Optional[datetime] = None,
 ) -> dict[str, Any]:
     """Return the full W-A presence block dict.
@@ -309,6 +343,17 @@ def compute_presence_block(
     readiness = _readiness_presence(conn, as_of=as_of, user_id=user_id)
     sleep = _sleep_presence(conn, as_of=as_of, user_id=user_id)
     weigh_in = _weigh_in_presence()
+
+    # F-IR-03 (round-1 IR fix): load cutoff + expected_meals from
+    # thresholds.toml when not explicitly passed. PLAN §2.B promises
+    # the cutoff is "configurable via thresholds; default 18:00
+    # user-local" — the threshold lookup honours that contract.
+    if cutoff_hour is None or expected_meals is None:
+        loaded_cutoff, loaded_expected = _load_partial_day_thresholds()
+        if cutoff_hour is None:
+            cutoff_hour = loaded_cutoff
+        if expected_meals is None:
+            expected_meals = loaded_expected
 
     partial, partial_reason = is_partial_day(
         as_of=as_of,
