@@ -21,9 +21,13 @@ reporting/plans/
 ├── v0_1_4/ … v0_1_13/                 ← per-cycle artifacts (frozen post-ship)
 ├── v0_1_14/                           ← shipped 2026-05-01 (eval substrate + provenance + recovery path)
 ├── v0_1_14_1/                         ← shipped 2026-05-02 (hardening: garmin_live structured signal)
+├── v0_1_15/                           ← shipped 2026-05-03 (foreign-user-ready package; publish-first pivot)
+├── v0_1_16/                           ← next empirical-fix workspace (authors after Mohil transcript)
+├── v0_1_17/                           ← maintainability + eval consolidation workspace
 ├── post_v0_1_10/                      ← between-cycles work (demo, Phase 4 audit)
 ├── post_v0_1_13/                      ← post-v0.1.13 strategic research + audit chain + CPs
 ├── post_v0_1_14/                      ← post-v0.1.14 carry-over findings + research notes
+├── post_v0_1_15/                      ← post-v0.1.15 internal-docs audit + between-cycle notes
 ├── future_strategy_2026-04-29/        ← Claude/Codex deep strategy review
 ├── historical/                        ← 9 superseded planning docs
 └── docs_overhaul/                     ← docs-overhaul review record
@@ -47,14 +51,11 @@ If you only have time for one: `strategic_plan_v1.md`.
 
 **Read in order:**
 
-1. `tactical_plan_v0_1_x.md` — current release-in-flight rows
-   (v0.1.15 candidate-package prep + v0.1.16 first foreign-machine
-   onboarding empirical proof).
-2. `v0_1_14/RELEASE_PROOF.md` §5 + `v0_1_14/REPORT.md` — the
-   most-recent substantive cycle's named carry-overs.
-3. `post_v0_1_14/carry_over_findings.md` — F-PV14-01 + F-PV14-02
-   (CSV-fixture isolation + `hai sync purge` surface) recommended
-   as a single workstream for v0.1.15.
+1. `reporting/docs/current_system_state.md` — latest shipped truth.
+2. `tactical_plan_v0_1_x.md` — current release-in-flight rows
+   (v0.1.16 empirical fixes, v0.1.17 maintainability/eval).
+3. `v0_1_16/README.md` — next-cycle workspace. PLAN.md is intentionally
+   absent until Mohil's transcript exists.
 4. The opening cycle's `PLAN.md` once authored.
 
 If you only have time for one: the open cycle's `PLAN.md` (or, when
@@ -136,6 +137,12 @@ Cycle directories preserve their own history:
   as structured capabilities signal (W-GARMIN-MANIFEST-SIGNAL).
   Shipped 2026-05-02 as a hardening tier (D15) with abbreviated
   audit chain (no external Codex IR). Test surface: 2581 passed.
+- `v0_1_15/` — foreign-user-ready package published 2026-05-03.
+  Six W-ids shipped (W-GYM-SETID, F-PV14-01, W-A, W-C, W-D arm-1,
+  W-E); W-2U-GATE reframed from pre-publish ship gate to post-publish
+  empirical validation feeding v0.1.16. Migration head 25. Test
+  surface: 2630 passed, 3 skipped. D14 settled 12 → 7 → 3 → 2;
+  D15 IR settled 6 → 2 → 1 nit.
 
 Each cycle directory typically contains:
 - `PLAN.md` — cycle scope.
@@ -204,9 +211,16 @@ any of them.
 
 ## docs_overhaul/
 
-The `docs_overhaul/` directory contains the v0.1.x documentation
-restructuring work. Active when in-flight; check the directory's
-own README for status.
+The `docs_overhaul/` directory contains the historical v0.1.x
+documentation restructuring review record (`codex_review.md`). It is
+provenance, not the current docs-operating surface.
+
+## post_v0_1_15/
+
+Post-v0.1.15 between-cycle notes. Current contents:
+
+- `internal_docs_audit.md` — internal-docs audit + fix report from
+  the 2026-05-03 post-publish cleanup.
 
 ---
 
@@ -215,8 +229,10 @@ own README for status.
 When a new doc is added or an old doc retired:
 
 1. Add or remove the entry above.
-2. Update the relevant cycle PLAN.md to reflect the doc relationship.
-3. Bump the "Last updated" date at top.
+2. Update `reporting/docs/current_system_state.md` if the change affects
+   current truth, schema head, command count, or next-cycle role.
+3. Update the relevant cycle PLAN.md to reflect the doc relationship.
+4. Bump the "Last updated" date at top.
 
 This file is small enough that drift is the maintainer's
 responsibility — no automated check today.

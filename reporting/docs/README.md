@@ -1,7 +1,8 @@
 # Docs — index
 
 Current v1 documentation for Health Agent Infra. Start with
-``architecture.md`` if this is your first read.
+``current_system_state.md`` if you need the latest shipped truth;
+start with ``architecture.md`` if this is your first architecture read.
 
 For a one-page orientation of the top-level repo layout (what each
 top-level directory is, what is active vs historical), see
@@ -11,6 +12,9 @@ itself (docs / artifacts / plans / experiments), see
 
 ## Controlling docs
 
+- [`current_system_state.md`](current_system_state.md) — current package
+  version, schema head, command count, release posture, and next-cycle
+  roles. This is the shortest "what is true now?" document.
 - [`architecture.md`](architecture.md) — pipeline diagram,
   code-vs-skill boundary, R-rule / X-rule intro, package layout.
 - [`non_goals.md`](non_goals.md) — what v1 refuses to build and
@@ -21,7 +25,7 @@ itself (docs / artifacts / plans / experiments), see
   schema. The migrations themselves at
   `src/health_agent_infra/core/state/migrations/` are the source of
   truth; this doc may lag the latest migration when a release adds
-  schema (currently 023 live as of v0.1.14.1).
+  schema (currently 025 live as of v0.1.15).
 
 ## Onboarding
 

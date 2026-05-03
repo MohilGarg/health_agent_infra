@@ -9,14 +9,14 @@ and the runtime defines + enforces what the agent is allowed to do.
 
 It is a working single-user package — dogfooded daily by the
 maintainer — and a reference architecture for the code/skill split.
-External-user readiness has not yet been empirically proven; the
-v0.1.15 / v0.1.16 split exists to prepare and then prove
-foreign-machine onboarding. It is not a chatbot or a hosted coaching
-app; it is the boundary that lets an LLM work over health data without
-owning the policy engine, the database, or the final write path.
+v0.1.15 is published as the foreign-user-ready package; the recorded
+non-maintainer validation session is post-publish empirical evidence
+feeding v0.1.16. It is not a chatbot or a hosted coaching app; it is
+the boundary that lets an LLM work over health data without owning the
+policy engine, the database, or the final write path.
 
 [![PyPI](https://img.shields.io/pypi/v/health-agent-infra)](https://pypi.org/project/health-agent-infra/)
-[![Tests](https://img.shields.io/badge/tests-2581_passing-green)](verification/tests/)
+[![Tests](https://img.shields.io/badge/tests-2630_passing-green)](verification/tests/)
 [![Python](https://img.shields.io/badge/python-3.11+-blue)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
@@ -51,10 +51,10 @@ agent without handing the model unchecked authority over personal health data.
 |---|---|
 | Domains | 6: recovery, running, sleep, stress, strength, nutrition |
 | Skills | 14 packaged markdown skills, including `intent-router` and `expert-explainer` |
-| CLI contract | 59 annotated `hai` commands with mutation class, idempotency, JSON mode, exit codes, and agent-safety metadata |
-| State | 23 SQLite migrations, local-only by default |
+| CLI contract | 60 annotated `hai` commands with mutation class, idempotency, JSON mode, exit codes, and agent-safety metadata |
+| State | 25 SQLite migrations, local-only by default |
 | Synthesis | 10 X-rule evaluators across two phases, committed in one transaction |
-| Verification | 2581 passing tests, 13-persona harness, 5-path trusted-first-value acceptance matrix |
+| Verification | 2630 passing tests, 13-persona harness, 5-path trusted-first-value acceptance matrix |
 
 ## Why it is different
 
@@ -76,18 +76,16 @@ agent without handing the model unchecked authority over personal health data.
   and `hai stats`; these surfaces reconcile supersede chains and hide schema
   churn that raw SQL will not.
 
-**Current state.** v0.1.14 (2026-05-01) shipped the eval substrate +
-provenance + recovery path: source-row locator type (W-PROV-1),
-`hai backup` / `hai restore` / `hai export`, LLM-judge harness scaffold
-(no model invocation yet), FActScore-aware calibration schema, and a
-P13 low-domain-knowledge persona for `hai explain` confusion review.
-v0.1.14.1 (2026-05-02) shipped a hardening cycle that surfaces
-Garmin-live unreliability as a structured signal in `hai capabilities
---json` (per-choice `choice_metadata` block + stderr warning at pull
-resolution). The dogfooded single-user system works; non-maintainer
-foreign-machine onboarding is still pending and is split across
-v0.1.15 (candidate-package prep) and v0.1.16 (W-2U-GATE empirical
-proof). The release-by-release audit index is in [AUDIT.md](AUDIT.md).
+**Current state.** v0.1.15 (2026-05-03) is published. It ships the
+foreign-user-ready package: gym set-id collision repair, CSV-fixture
+default-deny on `hai pull` and `hai daily`, `hai intake gaps` presence
+signals, `hai target nutrition` over the existing `target` table,
+partial-day nutrition suppression, and a `merge-human-inputs` skill
+update. Migration head is 25. The dogfooded single-user system works;
+the non-maintainer recorded session is still pending as empirical
+validation feeding v0.1.16. The release-by-release audit index is in
+[AUDIT.md](AUDIT.md); the shortest current-truth map is
+[`reporting/docs/current_system_state.md`](reporting/docs/current_system_state.md).
 
 ## What the loop looks like
 
@@ -336,7 +334,7 @@ hai today | hai doctor | hai stats
 hai review schedule | record | summary
 hai memory set | list | archive
 hai intent training add-session | training list | sleep set-window | list | archive
-hai target set | list | archive
+hai target set | nutrition | list | archive
 
 # Ops + research + evals
 hai auth intervals-icu | garmin | status
@@ -370,6 +368,7 @@ is superseded as of 2026-04-27.
 - [CONTRIBUTING.md](CONTRIBUTING.md) - code-vs-skill contribution rules
 - [REPO_MAP.md](REPO_MAP.md) - every top-level entry classified
 - [SECURITY.md](SECURITY.md) - vulnerability reporting and scope of trust
+- [`reporting/docs/current_system_state.md`](reporting/docs/current_system_state.md) - current shipped truth
 - [`reporting/docs/architecture.md`](reporting/docs/architecture.md) - full pipeline
 - [`reporting/docs/non_goals.md`](reporting/docs/non_goals.md) - scope discipline
 - [`reporting/docs/x_rules.md`](reporting/docs/x_rules.md) - X-rule catalogue

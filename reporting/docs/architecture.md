@@ -168,10 +168,10 @@ See [``x_rules.md``](x_rules.md) for the full catalogue.
 
 ## State model
 
-See [``state_model_v1.md``](state_model_v1.md) for the authoritative
+See [``state_model_v1.md``](state_model_v1.md) for the human-readable
 table-by-table schema. Each accepted_*_state_daily table is
 deterministically derived from one or more raw + source tables by
-the projector. Migrations 001-023 are live (latest: v0.1.14):
+the projector. Migrations 001-025 are live (latest: v0.1.15):
 
 - 001 initial schema
 - 002 training-readiness column rename
@@ -211,6 +211,12 @@ the projector. Migrations 001-023 are live (latest: v0.1.14):
 - 023 source_row_locator (v0.1.14 W-PROV-1 — provenance carrier
   for v0.2.0 W52 weekly review and W58D claim-block; foundation
   for the recommendation_evidence_card.v1 schema)
+- 024 gym_set id with exercise slug (v0.1.15 W-GYM-SETID —
+  rewrites old-format set ids and supersession links while preserving
+  custom-id correction rows)
+- 025 target macro extension (v0.1.15 W-C — extends the existing
+  `target` table's `target_type` CHECK with `carbs_g` and `fat_g`
+  for four-row nutrition macro targets)
 
 ## Agent-native surfaces
 

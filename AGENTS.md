@@ -31,6 +31,8 @@ Authoritative orientation:
 - `README.md` - product story, install, CLI surface
 - `ARCHITECTURE.md` - one-page architecture
 - `REPO_MAP.md` - every top-level entry classified active/historical
+- `reporting/docs/current_system_state.md` - latest shipped truth
+  (version, schema head, CLI command count, release posture, next cycle)
 - `reporting/docs/architecture.md` - full pipeline and code-vs-skill boundary
 - `reporting/docs/non_goals.md` - scope discipline
 - `reporting/plans/README.md` - reading-order index for the planning tree
@@ -148,8 +150,8 @@ write a cycle proposal in `reporting/plans/`; do not act unilaterally.
   F-PLAN-10; v0.1.14 → v0.1.15 W-29 destination updated 2026-05-02
   mid-day post-v0.1.14.1 ship; v0.1.15 → v0.1.17 W-29 destination
   updated 2026-05-02 evening per scope-restructure self-audit, so
-  v0.1.15 can ship the foreign-user gate without W-29 merge friction
-  with W-A/W-C/W-D CLI extensions.)
+  v0.1.15 can ship the foreign-user-ready package without W-29 merge
+  friction with W-A/W-C/W-D CLI extensions.)
 - **Garmin Connect is not the default live source.** Login is rate-limited
   and unreliable. Default to intervals.icu when configured. As of
   v0.1.14.1 (W-GARMIN-MANIFEST-SIGNAL), this is also a *structured*
@@ -282,6 +284,8 @@ Drift in any of these is the trust hazard a second user hits first:
   silently fall off the index.
 - [ ] `README.md` "Now/Next" or equivalent reflects current state.
   Historical "v0.1.X added Y" prose can stay.
+- [ ] `reporting/docs/current_system_state.md` reflects the just-shipped
+  package version, schema head, command count, test gate, and next-cycle role.
 - [ ] `HYPOTHESES.md` references current strategic plan, not a
   superseded roadmap.
 - [ ] `reporting/plans/README.md` reading-order index marks the just-
@@ -429,8 +433,8 @@ CI runs `verification/tests/`. The suite includes docs and skill/CLI drift check
   v0.1.15 cli.py-split destination updated 2026-05-02 mid-day
   post-v0.1.14.1 ship; v0.1.15 → v0.1.17 destination redestinated
   2026-05-02 evening per the v0.1.15 scope-restructure self-audit
-  to keep the foreign-user gate cycle free of cli.py merge friction
-  with W-A/W-C/W-D CLI extensions — see `reporting/plans/v0_1_15/PLAN.md`
+  to keep the foreign-user-ready package cycle free of cli.py merge
+  friction with W-A/W-C/W-D CLI extensions — see `reporting/plans/v0_1_15/PLAN.md`
   §1.4 and `reporting/plans/v0_1_17/README.md`.)
 - Do not add micronutrient or food-taxonomy features.
 - Do not treat raw SQLite reads as the normal inspection surface; use

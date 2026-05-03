@@ -281,8 +281,8 @@ None of those exist today.
 | Adaptive memory | *(intentionally none)* | *(intentionally none)* |
 
 The SQLite database itself lives under `platformdirs` user-data path by
-default (overridable via `--db-path`). Migrations 001-023 are live
-(latest: v0.1.14); forward-only migrations are expected for later
+default (overridable via `--db-path`). Migrations 001-025 are live
+(latest: v0.1.15); forward-only migrations are expected for later
 releases.
 
 ## 4. What this buys a new reader

@@ -50,7 +50,7 @@ checked-in repo shape.
 | You want to | Start at |
 |---|---|
 | Understand what the project is | [`README.md`](README.md) |
-| Know what is shipped right now | [`CHANGELOG.md`](CHANGELOG.md) and [`AUDIT.md`](AUDIT.md) |
+| Know what is shipped right now | [`reporting/docs/current_system_state.md`](reporting/docs/current_system_state.md), then [`CHANGELOG.md`](CHANGELOG.md) and [`AUDIT.md`](AUDIT.md) |
 | Take the guided 10-minute tour | [`reporting/docs/tour.md`](reporting/docs/tour.md) |
 | Read the architecture | [`reporting/docs/architecture.md`](reporting/docs/architecture.md) |
 | See how `hai explain` works (three-state audit) | [`reporting/docs/explainability.md`](reporting/docs/explainability.md) |
@@ -71,15 +71,15 @@ checked-in repo shape.
   `SECURITY.md`, `CITATION.cff`, `CONTRIBUTING.md`, `REPO_MAP.md`,
   everything directly under `reporting/docs/`
   (including `agent_cli_contract.md` — generated from `hai
-  capabilities --json`),
-  `reporting/plans/README.md` (reading-order index, NEW
-  v0.1.10), `reporting/plans/strategic_plan_v1.md` (NEW v0.1.10,
-  canonical strategic plan), `reporting/plans/tactical_plan_v0_1_x.md`
-  (NEW v0.1.10, canonical tactical plan), `reporting/plans/eval_strategy/`
-  (NEW v0.1.10), `reporting/plans/success_framework_v1.md` (NEW
-  v0.1.10), `reporting/plans/risks_and_open_questions.md` (NEW
-  v0.1.10), `reporting/plans/v0_1_10/`, `reporting/plans/v0_1_11/`
-  (next cycle scaffolded).
+  capabilities --json`; `current_system_state.md` is the current-truth
+  summary),
+  `reporting/plans/README.md` (reading-order index),
+  `reporting/plans/strategic_plan_v1.md` (canonical strategic plan),
+  `reporting/plans/tactical_plan_v0_1_x.md` (canonical tactical plan),
+  `reporting/plans/eval_strategy/`, `reporting/plans/success_framework_v1.md`,
+  `reporting/plans/risks_and_open_questions.md`, and the current/future
+  cycle workspaces (`v0_1_15/`, `v0_1_16/`, `v0_1_17/`) plus
+  `reporting/plans/post_v0_1_15/` between-cycle notes.
 - **SUPERSEDED 2026-04-27**: `reporting/plans/historical/multi_release_roadmap.md` —
   preserved as historical provenance; do not act on its release
   schedule. Use the strategic + tactical plans above.

@@ -1,6 +1,6 @@
 # v0.1.17 cycle — workspace
 
-**Status:** scoped, not yet open. PLAN.md authored when the cycle opens (after v0.1.15 + v0.1.16 close).
+**Status:** scoped, not yet open. PLAN.md authored when the cycle opens after v0.1.16 closes. v0.1.15 is already published; v0.1.16 must first absorb or defer the post-publish foreign-user findings.
 
 **Tier (anticipated):** substantive (multiple inherited workstreams + new schema/migration + persona-replay residual). Full Phase 0 D11 bug-hunt + multi-round D14 plan-audit.
 
@@ -54,7 +54,7 @@
 
 ## First actions for the cycle session (when it opens)
 
-1. Confirm v0.1.15 + v0.1.16 closed (RELEASE_PROOF.md present in both).
+1. Confirm v0.1.15 published and v0.1.16 closed (RELEASE_PROOF.md present in both).
 2. Re-read this README + the source carry-over docs.
 3. Author `PLAN.md`. First line: tier annotation.
 4. Copy `_templates/codex_plan_audit_prompt.template.md` and customise.

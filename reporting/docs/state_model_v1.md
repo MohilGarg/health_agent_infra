@@ -4,8 +4,8 @@ Status: human-readable map of the v1 runtime state model. The
 **source of truth is the live SQLite schema** under
 `src/health_agent_infra/core/state/migrations/`. This document was
 written against the v0.1.8 surface and may lag as later releases
-add migrations (023 live as of v0.1.14.1: `022_daily_plan_state_fingerprint`,
-`023_source_row_locator`). Trust the migration files for the
+add migrations (025 live as of v0.1.15: `024_gym_set_id_with_exercise_slug`,
+`025_target_macros_extension`). Trust the migration files for the
 authoritative shape; trust this doc for the human-readable
 narrative + invariants.
 
@@ -24,6 +24,17 @@ the on-device SQLite database, which stores:
   data-quality ledgers
 
 The agent resumes from local runtime state, not from chat memory alone.
+
+## Current schema head
+
+Schema head is **025** as of v0.1.15.
+
+- `024_gym_set_id_with_exercise_slug.sql` rewrites old-format
+  `gym_set.set_id` values so set ids include the exercise slug and do
+  not collide across exercises in the same session.
+- `025_target_macros_extension.sql` recreates the existing `target`
+  table with an extended `target_type` CHECK for `carbs_g` and
+  `fat_g`; existing rows are copied forward byte-stable.
 
 ## Layers
 
@@ -80,7 +91,7 @@ These tables capture source truth before projection:
 | `context_note` | Free-text human-input notes. |
 | `manual_readiness_raw` | Subjective soreness / energy / planned-session readiness input. |
 | `gym_session` | Resistance-training session envelope. |
-| `gym_set` | Individual sets within a session, optionally linked to `exercise_taxonomy`. |
+| `gym_set` | Individual sets within a session, optionally linked to `exercise_taxonomy`. Since migration 024, default `set_id` includes the exercise slug to avoid multi-exercise set-number collisions. |
 | `running_session` | Legacy raw per-activity running table from the initial schema. |
 | `running_activity` | Current per-session running structure from intervals.icu activities. |
 | `goal` | User-declared goals, optionally domain-scoped. |
@@ -112,7 +123,7 @@ Each accepted row carries projection metadata such as:
 | `exercise_taxonomy` | Canonical strength exercise names, aliases, muscle groups, equipment, source. |
 | `user_memory` | Durable goals, preferences, constraints, and context notes. |
 | `intent_item` | User-authored or agent-proposed intent, with explicit commit/archive discipline. |
-| `target` | User-authored or agent-proposed wellness targets, with explicit commit/archive discipline. |
+| `target` | User-authored or agent-proposed wellness targets, with explicit commit/archive discipline. Since migration 025, nutrition macro targets include `calories_kcal`, `protein_g`, `carbs_g`, and `fat_g`. |
 | `sync_run_log` | Pull freshness and source status rows. |
 | `runtime_event_log` | Per-command local runtime event rows for `hai stats`. |
 | `data_quality_daily` | Per-domain coverage/missingness/cold-start ledger. |

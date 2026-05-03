@@ -153,17 +153,24 @@ Plus a simulated-Linux check (any of):
 
 The maintainer's standing question: should v0.1.15.1 be a pure single-bug hotfix (matches v0.1.12.1 / v0.1.14.1 precedent) or a hotfix-plus-doc-backfill?
 
-### 4.1 Doc gaps from v0.1.15 PLAN §3 cross-cutting that didn't ship
+### 4.1 Doc gaps from v0.1.15 PLAN §3 cross-cutting
 
-Confirmed via grep:
+**Status as of hand-off:** the maintainer (or a linter) has done a parallel doc-sweep that landed most of the gaps already. Verified via grep at hand-off time:
 
-- **`reporting/docs/architecture.md`** — 0 mentions of `carbs_g`, `fat_g`, `insufficient_data`, `present` block, `target_status`, `partial_day_no_target`. PLAN §3 cross-cutting line:
+- ✅ **`reporting/docs/state_model_v1.md`** — now mentions `carbs_g` + `fat_g` + migration 025 at lines 36-37 and 126. Closed.
+- ✅ **`reporting/docs/current_system_state.md`** — NEW file, clean operational-truth surface for the v0.1.15 published baseline. Referenced from AGENTS.md "Authoritative orientation" line 34.
+- ⚠️ **`reporting/docs/architecture.md`** — partial close. Has the W-C `target_type` extension mention at line 218 but lacks W-A (`present` block, `is_partial_day`, `target_status`), W-D arm-1 (`insufficient_data` short-circuit), W-E (skill consumption). PLAN §3 cross-cutting line:
   > **`reporting/docs/architecture.md`** — extend nutrition section with target-aware classification path (W-C + W-D arm-1).
 
-- **`reporting/docs/state_model_v1.md`** — no `carbs_g` / `fat_g` mention. PLAN §3 cross-cutting line:
-  > **`reporting/docs/state_model_v1.md`** — document the `target` table's `target_type` extension to include `'carbs_g'` + `'fat_g'` (migration 025).
+  Codex should add a short paragraph in the nutrition-pipeline section covering the W-A presence-block read surface, the W-D arm-1 partial-day suppression to `nutrition_status='insufficient_data'`, and the snapshot-side wiring through `derive_nutrition_signals`. ~10-15 lines.
 
-These are the audit-visible contract surface a future session reads. Same provenance-discipline class as the F-IR-R3-01 stale-comment nit caught at IR round 3.
+- ⚠️ **`README.md` install instructions** — line 137 still says `pipx install health-agent-infra` without version pin or CDN-cache bypass. Per `reference_pypi_publish_cdn_lag.md` memory, the bare form fails for ~2 min after publish. For Mohil's onboarding (and any future foreign user), the canonical install is:
+
+  ```bash
+  pipx install --force --pip-args="--no-cache-dir --index-url https://pypi.org/simple/" 'health-agent-infra==0.1.15.1'
+  ```
+
+  Worth adding to README's onboarding section.
 
 ### 4.2 README install hardening
 
@@ -177,12 +184,12 @@ Worth adding to README's onboarding section so the next foreign user doesn't hit
 
 ### 4.3 Scope decision
 
-Two options:
+Two options (revised after the maintainer's parallel doc-sweep landed the bulk of the doc gaps):
 
-- **(A) Pure keyring-fix-only as v0.1.15.1.** Matches v0.1.12.1 / v0.1.14.1 hotfix discipline. Doc backfill rolls into v0.1.16 empirical-fix cycle.
-- **(B) Bundle keyring fix + doc backfill into v0.1.15.1.** Tighter "everything we missed" close-out; expands the hotfix scope.
+- **(A) Pure keyring-fix-only as v0.1.15.1.** Matches v0.1.12.1 / v0.1.14.1 hotfix discipline. The 2 small remaining doc gaps (architecture.md nutrition section + README install snippet) roll into v0.1.16 named-fix.
+- **(B) Bundle keyring fix + the 2 small remaining doc items into v0.1.15.1.** Light scope expansion; the 2 doc edits are ≤30 lines combined; tightens the "everything we missed" close-out.
 
-**Maintainer to decide.** If the maintainer doesn't pre-specify, default to **(A)** per the established hotfix discipline; v0.1.16 takes the docs as a named-deferral.
+**Maintainer to decide.** With most doc gaps already closed by the parallel sweep, the case for (B) is stronger now than it was — only ~30 lines of doc work remain and they directly improve Mohil's install path (the README snippet) and the audit-visible nutrition-pipeline surface (architecture.md). Default to **(B)** unless the maintainer prefers strict hotfix discipline.
 
 ---
 
@@ -203,13 +210,13 @@ Two options:
 | `verification/tests/snapshots/cli_capabilities_v0_1_13.json` | regenerate via `uv run hai capabilities --json > verification/tests/snapshots/cli_capabilities_v0_1_13.json` (the `hai_version` field is filtered as volatile per `_VOLATILE_FIELDS` in `test_cli_parser_capabilities_regression.py`, so this may not actually drift — verify before regen) |
 | `uv.lock` | will refresh automatically when adding the dep |
 
-### 5.2 If Option B (bundle docs) — additional
+### 5.2 If Option B (bundle remaining doc items) — additional
 
 | File | Change |
 |---|---|
-| `reporting/docs/architecture.md` | add v0.1.15 nutrition-section content per PLAN §3 (target-aware classification: W-A presence block + W-C `target` table extension + W-D arm-1 `nutrition_status='insufficient_data'` short-circuit + skill consumption per W-E) |
-| `reporting/docs/state_model_v1.md` | add v0.1.15 `target` table extension content per PLAN §3 (migration 025 adds `carbs_g` + `fat_g` to the `target_type` CHECK; Python `_VALID_TARGET_TYPE` extended; `add_targets_atomic` helper) |
-| `README.md` | update install section with `==0.1.15.1` + `--no-cache-dir --index-url` bypass per §4.2 |
+| `reporting/docs/architecture.md` | add ~10-15 lines in the nutrition-pipeline section covering W-A presence-block read surface + W-D arm-1 `nutrition_status='insufficient_data'` partial-day suppression + snapshot-side wiring through `derive_nutrition_signals`. The W-C `target_type` extension at line 218 is already there; do not duplicate. |
+| `README.md` | line 137 install snippet → add `==0.1.15.1` pin + `--no-cache-dir --index-url https://pypi.org/simple/` bypass per §4.2; ~5 lines. |
+| (state_model_v1.md, current_system_state.md) | already updated by parallel doc-sweep; do not touch. |
 
 ### 5.3 Files Codex must NOT touch (out of scope)
 
@@ -366,7 +373,8 @@ From `~/.claude/CLAUDE.md` "Working Style" + project memory:
 
 ## §11 — Open questions for Dom (decide before Codex starts implementation)
 
-1. **Scope decision:** Option A (pure keyring fix) or Option B (bundle keyring + doc backfill)? Default A per hotfix discipline.
-2. **Mohil's name in public artifacts:** the v0.1.15 RELEASE_PROOF + REPORT both use his full name. Per `project_v0_1_15_w2u_gate_candidate.md` memory, his name should be kept out of public artifacts. Should v0.1.15.1 ship include scrubbing those (replace with initials "MG" or just "the foreign-user candidate")? This is technically an audit-trail edit on a sealed cycle, but the cycle's RELEASE_PROOF is the public evidence so the scrub is justified.
-3. **CI workflow audit:** if the README quickstart smoke was failing on Linux pre-v0.1.15, the maintainer was shipping despite red CI. Worth a v0.1.16-or-later cycle proposal to enforce CI-green-before-publish; out of scope for this hotfix but worth noting.
-4. **§3.3 status-method audit:** include in v0.1.15.1 or defer to v0.1.16?
+1. **Scope decision:** Option A (pure keyring fix) or Option B (keyring + 2 small remaining doc items — architecture.md nutrition section + README install snippet)? Doc gaps that landed in the parallel sweep before this report (state_model_v1.md, current_system_state.md, etc.) are out of Codex's touch list either way. Default revised to **(B)** — see §4.3.
+2. **Mohil's name in public artifacts:** the v0.1.15 RELEASE_PROOF + REPORT both use his full name. Per `project_v0_1_15_w2u_gate_candidate.md` memory ("KEEP NAME OUT OF PUBLIC ARTIFACTS"), should v0.1.15.1 ship include scrubbing those (replace with initials "MG" or just "the foreign-user candidate")? This is technically an audit-trail edit on a sealed cycle, but the cycle's RELEASE_PROOF is the public-facing evidence trail so the scrub is justified. **If maintainer says yes, Codex should also scrub:** v0.1.15 RELEASE_PROOF.md, v0.1.15 REPORT.md, CHANGELOG.md (entry 0.1.15 mentions Mohil), AUDIT.md (entry v0.1.15 mentions Mohil), tactical_plan_v0_1_x.md (row 46 mentions Mohil).
+3. **CI workflow audit:** if the README quickstart smoke was failing on Linux pre-v0.1.15, the maintainer was shipping despite red CI. Worth a v0.1.16-or-later cycle proposal to enforce CI-green-before-publish; out of scope for this hotfix but worth noting in the v0.1.16 README scope table.
+4. **§3.3 status-method audit:** include in v0.1.15.1 or defer to v0.1.16? Recommend defer — the §3.1 + §3.2 fixes likely close the CI failure; §3.3 is belt-and-braces and adds scope.
+5. **Parallel doc-sweep work currently uncommitted:** at hand-off time the maintainer (or linter) has a working tree with ~14 modified files (AGENTS.md, README.md, architecture.md, state_model_v1.md, etc.) and ~3 untracked (current_system_state.md, post_v0_1_15/). Should Codex commit those alongside the hotfix, or are they separate maintainer work that lands independently? Recommend committing as a separate "post-v0.1.15 doc sweep" commit before the v0.1.15.1 hotfix commit so the hotfix delta is clean.
