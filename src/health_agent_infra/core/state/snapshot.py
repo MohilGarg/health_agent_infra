@@ -885,9 +885,26 @@ def build_snapshot(
         # carry classified_state in the snapshot when the bundle is
         # supplied. goal_domain is reserved for post-v1 goal-aware
         # targets — the v1 classifier ignores it.
+        # v0.1.15 W-D arm-1 wire: thread the W-A presence signals
+        # (`is_partial_day` + `target_status`) into the nutrition
+        # classifier. compute_presence_block reads the same W-A surface
+        # `hai intake gaps` exposes; passing it here lets the production
+        # daily pipeline trigger the W-D arm-1 partial-day suppression
+        # without the agent having to wire it call-site by call-site.
+        from health_agent_infra.core.intake.presence import (
+            compute_presence_block,
+        )
+        _w_a_block = compute_presence_block(
+            conn,
+            as_of=as_of_date,
+            user_id=user_id,
+            now_local=now_local,
+        )
         nutrition_signals = derive_nutrition_signals(
             nutrition_today=nutrition_today,
             goal_domain=(goals_active[0]["domain"] if goals_active else None),
+            is_partial_day=_w_a_block["is_partial_day"],
+            target_status=_w_a_block["target_status"],
         )
         nutrition_classified = classify_nutrition_state(nutrition_signals)
         # v0.1.10 W-C wire (F-CDX-IR-01): plumb the partial-day gate

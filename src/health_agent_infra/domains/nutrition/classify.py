@@ -307,6 +307,37 @@ def classify_nutrition_state(
     t = thresholds if thresholds is not None else load_thresholds()
     uncertainty: list[str] = []
 
+    # v0.1.15 W-D arm-1: partial-day suppression. When the W-A signals
+    # indicate today's intake is partial-day AND no nutrition target
+    # covers today, refuse to classify rather than misclassifying the
+    # partial intake against the config-baseline target. This is a
+    # named-incomplete fix per PLAN §4 risk 4: arm-1 covers no-target
+    # only; arm-2 (end-of-day projection when target IS present)
+    # defers to v0.1.17. Backwards-compat: when either signal is
+    # absent (the pre-W-D call shape), suppression doesn't fire.
+    is_partial_day = nutrition_signals.get("is_partial_day")
+    target_status = nutrition_signals.get("target_status")
+    if (
+        is_partial_day is True
+        and target_status in ("absent", "unavailable")
+    ):
+        return ClassifiedNutritionState(
+            calorie_balance_band="unknown",
+            protein_sufficiency_band="unknown",
+            hydration_band="unknown",
+            micronutrient_coverage="unavailable_at_source",
+            coverage_band="insufficient",
+            nutrition_status="insufficient_data",
+            nutrition_score=None,
+            calorie_deficit_kcal=None,
+            protein_ratio=None,
+            hydration_ratio=None,
+            derivation_path=(nutrition_signals.get("today_row") or {}).get(
+                "derivation_path"
+            ),
+            uncertainty=("partial_day_no_target",),
+        )
+
     today_row: Optional[dict[str, Any]] = nutrition_signals.get("today_row")
     targets = t["classify"]["nutrition"]["targets"]
     calorie_target = coerce_float(
