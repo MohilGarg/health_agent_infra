@@ -55,5 +55,6 @@ hai synthesize: --agent-version,--as-of,--bundle-only,--db-path,--domains,--draf
 hai target archive: --confirm,--db-path,--help,--target-id,--user-id
 hai target commit: --confirm,--db-path,--help,--target-id,--user-id
 hai target list: --all,--as-of,--db-path,--domain,--help,--status,--target-type,--user-id
+hai target nutrition: --carbs-g,--db-path,--effective-from,--fat-g,--help,--ingest-actor,--kcal,--phase,--protein-g,--reason,--user-id
 hai target set: --db-path,--domain,--effective-from,--effective-to,--help,--ingest-actor,--lower-bound,--reason,--review-after,--source,--status,--target-type,--unit,--upper-bound,--user-id,--value,--value-json
 hai today: --as-of,--db-path,--domain,--format,--help,--user-id,--verbose

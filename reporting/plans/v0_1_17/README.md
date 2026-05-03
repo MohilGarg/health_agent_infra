@@ -40,7 +40,7 @@
 
 - **v0.1.15 must close** so that:
   - W-A presence surface is in tree (persona-runner consumes it).
-  - W-C `target` table macro extension (migration 024 — `'carbs_g'` + `'fat_g'` added to `target_type` CHECK + `_VALID_TARGET_TYPE`) is in tree; W-D arm-2 reads the existing `target` table filtered by `domain='nutrition' AND target_type IN ('calories_kcal','protein_g','carbs_g','fat_g')`. (Updated post-v0.1.15 round-4 F-PHASE0-01 Option A revision; the original v0.1.15 round-3 PLAN proposed a separate `nutrition_target` table that was cut.)
+  - W-C `target` table macro extension (migration 025 — `'carbs_g'` + `'fat_g'` added to `target_type` CHECK + `_VALID_TARGET_TYPE`) is in tree; W-D arm-2 reads the existing `target` table filtered by `domain='nutrition' AND target_type IN ('calories_kcal','protein_g','carbs_g','fat_g')`. (Updated post-v0.1.15 round-4 F-PHASE0-01 Option A revision; the original v0.1.15 round-3 PLAN proposed a separate `nutrition_target` table that was cut. Migration number bumped from "024" to "025" at W-C-implementation time because v0.1.15 W-GYM-SETID claimed 024 first.)
   - The repo is post-restructure-stable.
 - **v0.1.16 must close** so that:
   - The foreign-user gate has fired and any P0/P1 bugs from the gate session have landed before this cycle's eval-substrate work starts. Otherwise W-AH-2's new scenarios may encode the wrong runtime contract.

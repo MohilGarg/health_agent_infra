@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import uuid
 import os
 import shutil
 import sqlite3
@@ -2907,6 +2908,185 @@ def cmd_target_archive(args: argparse.Namespace) -> int:
             )
             return exit_codes.USER_INPUT
         _emit_json({"target_id": args.target_id, "status": "archived"})
+        return exit_codes.OK
+    finally:
+        conn.close()
+
+
+# v0.1.15 W-C — `hai target nutrition` macro-group convenience command.
+# Round-4 F-PHASE0-01 Option A: extends the existing `target` table
+# (migration 020 + the migration-025 CHECK extension for carbs_g +
+# fat_g) rather than building a parallel nutrition_target table.
+# Tightened per Codex F-R4-01: explicit source/status pairing, atomic
+# 4-row insert via add_targets_atomic, natural-key idempotency.
+_NUTRITION_MACRO_TARGETS: tuple[tuple[str, str, str], ...] = (
+    ("calories_kcal", "kcal", "kcal"),
+    ("protein_g",     "g",    "protein_g"),
+    ("carbs_g",       "g",    "carbs_g"),
+    ("fat_g",         "g",    "fat_g"),
+)
+
+
+def cmd_target_nutrition(args: argparse.Namespace) -> int:
+    """`hai target nutrition` — write 4 atomic macro target rows.
+
+    Source/status pairing per the W57 invariant at
+    ``core/target/store.py:160-168``:
+
+      * agent invocation (``--ingest-actor`` matches a named agent
+        identifier such as ``claude_agent_v1``) → ``source='agent_proposed'``,
+        ``status='proposed'``. The user must promote each row via
+        ``hai target commit --target-id <id>``.
+      * user invocation (default ``--ingest-actor cli`` or any other
+        non-agent value) → ``source='user_authored'``, ``status='active'``.
+
+    Natural-key idempotency: re-invocation with identical args
+    (same kcal/protein/carbs/fat values, same phase, same effective_from,
+    same source) is a no-op — the existing matching rows are returned.
+    Different ``--phase`` values produce distinct natural keys (the
+    ``reason`` column carries ``"<phase>: ..."`` as a query-friendly
+    convention).
+    """
+
+    from datetime import datetime, timezone
+    from health_agent_infra.core.target.store import (
+        TargetRecord,
+        TargetValidationError,
+        add_targets_atomic,
+    )
+
+    conn, db_path = _intent_open_db(args)
+    if conn is None:
+        sys.stderr.write(
+            f"hai target: no state DB at {db_path}. Run `hai init` first.\n"
+        )
+        return exit_codes.USER_INPUT
+
+    try:
+        effective_from = (
+            date.fromisoformat(args.effective_from)
+            if args.effective_from
+            else date.today()
+        )
+        phase_token = (args.phase or "default").strip()
+        reason_extra = (args.reason or "").strip()
+        reason_str = (
+            f"{phase_token}: {reason_extra}"
+            if reason_extra
+            else f"{phase_token}: hai target nutrition macro group"
+        )
+
+        # Source/status pairing per the existing W57 invariant.
+        agent_actors = {"claude_agent_v1"}
+        if args.ingest_actor in agent_actors:
+            source = "agent_proposed"
+            status = "proposed"
+        else:
+            source = "user_authored"
+            status = "active"
+
+        macro_values = {
+            "calories_kcal": args.kcal,
+            "protein_g":     args.protein_g,
+            "carbs_g":       args.carbs_g,
+            "fat_g":         args.fat_g,
+        }
+        macro_units = {
+            "calories_kcal": "kcal",
+            "protein_g":     "g",
+            "carbs_g":       "g",
+            "fat_g":         "g",
+        }
+
+        # Natural-key idempotency check: query for existing matching
+        # rows scoped to (user_id, domain='nutrition', target_type IN
+        # macros, status, effective_from, reason LIKE '<phase>:%').
+        # If 4 rows exist with identical value_json, return them.
+        existing_rows = conn.execute(
+            "SELECT target_id, target_type, value_json FROM target "
+            "WHERE user_id=? AND domain='nutrition' AND status=? "
+            "AND date(effective_from)=date(?) "
+            "AND target_type IN ('calories_kcal','protein_g','carbs_g','fat_g') "
+            "AND reason LIKE ? "
+            "AND superseded_by_target_id IS NULL",
+            (
+                args.user_id, status, effective_from.isoformat(),
+                f"{phase_token}:%",
+            ),
+        ).fetchall()
+        if len(existing_rows) == 4:
+            existing_by_type = {
+                r["target_type"]: r for r in existing_rows
+            }
+            all_match = True
+            for tt, val in macro_values.items():
+                row = existing_by_type.get(tt)
+                if row is None:
+                    all_match = False
+                    break
+                decoded = json.loads(row["value_json"]).get("value")
+                if decoded != val:
+                    all_match = False
+                    break
+            if all_match:
+                # Idempotent no-op: return the existing rows.
+                _emit_json({
+                    "user_id": args.user_id,
+                    "domain": "nutrition",
+                    "phase": phase_token,
+                    "effective_from": effective_from.isoformat(),
+                    "rows_written": 0,
+                    "rows_existing": 4,
+                    "target_ids": sorted(
+                        r["target_id"] for r in existing_rows
+                    ),
+                    "idempotent_skip": True,
+                })
+                return exit_codes.OK
+
+        # Build the 4 records.
+        when = datetime.now(timezone.utc)
+        records = []
+        for target_type, value in macro_values.items():
+            records.append(TargetRecord(
+                target_id=f"target_{uuid.uuid4().hex[:12]}",
+                user_id=args.user_id,
+                domain="nutrition",
+                target_type=target_type,
+                status=status,
+                value=value,
+                unit=macro_units[target_type],
+                lower_bound=None,
+                upper_bound=None,
+                effective_from=effective_from,
+                effective_to=None,
+                review_after=None,
+                reason=reason_str,
+                source=source,
+                ingest_actor=args.ingest_actor,
+                created_at=when,
+                supersedes_target_id=None,
+                superseded_by_target_id=None,
+            ))
+
+        try:
+            add_targets_atomic(conn, records=records)
+        except TargetValidationError as exc:
+            sys.stderr.write(f"hai target nutrition: {exc}\n")
+            return exit_codes.USER_INPUT
+
+        _emit_json({
+            "user_id": args.user_id,
+            "domain": "nutrition",
+            "phase": phase_token,
+            "effective_from": effective_from.isoformat(),
+            "rows_written": 4,
+            "rows_existing": 0,
+            "target_ids": sorted(r.target_id for r in records),
+            "source": source,
+            "status": status,
+            "idempotent_skip": False,
+        })
         return exit_codes.OK
     finally:
         conn.close()
@@ -8110,6 +8290,8 @@ def build_parser() -> argparse.ArgumentParser:
                       help="Wellness domain the target belongs to (e.g. nutrition, sleep, running).")
     p_ts.add_argument("--target-type", required=True,
                       choices=("hydration_ml", "protein_g", "calories_kcal",
+                               # v0.1.15 W-C: macro-group target types.
+                               "carbs_g", "fat_g",
                                "sleep_duration_h", "sleep_window", "training_load",
                                "other"),
                       help="One of the v1 target types.")
@@ -8228,6 +8410,61 @@ def build_parser() -> argparse.ArgumentParser:
             "state deactivation per AGENTS.md W57. Agents that proposed "
             "the row must NOT auto-archive it; only an explicit user "
             "invocation may run this command."
+        ),
+    )
+
+    # v0.1.15 W-C — `hai target nutrition` macro-group convenience.
+    p_tn = target_sub.add_parser(
+        "nutrition",
+        help=(
+            "Write 4 atomic nutrition macro target rows (kcal + "
+            "protein_g + carbs_g + fat_g) in a single transaction. "
+            "Convenience wrapper over the existing W50 target ledger."
+        ),
+    )
+    _target_common_flags(p_tn)
+    p_tn.add_argument("--kcal", type=int, required=True,
+                      help="Daily calorie target (integer, kcal).")
+    p_tn.add_argument("--protein-g", type=int, required=True,
+                      help="Daily protein target (integer, grams).")
+    p_tn.add_argument("--carbs-g", type=int, required=True,
+                      help="Daily carbohydrate target (integer, grams).")
+    p_tn.add_argument("--fat-g", type=int, required=True,
+                      help="Daily fat target (integer, grams).")
+    p_tn.add_argument("--phase", default="default",
+                      help="Phase label (e.g. 'cut', 'maintain', 'bulk'). "
+                           "Captured in the rows' reason as a query convention "
+                           "(`reason LIKE '<phase>:%%'`); free-text token.")
+    p_tn.add_argument("--effective-from", default=None,
+                      help="ISO civil date the targets become active. "
+                           "Default: today.")
+    p_tn.add_argument("--reason", default=None,
+                      help="Optional free-text reason appended after the "
+                           "phase label in the rows' reason column.")
+    p_tn.add_argument("--ingest-actor", default="cli",
+                      help="Set to a named agent identifier (e.g. "
+                           "'claude_agent_v1') for agent-proposed rows; "
+                           "otherwise leave at 'cli' for user-authored "
+                           "rows. The W57 invariant at "
+                           "core/target/store.py:160-168 derives "
+                           "source/status pairing from this value.")
+    p_tn.set_defaults(func=cmd_target_nutrition)
+    annotate_contract(
+        p_tn,
+        mutation="writes-state",
+        idempotent="yes",
+        json_output="default",
+        exit_codes=("OK", "USER_INPUT"),
+        agent_safe=True,
+        description=(
+            "Write 4 atomic nutrition macro target rows (calories_kcal "
+            "+ protein_g + carbs_g + fat_g) in a single BEGIN IMMEDIATE "
+            "/ COMMIT. Source/status pairing per W57: agent-actor → "
+            "agent_proposed/proposed; otherwise user_authored/active. "
+            "Natural-key idempotency: identical re-invocation is a "
+            "no-op. Agent-safe because both paths respect W57; the "
+            "agent-path rows still require per-row `hai target commit` "
+            "before they go active."
         ),
     )
 

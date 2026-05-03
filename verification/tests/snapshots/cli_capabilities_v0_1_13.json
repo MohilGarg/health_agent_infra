@@ -4437,6 +4437,140 @@
     },
     {
       "agent_safe": true,
+      "command": "hai target nutrition",
+      "description": "Write 4 atomic nutrition macro target rows (calories_kcal + protein_g + carbs_g + fat_g) in a single BEGIN IMMEDIATE / COMMIT. Source/status pairing per W57: agent-actor \u2192 agent_proposed/proposed; otherwise user_authored/active. Natural-key idempotency: identical re-invocation is a no-op. Agent-safe because both paths respect W57; the agent-path rows still require per-row `hai target commit` before they go active.",
+      "exit_codes": [
+        "OK",
+        "USER_INPUT"
+      ],
+      "flags": [
+        {
+          "action": "store",
+          "aliases": [],
+          "choices": null,
+          "default": null,
+          "help": "Override state DB path.",
+          "name": "--db-path",
+          "nargs": null,
+          "positional": false,
+          "required": false,
+          "type": "str"
+        },
+        {
+          "action": "store",
+          "aliases": [],
+          "choices": null,
+          "default": "u_local_1",
+          "help": "User scope (default: u_local_1).",
+          "name": "--user-id",
+          "nargs": null,
+          "positional": false,
+          "required": false,
+          "type": "str"
+        },
+        {
+          "action": "store",
+          "aliases": [],
+          "choices": null,
+          "default": null,
+          "help": "Daily calorie target (integer, kcal).",
+          "name": "--kcal",
+          "nargs": null,
+          "positional": false,
+          "required": true,
+          "type": "int"
+        },
+        {
+          "action": "store",
+          "aliases": [],
+          "choices": null,
+          "default": null,
+          "help": "Daily protein target (integer, grams).",
+          "name": "--protein-g",
+          "nargs": null,
+          "positional": false,
+          "required": true,
+          "type": "int"
+        },
+        {
+          "action": "store",
+          "aliases": [],
+          "choices": null,
+          "default": null,
+          "help": "Daily carbohydrate target (integer, grams).",
+          "name": "--carbs-g",
+          "nargs": null,
+          "positional": false,
+          "required": true,
+          "type": "int"
+        },
+        {
+          "action": "store",
+          "aliases": [],
+          "choices": null,
+          "default": null,
+          "help": "Daily fat target (integer, grams).",
+          "name": "--fat-g",
+          "nargs": null,
+          "positional": false,
+          "required": true,
+          "type": "int"
+        },
+        {
+          "action": "store",
+          "aliases": [],
+          "choices": null,
+          "default": "default",
+          "help": "Phase label (e.g. 'cut', 'maintain', 'bulk'). Captured in the rows' reason as a query convention (`reason LIKE '<phase>:%%'`); free-text token.",
+          "name": "--phase",
+          "nargs": null,
+          "positional": false,
+          "required": false,
+          "type": "str"
+        },
+        {
+          "action": "store",
+          "aliases": [],
+          "choices": null,
+          "default": null,
+          "help": "ISO civil date the targets become active. Default: today.",
+          "name": "--effective-from",
+          "nargs": null,
+          "positional": false,
+          "required": false,
+          "type": "str"
+        },
+        {
+          "action": "store",
+          "aliases": [],
+          "choices": null,
+          "default": null,
+          "help": "Optional free-text reason appended after the phase label in the rows' reason column.",
+          "name": "--reason",
+          "nargs": null,
+          "positional": false,
+          "required": false,
+          "type": "str"
+        },
+        {
+          "action": "store",
+          "aliases": [],
+          "choices": null,
+          "default": "cli",
+          "help": "Set to a named agent identifier (e.g. 'claude_agent_v1') for agent-proposed rows; otherwise leave at 'cli' for user-authored rows. The W57 invariant at core/target/store.py:160-168 derives source/status pairing from this value.",
+          "name": "--ingest-actor",
+          "nargs": null,
+          "positional": false,
+          "required": false,
+          "type": "str"
+        }
+      ],
+      "idempotent": "yes",
+      "json_output": "default",
+      "mutation": "writes-state"
+    },
+    {
+      "agent_safe": true,
       "command": "hai target set",
       "description": "Insert a wellness target into the W50 target ledger. Wellness support, not a medical prescription.",
       "exit_codes": [
@@ -4487,6 +4621,8 @@
             "hydration_ml",
             "protein_g",
             "calories_kcal",
+            "carbs_g",
+            "fat_g",
             "sleep_duration_h",
             "sleep_window",
             "training_load",

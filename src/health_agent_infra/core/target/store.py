@@ -38,6 +38,10 @@ _TARGET_COLUMNS = (
 _VALID_STATUS = {"proposed", "active", "superseded", "archived"}
 _VALID_TARGET_TYPE = {
     "hydration_ml", "protein_g", "calories_kcal",
+    # v0.1.15 W-C (round-4 F-PHASE0-01 Option A): carbs_g + fat_g added
+    # to support the `hai target nutrition` 4-row macro convenience
+    # command. Migration 025 extends the SQL CHECK in lockstep.
+    "carbs_g", "fat_g",
     "sleep_duration_h", "sleep_window", "training_load",
     "other",
 }
@@ -221,6 +225,61 @@ def add_target(
     )
     conn.commit()
     return record
+
+
+def add_targets_atomic(
+    conn: sqlite3.Connection,
+    *,
+    records: list[TargetRecord],
+) -> list[TargetRecord]:
+    """Insert multiple TargetRecords in a single BEGIN IMMEDIATE / COMMIT.
+
+    v0.1.15 W-C (per Codex F-R4-01 disposition). The existing
+    :func:`add_target` helper commits per call, which would split a
+    4-row macro group across 4 separate transactions. This helper
+    collects every row's INSERT inside one transaction so the
+    `hai target nutrition` convenience command satisfies its atomicity
+    contract: any single-row validation or constraint failure rolls
+    back the whole group.
+
+    Validates each record via the same :func:`_validate` invariant as
+    :func:`add_target` (W57 source/status pairing, target_type +
+    status enums, bounds). Validation runs BEFORE the BEGIN IMMEDIATE
+    so an early failure doesn't acquire the write lock unnecessarily.
+
+    Returns the list of materialised records on success. Raises
+    :class:`TargetValidationError` on validation failure (no rows
+    written). Raises :class:`sqlite3.IntegrityError` (and rolls back)
+    on a SQL CHECK or PK violation surfaced at INSERT time.
+
+    Used by ``cmd_target_nutrition`` only; existing per-row callers
+    continue to use :func:`add_target`.
+    """
+
+    if not records:
+        return []
+
+    # Validate every record before any DB write — fail-fast on bad
+    # input so we don't acquire a transaction lock just to roll back.
+    for record in records:
+        _validate(record)
+
+    cols = ", ".join(_TARGET_COLUMNS)
+    placeholders = ", ".join("?" for _ in _TARGET_COLUMNS)
+
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        for record in records:
+            row = record.to_row()
+            conn.execute(
+                f"INSERT INTO target ({cols}) VALUES ({placeholders})",  # nosec B608 - cols from _TARGET_COLUMNS constant; placeholders are literal "?" tokens.
+                tuple(row[c] for c in _TARGET_COLUMNS),
+            )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    return records
 
 
 def list_target(

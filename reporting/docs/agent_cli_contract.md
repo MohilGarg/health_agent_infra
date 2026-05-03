@@ -55,7 +55,7 @@ JSON; this markdown is an at-a-glance overview for humans.
 
 ## Commands
 
-*59 commands; hai 0.1.14.1; schema agent_cli_contract.v1*
+*60 commands; hai 0.1.14.1; schema agent_cli_contract.v1*
 
 | Command | Mutation | Idempotent | JSON | Agent-safe | Exit codes | Description |
 |---|---|---|---|---|---|---|
@@ -116,5 +116,6 @@ JSON; this markdown is an at-a-glance overview for humans.
 | ``hai target archive`` | ``writes-state`` | ``yes-with-supersede`` | ``default`` | no | ``OK``, ``USER_INPUT`` | Archive a W50 target row (status='archived'). Marked NOT agent-safe: archiving an active or proposed row IS user-state deactivation per AGENTS.md W57. Agents that proposed the row must NOT auto-archive it; only an explicit user invocation may run this command. |
 | ``hai target commit`` | ``writes-state`` | ``yes-with-supersede`` | ``default`` | no | ``OK``, ``USER_INPUT`` | Promote a proposed target row to active. Marked NOT agent-safe: agents that proposed the row must NOT auto-promote it; only an explicit user invocation may run this command. |
 | ``hai target list`` | ``read-only`` | ``n/a`` | ``default`` | yes | ``OK``, ``USER_INPUT`` | List target rows from the W50 ledger; default-active. |
+| ``hai target nutrition`` | ``writes-state`` | ``yes`` | ``default`` | yes | ``OK``, ``USER_INPUT`` | Write 4 atomic nutrition macro target rows (calories_kcal + protein_g + carbs_g + fat_g) in a single BEGIN IMMEDIATE / COMMIT. Source/status pairing per W57: agent-actor → agent_proposed/proposed; otherwise user_authored/active. Natural-key idempotency: identical re-invocation is a no-op. Agent-safe because both paths respect W57; the agent-path rows still require per-row `hai target commit` before they go active. |
 | ``hai target set`` | ``writes-state`` | ``no`` | ``default`` | yes | ``OK``, ``USER_INPUT`` | Insert a wellness target into the W50 target ledger. Wellness support, not a medical prescription. |
 | ``hai today`` | ``read-only`` | ``n/a`` | ``opt-in`` | yes | ``OK``, ``USER_INPUT`` | Render today's canonical plan in plain language — the non-agent-mediated user surface. Read-only. |
