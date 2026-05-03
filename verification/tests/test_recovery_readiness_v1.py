@@ -433,11 +433,15 @@ def test_intake_readiness_output_feeds_hai_pull(tmp_path: Path, capsys):
     readiness_file.write_text(intake_json, encoding="utf-8")
 
     # 2. hai pull --manual-readiness-json <that file>
+    # F-PV14-01 (v0.1.15): default --source resolves to csv when no
+    # intervals.icu credentials are configured; the guard refuses
+    # against the canonical resolved DB unless we opt in.
     rc = main([
         "pull",
         "--date", "2026-04-08",
         "--user-id", "u_intake_test",
         "--manual-readiness-json", str(readiness_file),
+        "--allow-fixture-into-real-state",
     ])
     assert rc == 0
     pull_payload = json.loads(capsys.readouterr().out)

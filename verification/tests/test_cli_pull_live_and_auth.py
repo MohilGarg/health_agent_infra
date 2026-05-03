@@ -299,7 +299,14 @@ def test_pull_explicit_csv_source_uses_committed_fixture(capsys):
     source). This test pins the explicit-csv path that was previously
     the unconditional default."""
 
-    rc = cli_main(["pull", "--date", "2026-02-10", "--source", "csv"])
+    # F-PV14-01 (v0.1.15): explicit --allow-fixture-into-real-state
+    # confirms the test is intentionally writing CSV-fixture data into
+    # whatever DB the resolver picks (the test harness binds it to a
+    # tmp DB via the autouse fixture in this module).
+    rc = cli_main([
+        "pull", "--date", "2026-02-10", "--source", "csv",
+        "--allow-fixture-into-real-state",
+    ])
     assert rc == 0
     payload = json.loads(capsys.readouterr().out)
     # CSV adapter reports source "garmin"; live reports "garmin_live".
@@ -331,7 +338,13 @@ def test_pull_default_falls_back_to_csv_when_no_intervals_auth(
 
     monkeypatch.setattr(cli_mod, "CredentialStore", _NoCreds)
 
-    rc = cli_mod.main(["pull", "--date", "2026-02-10"])
+    # F-PV14-01 (v0.1.15): the implicit-csv fallback path also hits the
+    # default-deny guard now; --allow-fixture-into-real-state confirms
+    # this test's intent (probing the resolver fallback, not the guard).
+    rc = cli_mod.main([
+        "pull", "--date", "2026-02-10",
+        "--allow-fixture-into-real-state",
+    ])
     assert rc == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["source"] == "garmin"  # csv adapter

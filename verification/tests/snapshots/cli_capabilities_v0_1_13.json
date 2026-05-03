@@ -479,10 +479,22 @@
           "action": "store",
           "aliases": [],
           "choice_metadata": {
+            "csv": {
+              "data_origin": "packaged-csv-export",
+              "escape_paths": "hai demo start | --allow-fixture-into-real-state | --db-path | HAI_STATE_DB",
+              "reliability": "reliable",
+              "source_type": "fixture",
+              "writes_to_canonical_db_default": false
+            },
             "garmin_live": {
               "prefer_instead": "intervals_icu",
               "reason": "rate-limited / Cloudflare-blocked (HTTP 429 / 403)",
-              "reliability": "unreliable"
+              "reliability": "unreliable",
+              "source_type": "live"
+            },
+            "intervals_icu": {
+              "reliability": "reliable",
+              "source_type": "live"
             }
           },
           "choices": [
@@ -3210,10 +3222,22 @@
           "action": "store",
           "aliases": [],
           "choice_metadata": {
+            "csv": {
+              "data_origin": "packaged-csv-export",
+              "escape_paths": "hai demo start | --allow-fixture-into-real-state | --db-path | HAI_STATE_DB",
+              "reliability": "reliable",
+              "source_type": "fixture",
+              "writes_to_canonical_db_default": false
+            },
             "garmin_live": {
               "prefer_instead": "intervals_icu",
               "reason": "rate-limited / Cloudflare-blocked (HTTP 429 / 403)",
-              "reliability": "unreliable"
+              "reliability": "unreliable",
+              "source_type": "live"
+            },
+            "intervals_icu": {
+              "reliability": "reliable",
+              "source_type": "live"
             }
           },
           "choices": [
@@ -3252,6 +3276,18 @@
           "positional": false,
           "required": false,
           "type": "str"
+        },
+        {
+          "action": "store_true",
+          "aliases": [],
+          "choices": null,
+          "default": false,
+          "help": "Permit `--source csv` (committed CSV fixture) to write into the canonical state DB. Default-deny per F-PV14-01 (v0.1.15) \u2014 fixture data in the canonical DB corrupts user state. Use a `hai demo start` session or an explicit --db-path / HAI_STATE_DB override instead where possible.",
+          "name": "--allow-fixture-into-real-state",
+          "nargs": 0,
+          "positional": false,
+          "required": false,
+          "type": "bool"
         }
       ],
       "idempotent": "yes",
@@ -4876,6 +4912,6 @@
     }
   },
   "generated_by": "core.capabilities.walker.build_manifest",
-  "hai_version": "0.1.14",
+  "hai_version": "0.1.14.1",
   "schema_version": "agent_cli_contract.v1"
 }

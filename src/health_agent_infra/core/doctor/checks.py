@@ -320,6 +320,7 @@ def check_sources(
         as_of_date + timedelta(days=1), time.min, tzinfo=timezone.utc,
     )
     sources: dict[str, Any] = {}
+    any_for_date_divergence = False
     for source, row in rows.items():
         completed_at_raw = row.get("completed_at") or row.get("started_at")
         # F-A-11 fix per W-H1: fromisoformat doesn't accept None.
@@ -335,9 +336,44 @@ def check_sources(
                 )
             except (TypeError, ValueError):
                 staleness = None
+
+        # F-PV14-01 (v0.1.15): compute |started_at - for_date| in hours
+        # and flag >48h divergence. The carry-over evidence had CSV
+        # fixture rows with for_date months before started_at — exactly
+        # this gap. The check is informational on the canonical doctor
+        # surface so a fresh user notices the contamination shape; the
+        # cmd_pull guard is what prevents new contamination.
+        started_raw = row.get("started_at")
+        for_date_raw = row.get("for_date")
+        for_date_div_hours: Optional[float] = None
+        if started_raw and for_date_raw:
+            try:
+                started = datetime.fromisoformat(started_raw)
+                if started.tzinfo is None:
+                    started = started.replace(tzinfo=timezone.utc)
+                for_d = date.fromisoformat(for_date_raw)
+                for_date_div_hours = round(
+                    (
+                        started
+                        - datetime.combine(for_d, time.min, tzinfo=timezone.utc)
+                    ).total_seconds()
+                    / 3600.0,
+                    2,
+                )
+            except (TypeError, ValueError):
+                for_date_div_hours = None
+        for_date_warn = (
+            for_date_div_hours is not None and for_date_div_hours > 48.0
+        )
+        if for_date_warn:
+            any_for_date_divergence = True
+
         sources[source] = {
             "last_successful_sync_at": completed_at_raw,
             "staleness_hours": staleness,
+            "for_date": for_date_raw,
+            "for_date_divergence_hours": for_date_div_hours,
+            "for_date_divergence_warn": for_date_warn,
         }
 
     if not sources:
@@ -346,7 +382,19 @@ def check_sources(
             "sources": {},
             "reason": "no sync history yet (run `hai pull` or `hai intake *`)",
         }
-    return {"status": "ok", "sources": sources}
+    status = "warn" if any_for_date_divergence else "ok"
+    result: dict[str, Any] = {"status": status, "sources": sources}
+    if any_for_date_divergence:
+        result["reason"] = (
+            "one or more sources have a sync row whose for_date is >48h "
+            "before the run timestamp (F-PV14-01 contamination shape — "
+            "may indicate fixture data was projected into the canonical DB)"
+        )
+        result["hint"] = (
+            "review `hai stats --json` for `for_date_divergence_warn=true` "
+            "rows; restore from a clean backup if you suspect contamination"
+        )
+    return result
 
 
 def check_today(

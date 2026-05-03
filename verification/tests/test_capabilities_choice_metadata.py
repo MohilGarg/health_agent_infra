@@ -161,6 +161,12 @@ def test_pull_source_carries_garmin_live_unreliable_signal(command: str):
     )
     assert garmin["reliability"] == "unreliable"
     assert "intervals_icu" in garmin.get("prefer_instead", "")
-    # csv + intervals_icu carry no entry (absence == reliable-by-default)
-    assert "csv" not in source["choice_metadata"]
-    assert "intervals_icu" not in source["choice_metadata"]
+    # v0.1.15 F-PV14-01: csv + intervals_icu now carry source_type tags
+    # (`fixture` vs `live`) so an agent driving the CLI can distinguish
+    # the committed fixture path from the live wearable feeds. Both
+    # remain `reliability='reliable'`. This replaces the prior
+    # absence-as-signal contract for these two sources; garmin_live
+    # still uniquely carries `reliability='unreliable'`.
+    assert source["choice_metadata"]["csv"]["source_type"] == "fixture"
+    assert source["choice_metadata"]["intervals_icu"]["source_type"] == "live"
+    assert source["choice_metadata"]["garmin_live"]["source_type"] == "live"

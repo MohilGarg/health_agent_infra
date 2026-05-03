@@ -23,7 +23,7 @@ import shutil
 import sqlite3
 import sys
 from dataclasses import asdict, is_dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Any, Literal, Optional
 
@@ -171,6 +171,42 @@ def _emit_json(obj: Any) -> None:
 def cmd_pull(args: argparse.Namespace) -> int:
     as_of = _coerce_date(args.date)
     source = _resolve_pull_source(args)
+
+    # F-PV14-01 (v0.1.15): refuse a CSV-fixture pull when the resolver
+    # lands on the canonical default state DB without explicit user
+    # opt-in. The carry-over evidence (post_v0_1_14/carry_over_findings.md
+    # F-PV14-01) showed three fixture-shaped sync_run_log rows landing in
+    # the canonical state DB on 2026-05-01 because `core/pull/garmin.py`'s
+    # CSV adapter wrote through the same `_open_sync_row` path live pulls
+    # use, with no demo-marker check. Default-deny: refuse before opening
+    # the sync row so the acceptance "zero rows in sync_run_log" holds.
+    # Escape paths: (1) explicit --allow-fixture-into-real-state, (2) an
+    # active `hai demo` session marker, (3) explicit --db-path arg, (4)
+    # HAI_STATE_DB env var override. (3)/(4) are user-intent: if you said
+    # where to write, you opted in to whatever target you named.
+    if source == "csv":
+        from health_agent_infra.core.demo.session import is_demo_active
+
+        explicit_db_path = getattr(args, "db_path", None) is not None
+        env_db_path = bool(os.environ.get("HAI_STATE_DB"))
+        allow_fixture = getattr(args, "allow_fixture_into_real_state", False)
+        if (
+            not explicit_db_path
+            and not env_db_path
+            and not allow_fixture
+            and not is_demo_active()
+        ):
+            print(
+                "hai pull --source csv refused: writing CSV-fixture data "
+                "into the canonical state DB corrupts user state.\n"
+                "Run inside a `hai demo start` session, OR pass "
+                "--allow-fixture-into-real-state to confirm, OR set "
+                "--db-path / HAI_STATE_DB to a non-canonical destination. "
+                "(F-PV14-01, v0.1.15.)",
+                file=sys.stderr,
+            )
+            return exit_codes.USER_INPUT
+
     # Mode still tracks csv vs live for sync_run_log — both live sources
     # share the "live" label so existing freshness checks don't need to
     # grow a new enum value.
@@ -536,10 +572,30 @@ def _build_intervals_icu_adapter(args: argparse.Namespace) -> IntervalsIcuAdapte
 # truth so both annotation sites can't drift. Read by the capabilities
 # walker; surfaced under ``flags[].choice_metadata`` in the manifest.
 PULL_SOURCE_CHOICE_METADATA: dict[str, dict[str, Any]] = {
+    "csv": {
+        # F-PV14-01 (v0.1.15): tag the CSV adapter explicitly as a
+        # fixture so an agent driving the CLI knows the path is the
+        # committed packaged export, not a live wearable feed. Pairs
+        # with the cmd_pull default-deny guard against writing fixture
+        # rows into the canonical state DB.
+        "reliability": "reliable",
+        "source_type": "fixture",
+        "data_origin": "packaged-csv-export",
+        "writes_to_canonical_db_default": False,
+        "escape_paths": (
+            "hai demo start | --allow-fixture-into-real-state | "
+            "--db-path | HAI_STATE_DB"
+        ),
+    },
     "garmin_live": {
+        "source_type": "live",
         "reliability": "unreliable",
         "reason": "rate-limited / Cloudflare-blocked (HTTP 429 / 403)",
         "prefer_instead": "intervals_icu",
+    },
+    "intervals_icu": {
+        "reliability": "reliable",
+        "source_type": "live",
     },
 }
 
@@ -6156,6 +6212,31 @@ def cmd_stats(args: argparse.Namespace) -> int:
         ),
     }
 
+    # F-PV14-01 (v0.1.15) acceptance: surface
+    # |started_at - for_date| per source and flag >48h divergence.
+    # The contamination shape from the v0.1.14 carry-over evidence had
+    # for_date months before started_at (CSV fixture for a 2026-02-10
+    # row written 2026-05-01). Same field is consumed by `hai doctor`
+    # via core.doctor.checks.check_sources.
+    def _for_date_divergence_hours(row: dict[str, Any]) -> Optional[float]:
+        started_raw = row.get("started_at")
+        for_date_raw = row.get("for_date")
+        if not started_raw or not for_date_raw:
+            return None
+        try:
+            started = datetime.fromisoformat(started_raw)
+            for_d = date.fromisoformat(for_date_raw)
+        except (TypeError, ValueError):
+            return None
+        if started.tzinfo is None:
+            started = started.replace(tzinfo=timezone.utc)
+        # Divergence in hours: signed (positive when for_date is in the past
+        # relative to the run, which is the F-PV14-01 contamination shape).
+        delta = started - datetime.combine(
+            for_d, time.min, tzinfo=timezone.utc,
+        )
+        return round(delta.total_seconds() / 3600.0, 2)
+
     report: dict[str, Any] = {
         "db_path": str(db_path),
         "user_id": user_id,
@@ -6175,6 +6256,10 @@ def cmd_stats(args: argparse.Namespace) -> int:
                 "credentials_available": cred_status_by_source.get(source),
                 "for_date": row.get("for_date"),
                 "mode": row.get("mode"),
+                "for_date_divergence_hours": _for_date_divergence_hours(row),
+                "for_date_divergence_warn": (
+                    (_for_date_divergence_hours(row) or 0.0) > 48.0
+                ),
             }
             for source, row in freshness.items()
         },
@@ -7060,6 +7145,18 @@ def build_parser() -> argparse.ArgumentParser:
                              "if the DB is absent, the pull still runs but the "
                              "sync row is skipped. Default: `$HAI_STATE_DB` or "
                              "`~/.local/share/health_agent_infra/state.db`.")
+    p_pull.add_argument(
+        "--allow-fixture-into-real-state",
+        action="store_true",
+        help=(
+            "Permit `--source csv` (committed CSV fixture) to write "
+            "into the canonical state DB. Default-deny per F-PV14-01 "
+            "(v0.1.15) — fixture data in the canonical DB corrupts "
+            "user state. Use a `hai demo start` session or an "
+            "explicit --db-path / HAI_STATE_DB override instead "
+            "where possible."
+        ),
+    )
     p_pull.set_defaults(func=cmd_pull)
     annotate_contract(
         p_pull,

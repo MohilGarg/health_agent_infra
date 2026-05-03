@@ -37,7 +37,7 @@ hai memory list: --category,--db-path,--help,--include-archived,--user-id
 hai memory set: --category,--db-path,--domain,--help,--ingest-actor,--key,--memory-id,--source,--user-id,--value
 hai planned-session-types: --help
 hai propose: --base-dir,--db-path,--domain,--help,--proposal-json,--replace
-hai pull: --as-of,--date,--db-path,--help,--history-days,--live,--manual-readiness-json,--source,--use-default-manual-readiness,--user-id
+hai pull: --allow-fixture-into-real-state,--as-of,--date,--db-path,--help,--history-days,--live,--manual-readiness-json,--source,--use-default-manual-readiness,--user-id
 hai research search: --help,--topic
 hai research topics: --help
 hai restore: --base-dir,--bundle,--db-path,--help
